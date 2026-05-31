@@ -83,7 +83,7 @@ export default class ErrorBoundary extends React.PureComponent {
     return (
       <div className='pd1y wordbreak'>
         <h2>{e('troubleShoot')}</h2>
-        <p>Electerm Version: {packInfo.version}, OS: {os}</p>
+        <p>XNOW Version: {packInfo.version}, OS: {os}</p>
         {
           Object.keys(troubleshootContent).map((k, i) => {
             const v = troubleshootContent[k]
@@ -114,14 +114,8 @@ export default class ErrorBoundary extends React.PureComponent {
           <Link to={bugUrl}>{e('bugReport')}</Link>
         </div>
         <div className='pd1b'>
-          <span>Contact author: </span>
-          <Link to='mailto:zxdong@gmail.com'>zxdong@gmail.com</Link>
+          <span>XNOW Terminal - 基于 electerm</span>
         </div>
-        <div className='pd3y'>
-          <img
-            src='https://electerm.html5beta.com/electerm-wechat-group-qr.jpg'
-            className='mwm-100'
-          />
         </div>
       </>
     )
