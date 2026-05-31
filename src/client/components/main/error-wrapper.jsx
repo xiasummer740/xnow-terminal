@@ -116,7 +116,6 @@ export default class ErrorBoundary extends React.PureComponent {
         <div className='pd1b'>
           <span>XNOW Terminal - 基于 electerm</span>
         </div>
-        </div>
       </>
     )
   }
