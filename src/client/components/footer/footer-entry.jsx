@@ -4,7 +4,7 @@ import {
 } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
 import './footer.styl'
-import { statusMap } from '../../common/constants'
+import { statusMap, sidebarWidth } from '../../common/constants'
 import BatchInput from './batch-input'
 import encodes from '../bookmark-form/common/encodes'
 import { refs } from '../common/ref'
@@ -146,7 +146,7 @@ export default auto(function FooterEntry (props) {
     openedSideBar,
     inActiveTerminal
   } = props.store
-  const w = 43 + leftSidebarWidth
+  const w = sidebarWidth + leftSidebarWidth
   const sideProps = openedSideBar
     ? {
         className: 'main-footer',
