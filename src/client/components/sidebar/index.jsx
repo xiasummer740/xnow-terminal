@@ -7,9 +7,11 @@ import {
   SettingOutlined,
   UpCircleOutlined,
   AppstoreOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  DashboardOutlined
 } from '@ant-design/icons'
 import { Tooltip, Popover } from 'antd'
+import { useState } from 'react'
 import SideBarPanel from './sidebar-panel'
 import TransferList from './transfer-list'
 import MenuBtn from '../sys-menu/menu-btn'
@@ -22,6 +24,7 @@ import {
 import SideIcon from './side-icon'
 import SidePanel from './side-panel'
 import hasActiveInput from '../../common/has-active-input'
+import VpsDashboard from '../vps-dashboard/vps-dashboard'
 import './sidebar.styl'
 
 const e = window.translate
@@ -46,6 +49,7 @@ export default function Sidebar (props) {
   } = props
 
   const { store } = window
+  const [vpsDashboardOpen, setVpsDashboardOpen] = useState(false)
 
   const handleClickOutside = (event) => {
     // Don't close if pinned or has active input
@@ -164,6 +168,15 @@ export default function Sidebar (props) {
         </SideIcon>
         <TransferList {...transferProps} />
         <SideIcon
+          title='VPS看板'
+          active={vpsDashboardOpen}
+        >
+          <DashboardOutlined
+            className='font18 iblock pointer control-icon'
+            onClick={() => setVpsDashboardOpen(true)}
+          />
+        </SideIcon>
+        <SideIcon
           title={e(settingMap.terminalThemes)}
           active={themeActive}
         >
@@ -234,6 +247,11 @@ export default function Sidebar (props) {
           sidebarPanelTab={sidebarPanelTab}
         />
       </SidePanel>
+      <VpsDashboard
+        store={store}
+        visible={vpsDashboardOpen}
+        onClose={() => setVpsDashboardOpen(false)}
+      />
     </div>
   )
 }
