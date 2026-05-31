@@ -88,13 +88,16 @@
   &.active
     .control-icon
       color var(--text-light)
+      filter drop-shadow(0 0 6px rgba(0, 245, 255, 0.4))
     .control-icon-label
       color var(--text-light)
   .control-icon
     color var(--text-dark)
     cursor pointer
+    transition all 0.2s ease
     &:hover
       color var(--text-light)
+      filter drop-shadow(0 0 8px rgba(0, 245, 255, 0.5))
 .sidebar-list
   position absolute
   left 43px
