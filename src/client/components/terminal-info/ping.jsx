@@ -5,11 +5,12 @@ import { ApiOutlined } from '@ant-design/icons'
 import { useEffect, useState, useRef } from 'react'
 import { tcpPing } from '../terminal/terminal-apis'
 
-const MAX_POINTS = 60 // 60个数据点，每1秒1个 = 1分钟历史
+const MAX_POINTS = 60
 const CHART_W = 280
 const CHART_H = 50
-const BAR_W = 2.5
+const BAR_W = 3
 const BAR_GAP = 1.5
+const BAR_R = 1 // 圆角半径
 
 // Canvas 画柱状图
 let rafId = null
@@ -60,7 +61,7 @@ function drawChart (canvas, data) {
     ctx.fillText(Math.round(val) + '', 2, y - 2)
   }
 
-  // 画柱子
+  // 画柱子（圆角+渐变）
   const barStep = BAR_W + BAR_GAP
   const totalBars = Math.min(data.length, Math.floor(CHART_W / barStep))
   const startIdx = data.length - totalBars
@@ -71,10 +72,28 @@ function drawChart (canvas, data) {
     const x = i * barStep
     const h = Math.max(CHART_H - 2 - scaleY(v), 1)
     const y = scaleY(v)
-    if (v > 250) ctx.fillStyle = '#ff4d4f'
-    else if (v > 150) ctx.fillStyle = '#faad14'
-    else ctx.fillStyle = '#52c41a'
-    ctx.fillRect(x, y, BAR_W, h)
+
+    // 渐变填充
+    let topColor, bottomColor
+    if (v > 250) { topColor = '#ff7875'; bottomColor = '#ff4d4f' }
+    else if (v > 150) { topColor = '#ffc53d'; bottomColor = '#faad14' }
+    else { topColor = '#73d13d'; bottomColor = '#52c41a' }
+
+    const grad = ctx.createLinearGradient(x, y, x, y + h)
+    grad.addColorStop(0, topColor)
+    grad.addColorStop(1, bottomColor)
+    ctx.fillStyle = grad
+
+    // 圆角矩形
+    ctx.beginPath()
+    const r = Math.min(BAR_R, h / 2)
+    ctx.moveTo(x, y + r)
+    ctx.arcTo(x, y, x + BAR_W, y, r)
+    ctx.arcTo(x + BAR_W, y, x + BAR_W, y + h, r)
+    ctx.lineTo(x + BAR_W, y + h)
+    ctx.lineTo(x, y + h)
+    ctx.closePath()
+    ctx.fill()
   }
 }
 

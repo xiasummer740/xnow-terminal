@@ -52,9 +52,14 @@ export default function FooterPing ({ store }) {
 
   return (
     <div className='terminal-footer-unit terminal-footer-ping'
-      style={{ color, fontSize: 12, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 3, paddingRight: 8 }}>
+      style={{
+        color, fontSize: 12, fontWeight: 'bold',
+        display: 'flex', alignItems: 'center', gap: 4, paddingRight: 8,
+        transition: 'color 0.3s ease',
+        filter: `drop-shadow(0 0 ${level >= 2 ? 4 : 0}px ${color})`
+      }}>
       <SignalIcon level={level} />
-      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{ping}</span>
+      <span style={{ fontVariantNumeric: 'tabular-nums', transition: 'all 0.3s ease' }}>{ping}</span>
     </div>
   )
 }
