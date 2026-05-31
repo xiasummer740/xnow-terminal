@@ -15,40 +15,38 @@ import './vps-dashboard.styl'
 export default function VpsDashboard ({ store, visible, onClose }) {
   const [sortKey, setSortKey] = useState('expiryDays')
 
-  // 从书签中提取 VPS 信息
-  const vpsList = useMemo(() => {
-    const all = store.bookmarks || []
-    return all
-      .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl)
-      .map(b => {
-        const expiryDate = b.vpsExpiry ? new Date(b.vpsExpiry) : null
-        const expiryDays = expiryDate && !isNaN(expiryDate.getTime())
-          ? Math.ceil((expiryDate - Date.now()) / 86400000)
-          : null
-        const title = b.title || `${b.username || ''}@${b.host || ''}:${b.port || ''}`
-        return {
-          id: b.id,
-          title,
-          host: b.host,
-          vpsUrl: b.vpsUrl,
-          vpsExpiry: b.vpsExpiry,
-          expiryDays,
-          vpsPrice: b.vpsPrice,
-          vpsTraffic: b.vpsTraffic,
-          vpsRecharge: b.vpsRecharge,
-          isExpired: expiryDays !== null && expiryDays <= 0,
-          isExpiring: expiryDays !== null && expiryDays > 0 && expiryDays <= 30
-        }
-      })
-      .sort((a, b) => {
-        if (sortKey === 'expiryDays') {
-          if (a.expiryDays === null) return 1
-          if (b.expiryDays === null) return -1
-          return a.expiryDays - b.expiryDays
-        }
-        return 0
-      })
-  }, [store, sortKey])
+  // 从书签中提取 VPS 信息（每次渲染都重新计算）
+  const all = window.store.bookmarks || []
+  const vpsList = all
+    .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl)
+    .map(b => {
+      const expiryDate = b.vpsExpiry ? new Date(b.vpsExpiry) : null
+      const expiryDays = expiryDate && !isNaN(expiryDate.getTime())
+        ? Math.ceil((expiryDate - Date.now()) / 86400000)
+        : null
+      const title = b.title || `${b.username || ''}@${b.host || ''}:${b.port || ''}`
+      return {
+        id: b.id,
+        title,
+        host: b.host,
+        vpsUrl: b.vpsUrl,
+        vpsExpiry: b.vpsExpiry,
+        expiryDays,
+        vpsPrice: b.vpsPrice,
+        vpsTraffic: b.vpsTraffic,
+        vpsRecharge: b.vpsRecharge,
+        isExpired: expiryDays !== null && expiryDays <= 0,
+        isExpiring: expiryDays !== null && expiryDays > 0 && expiryDays <= 30
+      }
+    })
+    .sort((a, b) => {
+      if (sortKey === 'expiryDays') {
+        if (a.expiryDays === null) return 1
+        if (b.expiryDays === null) return -1
+        return a.expiryDays - b.expiryDays
+      }
+      return 0
+    })
 
   const columns = [
     {
