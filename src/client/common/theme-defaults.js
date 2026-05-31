@@ -2,6 +2,8 @@
  * database default should init
  */
 
+import { xnowTheme } from './theme-xnow.js'
+
 function parsor (themeTxt) {
   return themeTxt.split('\n').reduce((prev, line) => {
     let [key = '', value = ''] = line.split('=')
@@ -102,12 +104,7 @@ const defaultThemeDarkTerminal = () => {
 }
 
 export function defaultTheme () {
-  return {
-    id: 'default',
-    name: 'default',
-    themeConfig: defaultThemeDarkTerminal(),
-    uiThemeConfig: defaultThemeDark()
-  }
+  return xnowTheme()
 }
 
 export function defaultThemeLight () {
