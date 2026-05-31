@@ -127,10 +127,26 @@ function startTerminalLogFile (ws, msg) {
   })
 }
 
+async function tcpPing (ws, msg) {
+  const { id, pid } = msg
+  const term = terminals(pid)
+  if (!term) {
+    ws.s({ id, data: -1 })
+    return
+  }
+  try {
+    const latency = await term.tcpPing(id)
+    ws.s({ id, data: latency })
+  } catch (e) {
+    ws.s({ id, data: -1 })
+  }
+}
+
 exports.createTerm = createTerm
 exports.testTerm = testTerm
 exports.resize = resize
 exports.runCmd = runCmd
+exports.tcpPing = tcpPing
 exports.toggleTerminalLog = toggleTerminalLog
 exports.toggleTerminalLogTimestamp = toggleTerminalLogTimestamp
 exports.setTerminalLogPath = setTerminalLogPath

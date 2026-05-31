@@ -54,6 +54,7 @@ export default memo(function TransferList (props) {
           <SwapOutlined
             className='iblock font20 control-icon'
           />
+          <div className='control-icon-label'>{e('fileTransfers')}</div>
         </Badge>
       </Popover>
     </div>

@@ -19,6 +19,7 @@ const {
   testTerm,
   resize,
   runCmd,
+  tcpPing,
   toggleTerminalLog,
   toggleTerminalLogTimestamp,
   setTerminalLogPath,
@@ -434,6 +435,8 @@ process.on('message', async (message) => {
       promise = startTerminalLogFile(body)
     } else if (action === 'run-cmd') {
       promise = runCmd(body)
+    } else if (action === 'tcp-ping') {
+      promise = tcpPing(body)
     }
 
     const result = await promise

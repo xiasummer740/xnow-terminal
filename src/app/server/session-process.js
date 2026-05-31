@@ -245,6 +245,13 @@ exports.terminals = function (pid) {
         action: 'start-terminal-log-file',
         body: { pid, logFilePath, addTimeStampToTermLog }
       })
+    },
+    tcpPing: (id) => {
+      return sendMsgToChildProcess(pid, {
+        id,
+        action: 'tcp-ping',
+        body: { pid }
+      })
     }
   }
 }

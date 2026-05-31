@@ -13,6 +13,7 @@ const {
   testTerm,
   resize,
   runCmd,
+  tcpPing,
   toggleTerminalLog,
   toggleTerminalLogTimestamp,
   setTerminalLogPath,
@@ -94,6 +95,8 @@ const initWs = function (app) {
           startTerminalLogFile(ws, msg)
         } else if (action === 'run-cmd') {
           runCmd(ws, msg)
+        } else if (action === 'tcp-ping') {
+          tcpPing(ws, msg)
         }
       } catch (err) {
         log.error('common ws error', err)

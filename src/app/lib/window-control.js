@@ -77,7 +77,7 @@ exports.getWindowSizeDep = async () => {
     width: maxWidth,
     height: maxHeight
   } = exports.getScreenSize()
-  if (!windowSizeLastState || isDev) {
+  if (!windowSizeLastState) {
     return {
       width: maxWidth,
       height: maxHeight,

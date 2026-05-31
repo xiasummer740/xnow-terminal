@@ -150,6 +150,7 @@ export default function Sidebar (props) {
             <ThunderboltOutlined
               className='font20 iblock control-icon'
             />
+            <div className='control-icon-label'>{e('quickConnect')}</div>
           </div>
         </Popover>
         <SideIcon

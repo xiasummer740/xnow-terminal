@@ -11,6 +11,7 @@ import { refs } from '../common/ref'
 import Qm from '../quick-commands/quick-commands-select'
 import AIIcon from '../icons/ai-icon'
 import CmdHistory from './cmd-history'
+import FooterPing from './footer-ping'
 
 const {
   Option
@@ -166,6 +167,7 @@ export default auto(function FooterEntry (props) {
   return (
     <div {...sideProps}>
       <div className='terminal-footer-flex'>
+        <FooterPing store={props.store} />
         {renderAIIcon()}
         {renderCmdHistory()}
         {renderQuickCommands()}

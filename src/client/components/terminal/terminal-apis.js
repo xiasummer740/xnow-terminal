@@ -19,6 +19,13 @@ export function runCmd (pid, cmd) {
   })
 }
 
+export function tcpPing (pid) {
+  return fetch({
+    pid,
+    action: 'tcp-ping'
+  })
+}
+
 export function resizeTerm (pid, cols, rows) {
   return fetch({
     pid,

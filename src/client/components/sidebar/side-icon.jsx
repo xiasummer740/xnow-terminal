@@ -20,6 +20,7 @@ export default function SideIcon (props) {
       title={title}
     >
       {children}
+      <div className='control-icon-label'>{title}</div>
     </div>
   )
 }

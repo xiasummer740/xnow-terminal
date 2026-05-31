@@ -76,15 +76,19 @@
 .type-history
   .history-panel
     width 100%
-.control-icon-text
-  color var(--text)
-  &:hover
-    color var(--success)
+.control-icon-label
+  font-size 11px
+  color var(--text-dark)
+  line-height 1.3
+  margin-top 2px
+  white-space nowrap
 .control-icon-wrap
-  padding 14px 0
+  padding 10px 0 6px 0
   text-align center
   &.active
     .control-icon
+      color var(--text-light)
+    .control-icon-label
       color var(--text-light)
   .control-icon
     color var(--text-dark)

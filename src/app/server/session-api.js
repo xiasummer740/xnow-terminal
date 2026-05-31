@@ -76,10 +76,29 @@ async function startTerminalLogFile (body) {
   return 'ok'
 }
 
+async function tcpPing (body) {
+  const { pid } = body
+  const term = terminals(pid)
+  if (!term || !term.conn || !term.conn._protocol || !term.conn._callbacks) {
+    return -1
+  }
+  // SSH协议层 keepalive ping，单次往返RTT（类似FinalShell原理）
+  return new Promise((resolve) => {
+    const start = Date.now()
+    const timeout = setTimeout(() => resolve(-1), 3000)
+    term.conn._callbacks.push(() => {
+      clearTimeout(timeout)
+      resolve(Date.now() - start)
+    })
+    term.conn._protocol.ping()
+  })
+}
+
 exports.createTerm = createTerm
 exports.testTerm = testTerm
 exports.resize = resize
 exports.runCmd = runCmd
+exports.tcpPing = tcpPing
 exports.toggleTerminalLog = toggleTerminalLog
 exports.toggleTerminalLogTimestamp = toggleTerminalLogTimestamp
 exports.setTerminalLogPath = setTerminalLogPath
