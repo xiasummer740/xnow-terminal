@@ -246,6 +246,14 @@ export const commonFields = {
     name: 'enableTerminalImage',
     label: () => e('enableTerminalImage'),
     valuePropName: 'checked'
+  },
+
+  vpsUrl: {
+    type: 'input',
+    name: 'vpsUrl',
+    label: () => 'VPS网址',
+    rules: [{ type: 'url', message: '请输入有效的URL' }],
+    props: { placeholder: 'https:// 服务商管理面板或相关链接' }
   }
 }
 
@@ -294,6 +302,7 @@ export const basicAuthFields = [
   commonFields.category,
   commonFields.title,
   commonFields.description,
+  commonFields.vpsUrl,
   commonFields.type
 ]
 
@@ -312,6 +321,7 @@ export const sshAuthFields = [
   { type: 'switch', name: 'isMFA', label: () => e('MFA/OTP'), valuePropName: 'checked' },
   commonFields.runScripts,
   commonFields.description,
+  commonFields.vpsUrl,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,
@@ -334,6 +344,7 @@ export const telnetAuthFields = [
   commonFields.port,
   commonFields.runScripts,
   commonFields.description,
+  commonFields.vpsUrl,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,
