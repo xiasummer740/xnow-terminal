@@ -107,6 +107,7 @@ async function createGlobalStyle (props) {
   if (!st) {
     return '#container .session-batch-active .xterm-screen::before {' +
     'background-image: url("./images/xnow-logo.png");' +
+    'opacity: 0.1;' +
     '}'
   }
 

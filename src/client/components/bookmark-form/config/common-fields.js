@@ -252,8 +252,35 @@ export const commonFields = {
     type: 'input',
     name: 'vpsUrl',
     label: () => 'VPS网址',
-    rules: [{ type: 'url', message: '请输入有效的URL' }],
-    props: { placeholder: 'https:// 服务商管理面板或相关链接' }
+    props: { placeholder: 'https:// 服务商管理面板' }
+  },
+
+  vpsExpiry: {
+    type: 'input',
+    name: 'vpsExpiry',
+    label: () => '到期时间',
+    props: { placeholder: '如 2026-12-31' }
+  },
+
+  vpsPrice: {
+    type: 'input',
+    name: 'vpsPrice',
+    label: () => '购买价格',
+    props: { placeholder: '如 $5/月 或 ¥99/年' }
+  },
+
+  vpsTraffic: {
+    type: 'input',
+    name: 'vpsTraffic',
+    label: () => '流量/带宽',
+    props: { placeholder: '如 1TB/月 或 100Mbps' }
+  },
+
+  vpsRecharge: {
+    type: 'input',
+    name: 'vpsRecharge',
+    label: () => '续费/充值',
+    props: { placeholder: '如 每月1号 或 支付宝自动续费' }
   }
 }
 
@@ -294,6 +321,15 @@ export const sshSettings = [
 ]
 
 // Common auth fields
+// VPS 信息字段组
+const vpsFields = [
+  commonFields.vpsUrl,
+  commonFields.vpsExpiry,
+  commonFields.vpsPrice,
+  commonFields.vpsTraffic,
+  commonFields.vpsRecharge
+]
+
 export const basicAuthFields = [
   commonFields.host,
   commonFields.username,
@@ -302,7 +338,7 @@ export const basicAuthFields = [
   commonFields.category,
   commonFields.title,
   commonFields.description,
-  commonFields.vpsUrl,
+  ...vpsFields,
   commonFields.type
 ]
 
@@ -321,7 +357,7 @@ export const sshAuthFields = [
   { type: 'switch', name: 'isMFA', label: () => e('MFA/OTP'), valuePropName: 'checked' },
   commonFields.runScripts,
   commonFields.description,
-  commonFields.vpsUrl,
+  ...vpsFields,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,
@@ -344,7 +380,7 @@ export const telnetAuthFields = [
   commonFields.port,
   commonFields.runScripts,
   commonFields.description,
-  commonFields.vpsUrl,
+  ...vpsFields,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,

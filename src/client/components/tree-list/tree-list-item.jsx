@@ -126,6 +126,17 @@ function TreeListItem (props) {
       </span>
       )
     : null
+  // 到期提醒
+  const expiryWarn = (!isGroup && item.vpsExpiry)
+    ? (() => {
+      const d = new Date(item.vpsExpiry)
+      if (isNaN(d.getTime())) return null
+      const days = Math.ceil((d - Date.now()) / 86400000)
+      if (days <= 0) return <span title='已到期！' style={{ marginLeft: 4, color: '#ff4d4f', fontSize: 11 }}>⚠过期</span>
+      if (days <= 7) return <span title={`${days}天后到期`} style={{ marginLeft: 4, color: '#faad14', fontSize: 11 }}>⚠{days}天</span>
+      return null
+    })()
+    : null
   return (
     <div
       {...propsAll}
@@ -134,7 +145,7 @@ function TreeListItem (props) {
       <div
         {...titleProps}
       >
-        {colorTag}{tag}{titleHighlight}{vpsLink}
+        {colorTag}{tag}{titleHighlight}{vpsLink}{expiryWarn}
       </div>
     </div>
   )
