@@ -13,6 +13,10 @@ export const version = pack.version
 export const viewPath = resolve(cwd, '../../src/client/views')
 export const staticPaths = [
   {
+    dir: resolve(cwd, '../../src/client/res/imgs'),
+    path: '/images'
+  },
+  {
     dir: resolve(cwd, '../../node_modules/electerm-icons/icons'),
     path: '/icons'
   },
