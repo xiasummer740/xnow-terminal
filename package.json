@@ -1,7 +1,7 @@
 {
-  "name": "electerm",
+  "name": "xnow",
   "version": "3.12.5",
-  "description": "Terminal/ssh/telnet/serialport/sftp client(linux, mac, win)",
+  "description": "XNOW - 科技风终端管理工具 Terminal/ssh/telnet/serialport/sftp client(linux, mac, win)",
   "main": "app.js",
   "bin": "npm/electerm",
   "scripts": {
@@ -40,9 +40,9 @@
     "url": "git+https://github.com/electerm/electerm.git"
   },
   "author": {
-    "name": "ZHAO Xudong",
-    "email": "zxdong@gmail.com",
-    "url": "https://github.com/zxdong262"
+    "name": "XNOW Team",
+    "email": "contact@xnow.tech",
+    "url": "https://xnow.tech"
   },
   "bugs": {
     "url": "https://github.com/electerm/electerm/issues"
@@ -76,7 +76,7 @@
     "cross-env": "7.0.3",
     "dotenv": "16.4.5",
     "electerm-icons": "1.0.1",
-    "electron": "41.2.0",
+    "electron": "^41.2.0",
     "electron-builder": "26.9.0",
     "filesize": "10.1.6",
     "filesize-parser": "1.5.1",

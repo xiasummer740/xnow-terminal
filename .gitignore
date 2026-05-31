@@ -123,3 +123,7 @@ ftp-root
 /dist-loong64
 /work-loong64
 /.claude
+
+# 防止再次添加冗余目录
+/electerm/
+/temp-electerm/

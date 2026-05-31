@@ -10,48 +10,8 @@ const globalState = require('./global-state')
 
 class TerminalLocal extends TerminalBase {
   init () {
-    const {
-      cols,
-      rows,
-      execWindows,
-      execMac,
-      execLinux,
-      execWindowsArgs,
-      execMacArgs,
-      execLinuxArgs,
-      termType,
-      term
-    } = this.initOptions
-    this.isLocal = true
-    const { platform } = process
-    const isWin = platform.startsWith('win')
-    const exec = isWin
-      ? pathResolve(
-        process.env.windir,
-        execWindows
-      )
-      : platform === 'darwin' ? execMac : execLinux
-    if ((exec || '').includes('..')) {
-      return Promise.reject(new Error('execWindows should not contain ".."'))
-    }
-    const arg = isWin
-      ? execWindowsArgs
-      : platform === 'darwin' ? execMacArgs : execLinuxArgs
-    const cwd = process.env[platform === 'win32' ? 'USERPROFILE' : 'HOME']
-    const argv = platform.startsWith('darwin') ? ['--login', ...arg] : arg
-    const pty = require('node-pty')
-    const env = Object.assign({}, process.env)
-    this.term = pty.spawn(exec, argv, {
-      name: term,
-      encoding: null,
-      cols: cols || 80,
-      rows: rows || 24,
-      cwd,
-      env
-    })
-    this.term.termType = termType
-    globalState.setSession(this.pid, this)
-    return Promise.resolve(this)
+    // 本地终端功能已禁用（node-pty 模块未编译）
+    return Promise.reject(new Error('本地终端功能暂不可用，请使用 SSH 连接远程服务器'))
   }
 
   resize (cols, rows) {

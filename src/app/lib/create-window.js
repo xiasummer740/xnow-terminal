@@ -32,10 +32,10 @@ exports.createWindow = async function (userConfig) {
     fullscreenable: true,
     minWidth: minWindowWidth,
     minHeight: minWindowHeight,
-    title: packInfo.name,
+    title: 'XNOW',
     frame: useSystemTitleBar,
     transparent: !useSystemTitleBar,
-    backgroundColor: '#333333',
+    backgroundColor: '#0a0e1a',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -74,9 +74,10 @@ exports.createWindow = async function (userConfig) {
   })
   win.loadURL(opts)
   win.webContents.once('dom-ready', () => {
-    if (isDev && !userConfig.disableDeveloperTool) {
-      win.webContents.openDevTools()
-    }
+    // 已禁用开发者工具自动打开
+    // if (isDev && !userConfig.disableDeveloperTool) {
+    //   win.webContents.openDevTools()
+    // }
     win.on('unmaximize', () => {
       const { width, height } = win.getBounds()
       if (width < minWindowWidth || height < minWindowHeight) {

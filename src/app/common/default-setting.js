@@ -3,6 +3,7 @@
  */
 
 module.exports = exports.default = {
+  language: 'zh_cn',
   hotkey: 'Control+2',
   sshReadyTimeout: 50000,
   scrollback: 3000,
@@ -49,7 +50,8 @@ module.exports = exports.default = {
     'mem',
     'activities',
     'network',
-    'disks'
+    'disks',
+    'ping'
   ],
   filePropsEnabled: [
     'name',
@@ -68,6 +70,6 @@ module.exports = exports.default = {
   showCmdSuggestions: false,
   startDirectoryLocal: '',
   allowMultiInstance: false,
-  disableDeveloperTool: false,
+  disableDeveloperTool: true,
   dragDropBehavior: 'ask'
 }
