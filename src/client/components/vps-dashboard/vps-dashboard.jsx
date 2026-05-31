@@ -15,35 +15,6 @@ import {
 } from '@ant-design/icons'
 import './vps-dashboard.styl'
 
-// 延迟数据模拟（可后续接入真实 ping）
-const REGIONS = {
-  JP: { name: '日本', flag: '🇯🇵', color: '#f5222d' },
-  HK: { name: '香港', flag: '🇭🇰', color: '#fa8c16' },
-  US: { name: '美国', flag: '🇺🇸', color: '#1890ff' },
-  SG: { name: '新加坡', flag: '🇸🇬', color: '#722ed1' },
-  KR: { name: '韩国', flag: '🇰🇷', color: '#eb2f96' },
-  DE: { name: '德国', flag: '🇩🇪', color: '#13c2c2' },
-  CN: { name: '中国', flag: '🇨🇳', color: '#52c41a' },
-  OTHER: { name: '其他', flag: '🌐', color: '#666' }
-}
-
-function detectRegion (host) {
-  if (!host) return REGIONS.OTHER
-  const h = host.toLowerCase()
-  if (h.includes('.jp') || h.includes('jp.')) return REGIONS.JP
-  if (h.includes('.hk') || h.includes('hk.')) return REGIONS.HK
-  if (h.includes('.us') || h.includes('us.')) return REGIONS.US
-  if (h.includes('.sg') || h.includes('sg.')) return REGIONS.SG
-  if (h.includes('.kr') || h.includes('kr.')) return REGIONS.KR
-  if (h.includes('.de') || h.includes('de.')) return REGIONS.DE
-  if (h.includes('.cn') || h.includes('cn.')) return REGIONS.CN
-  // 根据 IP 段粗略判断
-  if (/^(103|124|126|150|160|180|203|210|211|218|219|220|221|222|223)\./.test(h)) return REGIONS.CN
-  if (/^(1|3|4|5|8|13|23|24|34|38|45|47|50|52|54|63|64|66|67|69|70|72|74|76|96|98|104|107|108|128|131|135|136|138|139|140|142|144|146|147|148|149|152|155|156|157|158|159|161|162|166|168|170|172|173|174|175|176|180|183|184|192|198|199|207|208|209|212|216)\./.test(h)) return REGIONS.US
-  if (/^(27|42|101|103|106|110|111|112|113|114|115|116|117|118|119|120|121|122|123|124|125|126|128|129|130|132|133|150|153|157|160|163|171|175|180|182|183|202|203|210|211|218|219|220|221|222|223)\./.test(h)) return REGIONS.JP
-  return REGIONS.OTHER
-}
-
 function ExpiryBadge ({ days, isExpired }) {
   if (isExpired) return <Tag color='red' icon={<WarningOutlined />}>已过期 {Math.abs(days)}天</Tag>
   if (days <= 7) return <Tag color='red'>{days}天</Tag>
@@ -74,8 +45,7 @@ export default function VpsDashboard ({ visible, onClose }) {
         vpsTraffic: b.vpsTraffic,
         vpsRecharge: b.vpsRecharge,
         isExpired: expiryDays !== null && expiryDays <= 0,
-        isExpiring: expiryDays !== null && expiryDays > 0 && expiryDays <= 30,
-        region: detectRegion(b.host)
+        isExpiring: expiryDays !== null && expiryDays > 0 && expiryDays <= 30
       }
     })
     .sort((a, b) => {
@@ -106,25 +76,25 @@ export default function VpsDashboard ({ visible, onClose }) {
       className='vps-dashboard-modal'
       destroyOnClose
     >
-      {/* 顶部状态条 */}
+      {/* 顶部统计条 */}
       <div className='vps-stats-strip'>
-        <div className='stat-item total'>
-          <span className='stat-num'>{stats.total}</span>
-          <span className='stat-label'>总计</span>
+        <div className='stat-item'>
+          <span className='stat-num c-total'>{stats.total}</span>
+          <span className='stat-label'>总台数</span>
         </div>
-        <div className='stat-item healthy'>
-          <span className='stat-num'>{stats.healthy}</span>
+        <div className='stat-item'>
+          <span className='stat-num c-good'>{stats.healthy}</span>
           <span className='stat-label'>正常</span>
         </div>
         {stats.expiring > 0 && (
-          <div className='stat-item warning'>
-            <span className='stat-num'>{stats.expiring}</span>
+          <div className='stat-item'>
+            <span className='stat-num c-warn'>{stats.expiring}</span>
             <span className='stat-label'>即将到期</span>
           </div>
         )}
         {stats.expired > 0 && (
-          <div className='stat-item danger'>
-            <span className='stat-num'>{stats.expired}</span>
+          <div className='stat-item'>
+            <span className='stat-num c-bad'>{stats.expired}</span>
             <span className='stat-label'>已过期</span>
           </div>
         )}
@@ -141,11 +111,9 @@ export default function VpsDashboard ({ visible, onClose }) {
               key={vps.id}
               className={`vps-card ${vps.isExpired ? 'expired' : vps.isExpiring ? 'expiring' : 'normal'}`}
             >
-              {/* 卡片头部：地区 + 名称 */}
+              {/* 卡片头部：主机 + 管理面板链接 */}
               <div className='vps-card-header'>
-                <span className='vps-region' style={{ color: vps.region.color }}>
-                  {vps.region.flag} {vps.region.name}
-                </span>
+                <span className='vps-host'>{vps.host || '未设主机'}</span>
                 {vps.vpsUrl && (
                   <Tooltip title='打开管理面板'>
                     <LinkOutlined

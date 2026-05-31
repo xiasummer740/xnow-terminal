@@ -214,6 +214,8 @@ export default (Store) => {
     )
     // 关闭启动时自动检查更新
     store.config.checkUpdateOnStart = false
+    // 启用系统标题栏（Windows 11 圆角窗口）
+    store.config.useSystemTitleBar = true
     store.startAutoRunWidgets().catch(err => {
       console.error('Failed to start autorun widgets:', err)
     })
