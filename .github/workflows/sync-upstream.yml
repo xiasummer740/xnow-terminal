@@ -1,0 +1,77 @@
+name: 同步官方更新
+
+on:
+  schedule:
+    # 每周一凌晨 3 点检查
+    - cron: '37 3 * * 1'
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 添加上游仓库
+        run: |
+          git remote add upstream https://github.com/electerm/electerm.git
+          git fetch upstream
+
+      - name: 检查是否有更新
+        id: check
+        run: |
+          # 比较上游 master 和本地 main 的差异
+          BEHIND=$(git rev-list --count main..upstream/master)
+          echo "behind=$BEHIND" >> $GITHUB_OUTPUT
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "发现 $BEHIND 个新提交"
+          else
+            echo "已经是最新，无需同步"
+          fi
+
+      - name: 合并上游更新
+        if: steps.check.outputs.behind > 0
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          # 创建同步分支
+          git checkout -b sync/upstream-$(date +%Y%m%d) main
+          # 合并上游
+          if git merge upstream/master --no-edit; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+          else
+            echo "conflict=true" >> $GITHUB_OUTPUT
+          fi
+        id: merge
+
+      - name: 创建 PR（自动合并成功）
+        if: steps.merge.outputs.merged == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: '🔄 同步官方上游更新'
+          body: |
+            自动从 [electerm/electerm](https://github.com/electerm/electerm) 合并了最新更新。
+
+            如有问题请检查后手动修复。
+
+            🤖 Generated with Claude Code
+          branch: sync/upstream-${{ github.run_id }}
+          base: main
+
+      - name: 创建 Issue（合并冲突需手动处理）
+        if: steps.merge.outputs.conflict == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ 同步官方更新时发生冲突，需手动处理',
+              body: '官方 electerm/electerm 有新更新，但自动合并时发生冲突。请手动执行：\n\n```bash\ngit fetch upstream\ngit merge upstream/master\n# 解决冲突后\ngit push origin main\n```',
+              labels: ['upstream', 'conflict']
+            })

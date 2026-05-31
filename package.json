@@ -28,7 +28,8 @@
     "r": "./build/bin/release",
     "w": "./build/bin/web-release",
     "t": "./node_modules/.bin/electron work/app/app.js",
-    "lock": "npm i --package-lock-only"
+    "lock": "npm i --package-lock-only",
+    "sync-upstream": "git fetch upstream && git merge upstream/master --no-edit"
   },
   "license": "MIT",
   "langugeRepo": "https://github.com/electerm/electerm-locales",
