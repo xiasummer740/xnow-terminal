@@ -11,7 +11,7 @@ export default function TerminalInfoUp (props) {
   }
   return (
     <div className='terminal-info-section terminal-info-up'>
-      <b><ClockCircleOutlined /> uptime</b>: {uptime}
+      <b><ClockCircleOutlined /> 运行时间</b>: {uptime}
     </div>
   )
 }

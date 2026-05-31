@@ -79,10 +79,10 @@ export default function TerminalInfoDisk (props) {
     return a.name > b.name ? 1 : -1
   })
   const map = {
-    up: '↑',
-    down: '↓',
-    name: 'name',
-    ip: 'ipv4'
+    up: '上传↑',
+    down: '下载↓',
+    name: '网卡',
+    ip: 'IP地址'
   }
   const col = ['name', 'ip', 'up', 'down'].map((k, i) => {
     return {
@@ -110,7 +110,7 @@ export default function TerminalInfoDisk (props) {
   }
   return (
     <div className='terminal-info-section terminal-info-network'>
-      <div className='pd1y bold'><ApiOutlined /> Network</div>
+      <div className='pd1y bold'><ApiOutlined /> 网络流量</div>
       <Table {...ps} />
     </div>
   )

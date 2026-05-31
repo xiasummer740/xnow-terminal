@@ -73,19 +73,19 @@ export default function TerminalInfoResource (props) {
   const data = []
   if (terminalInfos.includes('cpu')) {
     data.push({
-      name: 'cpu',
+      name: 'CPU',
       percent: parseInt10(cpu) || 0
     })
   }
   if (terminalInfos.includes('mem')) {
     data.push({
-      name: 'mem',
+      name: '内存',
       ...mem
     })
   }
   if (terminalInfos.includes('swap')) {
     data.push({
-      name: 'swap',
+      name: '交换分区',
       ...swap
     })
   }

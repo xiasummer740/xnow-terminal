@@ -30,7 +30,18 @@ const mapper = {
   mem: <DatabaseOutlined />,
   activities: <BarsOutlined />,
   network: <ApiOutlined />,
-  disks: <PartitionOutlined />
+  disks: <PartitionOutlined />,
+  ping: <ApiOutlined />
+}
+
+const labelMapper = {
+  uptime: '运行时间',
+  cpu: 'CPU',
+  mem: '内存',
+  activities: '进程',
+  network: '网络',
+  disks: '磁盘',
+  ping: '延迟'
 }
 
 export default class TerminalInfoBase extends Component {
@@ -151,7 +162,7 @@ export default class TerminalInfoBase extends Component {
                 className='cap'
                 icon={mapper[f]}
               >
-                {f}
+                {labelMapper[f] || f}
               </Button>
             )
           })

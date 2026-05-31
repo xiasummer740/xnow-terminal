@@ -46,7 +46,7 @@ export default function TerminalInfoActivities (props) {
   }
   return (
     <div className='terminal-info-section terminal-info-act'>
-      <div className='pd1y bold'><BarsOutlined /> Activities</div>
+      <div className='pd1y bold'><BarsOutlined /> 进程活动</div>
       <Table {...ps} />
     </div>
   )
