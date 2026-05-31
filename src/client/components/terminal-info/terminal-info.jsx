@@ -5,6 +5,7 @@
 import { PureComponent } from 'react'
 import TerminalInfoBase from './base'
 import TerminalInfoUp from './up'
+import TerminalInfoPing from './ping'
 import TerminalInfoNetwork from './network'
 import TerminalInfoResource from './resource'
 import TerminalInfoActivities from './activity'
@@ -45,6 +46,7 @@ export default class TerminalInfoContent extends PureComponent {
       <>
         <TerminalInfoBase {...props} {...state} />
         <TerminalInfoUp {...props} {...state} />
+        <TerminalInfoPing {...props} {...state} />
         <TerminalInfoResource
           {...props} {...state}
         />
