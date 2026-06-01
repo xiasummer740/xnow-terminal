@@ -192,6 +192,11 @@ export default (Store) => {
         }
       })
     ext.lastDataUpdateTime = await getData('lastDataUpdateTime') || 0
+    // 强制设置（必须在 openInitSessions 之前）
+    store.config.checkUpdateOnStart = false
+    store.config.language = 'zh_cn'
+    store.config.initDefaultTabOnStart = false
+
     Object.assign(store, ext)
     store.loadFontList()
     store.fetchItermThemes()
@@ -212,12 +217,6 @@ export default (Store) => {
       },
       2000
     )
-    // 关闭启动时自动检查更新
-    store.config.checkUpdateOnStart = false
-    // 强制中文
-    store.config.language = 'zh_cn'
-    // 不自动创建新连接标签
-    store.config.initDefaultTabOnStart = false
     store.startAutoRunWidgets().catch(err => {
       console.error('Failed to start autorun widgets:', err)
     })
