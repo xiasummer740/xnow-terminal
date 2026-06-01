@@ -158,7 +158,7 @@ export default () => {
 
     // sidebar
     openedSideBar: ls.getItem(openedSidebarKey) || '',
-    leftSidebarWidth: parseInt(ls.getItem(leftSidebarWidthKey), 10) || 300,
+    leftSidebarWidth: parseInt(ls.getItem(leftSidebarWidthKey), 10) || 360,
     addPanelWidth: parseInt(ls.getItem(addPanelWidthLsKey), 10) || 300,
     menuOpened: false,
     pinned: ls.getItem(sidebarPinnedKey) === 'true',
