@@ -33,23 +33,23 @@
   },
   "license": "MIT",
   "langugeRepo": "https://github.com/electerm/electerm-locales",
-  "privacyNoticeLink": "https://github.com/electerm/electerm/wiki/privacy-notice",
-  "knownIssuesLink": "https://github.com/electerm/electerm/wiki/Know-issues",
-  "sponsorLink": "https://electerm.html5beta.com/sponsor-electerm.html",
+  "privacyNoticeLink": "https://github.com/xiasummer740/xnow-terminal",
+  "knownIssuesLink": "https://github.com/xiasummer740/xnow-terminal/issues",
+  "sponsorLink": "https://github.com/xiasummer740/xnow-terminal",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/electerm/electerm.git"
+    "url": "git+https://github.com/xiasummer740/xnow-terminal.git"
   },
   "author": {
     "name": "XNOW Team",
     "email": "contact@xnow.tech",
-    "url": "https://xnow.tech"
+    "url": "https://github.com/xiasummer740/xnow-terminal"
   },
   "bugs": {
-    "url": "https://github.com/electerm/electerm/issues"
+    "url": "https://github.com/xiasummer740/xnow-terminal/issues"
   },
-  "homepage": "https://electerm.html5beta.com",
-  "releases": "https://github.com/electerm/electerm/releases",
+  "homepage": "https://github.com/xiasummer740/xnow-terminal",
+  "releases": "https://github.com/xiasummer740/xnow-terminal/releases",
   "engines": {
     "node": ">=16.0.0"
   },
