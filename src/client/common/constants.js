@@ -201,7 +201,6 @@ export const baseUpdateCheckUrls = [
   'https://github.com/xiasummer740/xnow-terminal/releases/latest',
   'https://api.github.com/repos/xiasummer740/xnow-terminal/releases/latest'
 ]
-]
 export const syncTypes = buildConst([
   'github',
   'gitee',
