@@ -195,6 +195,7 @@ export default (Store) => {
     store.config.language = 'zh_cn'
     store.config.initDefaultTabOnStart = false
     store.config.sshSftpSplitView = true
+    store.config.autoReconnectTerminal = true
 
     Object.assign(store, ext)
     store.loadFontList()
