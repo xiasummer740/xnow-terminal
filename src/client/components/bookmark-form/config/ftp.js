@@ -36,8 +36,10 @@ const ftpConfig = {
         commonFields.encode,
         commonFields.proxy,
         commonFields.type
+    vpsInfoTab()
       ]
     }
+    vpsInfoTab()
   ]
 }
 

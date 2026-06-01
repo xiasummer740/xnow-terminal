@@ -38,9 +38,11 @@ const rdpConfig = {
         { type: 'input', name: 'domain', label: () => e('domain') },
         commonFields.proxy,
         commonFields.type
+    vpsInfoTab()
       ]
     },
-    connectionHoppingTab()
+    connectionHoppingTab(),
+    vpsInfoTab()
   ]
 }
 

@@ -35,8 +35,10 @@ const spiceConfig = {
         commonFields.description,
         commonFields.proxy,
         commonFields.type
+    vpsInfoTab()
       ]
     }
+    vpsInfoTab()
   ]
 }
 

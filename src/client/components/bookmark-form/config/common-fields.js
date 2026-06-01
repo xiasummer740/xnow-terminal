@@ -338,7 +338,6 @@ export const basicAuthFields = [
   commonFields.category,
   commonFields.title,
   commonFields.description,
-  ...vpsFields,
   commonFields.type
 ]
 
@@ -357,7 +356,6 @@ export const sshAuthFields = [
   { type: 'switch', name: 'isMFA', label: () => e('MFA/OTP'), valuePropName: 'checked' },
   commonFields.runScripts,
   commonFields.description,
-  ...vpsFields,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,
@@ -380,7 +378,6 @@ export const telnetAuthFields = [
   commonFields.port,
   commonFields.runScripts,
   commonFields.description,
-  ...vpsFields,
   commonFields.setEnv,
   commonFields.startDirectoryLocal,
   commonFields.startDirectory,
@@ -406,4 +403,10 @@ export const connectionHoppingTab = () => ({
   key: 'connectionHopping',
   label: e('connectionHopping'),
   fields: [commonFields.connectionHopping]
+})
+
+export const vpsInfoTab = () => ({
+  key: 'vpsInfo',
+  label: 'VPS 信息',
+  fields: vpsFields
 })

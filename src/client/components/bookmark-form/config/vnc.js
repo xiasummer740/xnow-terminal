@@ -43,9 +43,11 @@ const vncConfig = {
         commonFields.description,
         commonFields.proxy,
         commonFields.type
+    vpsInfoTab()
       ]
     },
-    connectionHoppingTab()
+    connectionHoppingTab(),
+    vpsInfoTab()
   ]
 }
 

@@ -62,6 +62,7 @@ const serialConfig = {
         commonFields.runScripts,
         commonFields.description,
         { type: 'input', name: 'type', label: 'type', hidden: true }
+    vpsInfoTab()
       ]
     },
     {
@@ -69,6 +70,7 @@ const serialConfig = {
       label: e('settings'),
       fields: [
         { type: 'terminalBackground', name: 'terminalBackground', label: () => e('terminalBackgroundImage') }
+    vpsInfoTab()
       ]
     },
     {
@@ -76,8 +78,10 @@ const serialConfig = {
       label: e('quickCommands'),
       fields: [
         { type: 'quickCommands', name: '__quick__', label: '' }
+    vpsInfoTab()
       ]
     }
+    vpsInfoTab()
   ]
 }
 
