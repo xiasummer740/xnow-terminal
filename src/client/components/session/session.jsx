@@ -59,8 +59,8 @@ export default class SessionWrapper extends Component {
     props.tab.sshSftpSplitView = !!props.config.sshSftpSplitView
   }
 
-  minWithForSplit = 640
-  minHeightForSplit = 400
+  minWithForSplit = 500
+  minHeightForSplit = 300
 
   componentWillUnmount () {
     clearTimeout(this.backspaceKeyPressedTimer)
