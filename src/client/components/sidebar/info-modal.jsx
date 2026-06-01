@@ -13,7 +13,7 @@ import {
   ImportOutlined,
   CloudDownloadOutlined
 } from '@ant-design/icons'
-import { Tabs, Button, message, Upload, Space } from 'antd'
+import { Tabs, Button, message, Upload, Space, Modal as AntModal } from 'antd'
 import Modal from '../common/modal'
 import Link from '../common/external-link'
 import LogoElem from '../common/logo-elem'
@@ -186,21 +186,29 @@ export default auto(function InfoModal (props) {
   }
 
   const handleImportAll = (file) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result)
-        if (data.bookmarks) window.store.bookmarks = data.bookmarks
-        if (data.bookmarkGroups) window.store.bookmarkGroups = data.bookmarkGroups
-        if (data.config) Object.assign(window.store.config, data.config)
-        if (data.terminalThemes) window.store.terminalThemes = data.terminalThemes
-        if (data.addressBookmarks) window.store.addressBookmarks = data.addressBookmarks
-        message.success('导入成功，请重启应用以完全生效')
-      } catch (err) {
-        message.error('文件格式错误')
+    AntModal.confirm({
+      title: '确认导入',
+      content: '导入备份将覆盖当前所有书签、分组和配置，确定继续？',
+      okText: '确认导入',
+      cancelText: '取消',
+      onOk: () => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result)
+            if (data.bookmarks) window.store.bookmarks = data.bookmarks
+            if (data.bookmarkGroups) window.store.bookmarkGroups = data.bookmarkGroups
+            if (data.config) Object.assign(window.store.config, data.config)
+            if (data.terminalThemes) window.store.terminalThemes = data.terminalThemes
+            if (data.addressBookmarks) window.store.addressBookmarks = data.addressBookmarks
+            message.success('导入成功，请重启应用以完全生效')
+          } catch (err) {
+            message.error('文件格式错误')
+          }
+        }
+        reader.readAsText(file)
       }
-    }
-    reader.readAsText(file)
+    })
     return false
   }
 
