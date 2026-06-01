@@ -127,9 +127,7 @@ export default (Store) => {
       for (const s of arr) {
         store.onSelectBookmark(s)
       }
-      if (!arr.length && store.config.initDefaultTabOnStart) {
-        store.initFirstTab()
-      }
+      // 不自动创建新连接标签
     }
 
     store.confirmLoad()
