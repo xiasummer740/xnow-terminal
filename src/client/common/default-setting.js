@@ -3,6 +3,7 @@
  */
 
 export default {
+  language: 'zh_cn',
   hotkey: 'Control+2',
   sshReadyTimeout: 50000,
   scrollback: 3000,
