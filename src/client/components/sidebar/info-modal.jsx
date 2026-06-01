@@ -8,15 +8,21 @@ import {
   InfoCircleOutlined,
   AlignLeftOutlined,
   BugOutlined,
-  HeartOutlined
+  HeartOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  CloudDownloadOutlined
 } from '@ant-design/icons'
-import { Tabs, Button } from 'antd'
+import { Tabs, Button, message, Upload, Space } from 'antd'
 import Modal from '../common/modal'
 import Link from '../common/external-link'
 import LogoElem from '../common/logo-elem'
 import RunningTime from './app-running-time'
 import { auto } from 'manate/react'
 import { useState } from 'react'
+import copy from 'json-deep-copy'
+import time from '../../common/time'
+import download from '../../common/download'
 
 import {
   packInfo,
@@ -122,7 +128,6 @@ export default auto(function InfoModal (props) {
   }
   const {
     name,
-    // description,
     devDependencies,
     dependencies,
     langugeRepo,
@@ -163,6 +168,42 @@ export default auto(function InfoModal (props) {
     open: true,
     wrapClassName: 'info-modal'
   }
+
+  // 一键备份
+  const handleExportAll = () => {
+    const data = {
+      version: packInfo.version,
+      exportTime: time(undefined, 'YYYY-MM-DD-HH-mm-ss'),
+      bookmarks: copy(window.store.bookmarks || []),
+      bookmarkGroups: copy(window.store.bookmarkGroups || []),
+      config: copy(window.store.config || {}),
+      terminalThemes: copy(window.store.terminalThemes || []),
+      addressBookmarks: copy(window.store.addressBookmarks || [])
+    }
+    const json = JSON.stringify(data, null, 2)
+    download('xnow-backup-' + time(undefined, 'YYYY-MM-DD-HH-mm-ss') + '.json', json)
+    message.success('备份已下载')
+  }
+
+  const handleImportAll = (file) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result)
+        if (data.bookmarks) window.store.bookmarks = data.bookmarks
+        if (data.bookmarkGroups) window.store.bookmarkGroups = data.bookmarkGroups
+        if (data.config) Object.assign(window.store.config, data.config)
+        if (data.terminalThemes) window.store.terminalThemes = data.terminalThemes
+        if (data.addressBookmarks) window.store.addressBookmarks = data.addressBookmarks
+        message.success('导入成功，请重启应用以完全生效')
+      } catch (err) {
+        message.error('文件格式错误')
+      }
+    }
+    reader.readAsText(file)
+    return false
+  }
+
   const items = [
     {
       key: infoTabs.info,
@@ -267,6 +308,28 @@ export default auto(function InfoModal (props) {
       key: infoTabs.os,
       label: e('os'),
       children: <div>{renderOSInfo()}</div>
+    },
+    {
+      key: 'backup',
+      label: '备份恢复',
+      children: (
+        <div style={{ padding: '16px 0' }}>
+          <Space direction='vertical' size='middle' style={{ width: '100%' }}>
+            <div>
+              <h4><CloudDownloadOutlined className='mg1r' />一键全量备份</h4>
+              <p style={{ color: '#888', marginBottom: 8 }}>导出所有书签、分组、配置、终端主题为一个 JSON 文件，换电脑时用它恢复。</p>
+              <Button type='primary' icon={<ExportOutlined />} onClick={handleExportAll}>导出全部数据</Button>
+            </div>
+            <div>
+              <h4><ImportOutlined className='mg1r' />从备份恢复</h4>
+              <p style={{ color: '#888', marginBottom: 8 }}>选择之前导出的 JSON 备份文件，恢复所有数据。恢复后需重启应用。</p>
+              <Upload accept='.json' showUploadList={false} beforeUpload={handleImportAll}>
+                <Button icon={<ImportOutlined />}>导入备份文件</Button>
+              </Upload>
+            </div>
+          </Space>
+        </div>
+      )
     }
   ]
 
