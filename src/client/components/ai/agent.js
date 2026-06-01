@@ -21,13 +21,11 @@ function buildAgentSystemPrompt (config) {
   const baseRole = config.roleAI || 'You are a helpful assistant.'
   const customPrompt = window.store.config?.agentSystemPrompt
 
-  // 加载历史经验
   const memories = loadMemories()
   const memoryText = memories.length > 0
-    ? '\n\n## 历史经验（从过去任务中学到的技能）\n' +
-      memories.map((m, i) => `${i + 1}. ${m}`).join('\n') +
-      '\n\n完成任务后，如果学到了新的可复用经验，在回复末尾用 [LEARN: 一句话总结] 格式记录。'
-    : '\n\n完成任务后，如果学到了新的可复用经验，在回复末尾用 [LEARN: 一句话总结] 格式记录。'
+    ? '\n\n## 已掌握的经验技能\n' +
+      memories.map((m, i) => `${i + 1}. ${m}`).join('\n')
+    : ''
 
   const basePrompt = customPrompt && customPrompt.trim()
     ? `${baseRole}\n\n${customPrompt}\n\nReply in ${lang} language.`
@@ -64,16 +62,6 @@ Reply in ${lang} language.`
   return basePrompt + memoryText
 }
 
-function extractLearnings (text) {
-  const learnings = []
-  const regex = /\[LEARN:\s*([^\]]+)\]/gi
-  let match
-  while ((match = regex.exec(text)) !== null) {
-    learnings.push(match[1].trim())
-  }
-  return learnings
-}
-
 function updateChatEntry (chatEntry, updates) {
   const index = window.store.aiChatHistory.findIndex(i => i.id === chatEntry.id)
   if (index !== -1) {
@@ -93,6 +81,39 @@ async function callBackendAIchatWithTools (messages, config) {
     config.proxyAI,
     agentTools
   )
+}
+
+// 自动总结学习 — 用 AI 提炼经验
+async function autoLearn (messages, accumulatedContent, config) {
+  try {
+    const summaryMsg = [
+      { role: 'system', content: '你是一个经验提炼助手。根据以下对话，用一句中文总结本次任务中学到的可复用经验或技能。只输出总结，不要其他内容。' },
+      { role: 'user', content: '请总结这次任务的经验：\n' + accumulatedContent.substring(0, 2000) }
+    ]
+    const result = await window.pre.runGlobalAsync(
+      'AIchat',
+      summaryMsg[1].content,
+      config.modelAI,
+      summaryMsg[0].content,
+      config.baseURLAI,
+      config.apiPathAI,
+      config.apiKeyAI,
+      config.proxyAI,
+      false
+    )
+    if (result && result.response && !result.error) {
+      const learning = result.response.trim()
+      if (learning && learning.length > 5 && learning.length < 200) {
+        const existing = loadMemories()
+        if (!existing.includes(learning)) {
+          existing.push(learning)
+          saveMemories(existing)
+        }
+      }
+    }
+  } catch (e) {
+    // 静默失败，不影响主流程
+  }
 }
 
 export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming) {
@@ -147,23 +168,10 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
     }
 
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
-      // Agent 完成了，提取学到的经验
-      const newLearnings = extractLearnings(accumulatedContent)
-      if (newLearnings.length > 0) {
-        const existing = loadMemories()
-        for (const l of newLearnings) {
-          if (!existing.includes(l)) existing.push(l)
-        }
-        saveMemories(existing)
-        // 清理回复中的 LEARN 标记
-        const cleaned = accumulatedContent.replace(/\[LEARN:\s*[^\]]+\]/gi, '')
-        accumulatedContent = cleaned
-      }
-
       setIsStreaming(false)
-      updateChatEntry(chatEntry, {
-        response: accumulatedContent
-      })
+      updateChatEntry(chatEntry, { response: accumulatedContent })
+      // 后台自动总结学习
+      autoLearn(messages, accumulatedContent, config)
       return
     }
 
@@ -177,11 +185,7 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
       }
 
       let args
-      try {
-        args = JSON.parse(toolCall.function.arguments)
-      } catch {
-        args = {}
-      }
+      try { args = JSON.parse(toolCall.function.arguments) } catch { args = {} }
 
       const toolEntry = {
         id: toolCall.id,
@@ -191,9 +195,7 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
         result: null
       }
       toolCallsLog.push(toolEntry)
-      updateChatEntry(chatEntry, {
-        toolCalls: [...toolCallsLog]
-      })
+      updateChatEntry(chatEntry, { toolCalls: [...toolCallsLog] })
 
       let toolResult
       try {
@@ -205,9 +207,7 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
         toolEntry.result = err.message
       }
 
-      updateChatEntry(chatEntry, {
-        toolCalls: [...toolCallsLog]
-      })
+      updateChatEntry(chatEntry, { toolCalls: [...toolCallsLog] })
 
       messages.push({
         role: 'tool',
@@ -223,7 +223,6 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
   })
 }
 
-// 导出手动管理记忆的接口
 export function getAgentMemories () { return loadMemories() }
 export function clearAgentMemories () { saveMemories([]) }
 export function addAgentMemory (text) {
