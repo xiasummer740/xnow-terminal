@@ -51,7 +51,9 @@ export default class Sftp extends Component {
       ...this.defaultState(),
       loadingSftp: false,
       inited: false,
-      ready: false
+      ready: false,
+      localCollapsed: false,
+      remoteCollapsed: false
     }
     this.retryCount = 0
   }
@@ -1202,16 +1204,31 @@ export default class Sftp extends Component {
   }
 
   renderSftpPanelTitle (type, username, host) {
-    if (type === typeMap.remote) {
-      return (
-        <div className='sftp-panel-title pd1t pd1b pd1x alignright'>
+    const isRemote = type === typeMap.remote
+    const collapsed = isRemote ? this.state.remoteCollapsed : this.state.localCollapsed
+    const toggleCollapse = () => {
+      if (isRemote) {
+        this.setState({ remoteCollapsed: !collapsed })
+      } else {
+        this.setState({ localCollapsed: !collapsed })
+      }
+    }
+    const title = isRemote
+      ? `${e('remote')}: ${username}@${host}`
+      : e('local')
+    return (
+      <div className='sftp-panel-title pd1t pd1b pd1x' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ cursor: 'pointer', userSelect: 'none', fontSize: 12 }} onClick={toggleCollapse}>
+          {collapsed ? '▸' : '▾'} {title}
+        </span>
+        {isRemote && (
           <ReloadOutlined
             className='mg1r pointer'
             onClick={this.handleReloadRemoteSftp}
           />
-          {e('remote')}: {username}@{host}
-        </div>
-      )
+        )}
+      </div>
+    )
     }
     return (
       <div className='sftp-panel-title pd1t pd1b pd1x'>
@@ -1221,6 +1238,7 @@ export default class Sftp extends Component {
   }
 
   renderSection (type, style, width) {
+    const collapsed = type === typeMap.remote ? this.state.remoteCollapsed : this.state.localCollapsed
     const {
       id
     } = this.state
@@ -1293,16 +1311,20 @@ export default class Sftp extends Component {
             {
               this.renderSftpPanelTitle(type, username, host)
             }
-            <AddressBar
-              {...addrProps}
-            />
-            <div
-              className={`file-list ${type} relative`}
-            >
-              <ListTable
-                {...listProps}
-              />
-            </div>
+            {!collapsed && (
+              <>
+                <AddressBar
+                  {...addrProps}
+                />
+                <div
+                  className={`file-list ${type} relative`}
+                >
+                  <ListTable
+                    {...listProps}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </Spin>
       </div>
@@ -1330,6 +1352,22 @@ export default class Sftp extends Component {
           height
         }, width)
       )
+    }
+    const { localCollapsed, remoteCollapsed } = this.state
+    if (localCollapsed && !remoteCollapsed) {
+      // 本地收起，远程全宽
+      return this.renderSection(typeMap.remote, { width, left: 0, top: 0, height }, width)
+    }
+    if (remoteCollapsed && !localCollapsed) {
+      // 远程收起，本地全宽
+      return this.renderSection(typeMap.local, { width, left: 0, top: 0, height }, width)
+    }
+    if (localCollapsed && remoteCollapsed) {
+      // 都收起，只显示标题栏
+      return arr.map((t) => {
+        const halfW = width / 2
+        return this.renderSection(t, { width: halfW, left: 0, top: 0, height }, halfW)
+      })
     }
     return arr.map((t, i) => {
       const style = {
