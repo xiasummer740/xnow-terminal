@@ -214,8 +214,6 @@ export default (Store) => {
     )
     // 关闭启动时自动检查更新
     store.config.checkUpdateOnStart = false
-    // 窗口圆角需要 frameless 模式
-    store.config.useSystemTitleBar = false
     store.startAutoRunWidgets().catch(err => {
       console.error('Failed to start autorun widgets:', err)
     })

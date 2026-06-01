@@ -33,9 +33,9 @@ exports.createWindow = async function (userConfig) {
     minWidth: minWindowWidth,
     minHeight: minWindowHeight,
     title: 'XNOW',
-    frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
+    frame: true,
+    transparent: false,
+    backgroundColor: '#0a0e1a',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
