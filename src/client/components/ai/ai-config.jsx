@@ -4,7 +4,8 @@ import {
   Button,
   AutoComplete,
   Alert,
-  Space
+  Space,
+  Select
 } from 'antd'
 import { useEffect, useState } from 'react'
 import Link from '../common/external-link'
@@ -20,13 +21,22 @@ const STORAGE_KEY_CONFIG = 'ai_config_history'
 const EVENT_NAME_CONFIG = 'ai-config-history-update'
 
 const e = window.translate
+
+// AI 平台预设
+const AI_PLATFORMS = [
+  { label: '🔵 DeepSeek (首选)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
+  { label: '🟢 OpenAI', value: 'openai', url: 'https://api.openai.com', path: '/v1/chat/completions', model: 'gpt-4o', key: '' },
+  { label: '🟣 Anthropic Claude', value: 'claude', url: 'https://api.anthropic.com', path: '/v1/messages', model: 'claude-sonnet-4-20250514', key: '' },
+  { label: '🟠 阿里通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },
+  { label: '🔴 百度文心一言', value: 'ernie', url: 'https://qianfan.baidubce.com', path: '/v2/chat/completions', model: 'ernie-4.0-8k', key: '' },
+  { label: '⚪ 智谱 GLM', value: 'glm', url: 'https://open.bigmodel.cn/api/paas', path: '/v4/chat/completions', model: 'glm-4-flash', key: '' },
+  { label: '🟡 月之暗面 Kimi', value: 'moonshot', url: 'https://api.moonshot.cn', path: '/v1/chat/completions', model: 'moonshot-v1-8k', key: '' },
+  { label: '⚫ 自定义', value: 'custom', url: '', path: '/chat/completions', model: '', key: '' }
+]
+
 const defaultRoles = [
-  {
-    value: 'Terminal expert, provide commands for different OS, explain usage briefly, use markdown format'
-  },
-  {
-    value: '终端专家,提供不同系统下命令,简要解释用法,用markdown格式'
-  }
+  { value: '你是终端运维专家，根据用户需求提供准确的命令行指令，简要解释用法，用中文回复，使用markdown格式。' },
+  { value: 'You are a terminal expert. Provide accurate commands, explain briefly in Chinese, use markdown.' }
 ]
 
 const proxyOptions = [
@@ -131,6 +141,22 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         layout='vertical'
         className='ai-config-form'
       >
+        <Form.Item label='AI 平台'>
+          <Select
+            placeholder='选择 AI 平台自动填充配置'
+            options={AI_PLATFORMS}
+            onChange={(val) => {
+              const p = AI_PLATFORMS.find(p => p.value === val)
+              if (p && p.value !== 'custom') {
+                form.setFieldsValue({
+                  baseURLAI: p.url,
+                  apiPathAI: p.path,
+                  modelAI: p.model
+                })
+              }
+            }}
+          />
+        </Form.Item>
         <Form.Item label={renderApiUrlLabel()} required>
           <Space.Compact className='width-100'>
             <Form.Item
@@ -138,12 +164,12 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
               name='baseURLAI'
               noStyle
               rules={[
-                { required: true, message: 'Please input or select API provider URL!' },
-                { type: 'url', message: 'Please enter a valid URL!' }
+                { required: true, message: '请输入 API 地址' },
+                { type: 'url', message: '请输入有效 URL' }
               ]}
             >
               <Input
-                placeholder='Enter API provider URL'
+                placeholder='https://api.deepseek.com'
                 style={{ width: '75%' }}
               />
             </Form.Item>
@@ -151,7 +177,7 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
               label='API PATH'
               name='apiPathAI'
               rules={[
-                { required: true, message: 'Please input API PATH' }
+                { required: true, message: '请输入 API 路径' }
               ]}
               noStyle
             >
