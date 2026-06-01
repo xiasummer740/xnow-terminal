@@ -231,14 +231,25 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         </Form.Item>
 
         <Form.Item label='Agent 记忆'>
-          <Space>
+          <div style={{ marginBottom: 8 }}>
             <span style={{ color: '#888', fontSize: 12 }}>
-              已积累 {getAgentMemories().length} 条经验。Agent 完成任务后会自动总结学习。
+              已积累 {getAgentMemories().length} 条经验。Agent 每次完成任务后全自动学习总结。
             </span>
-            <Button size='small' danger onClick={() => { clearAgentMemories(); message.success('记忆已清除') }}>
-              清除记忆
-            </Button>
-          </Space>
+            {getAgentMemories().length > 0 && (
+              <Button size='small' danger style={{ marginLeft: 8 }} onClick={() => { clearAgentMemories(); message.success('记忆已清除'); window.store.triggerResize() }}>
+                清除全部
+              </Button>
+            )}
+          </div>
+          {getAgentMemories().length > 0 && (
+            <div style={{ background: '#1a1a1a', borderRadius: 6, padding: '8px 12px', maxHeight: 160, overflowY: 'auto', fontSize: 12, color: '#aaa', lineHeight: 1.8 }}>
+              {getAgentMemories().map((m, i) => (
+                <div key={i} style={{ padding: '2px 0', borderBottom: i < getAgentMemories().length - 1 ? '1px solid #222' : 'none' }}>
+                  {i + 1}. {m}
+                </div>
+              ))}
+            </div>
+          )}
         </Form.Item>
 
         <Form.Item
