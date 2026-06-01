@@ -32,7 +32,7 @@ module.exports = exports.default = {
   checkUpdateOnStart: false,
   cursorBlink: false,
   cursorStyle: 'block',
-  useSystemTitleBar: false,
+  useSystemTitleBar: true,
   opacity: 1,
   defaultEditor: '',
   terminalWordSeparator: './\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~ ?',

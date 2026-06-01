@@ -214,8 +214,6 @@ export default (Store) => {
     )
     // 关闭启动时自动检查更新
     store.config.checkUpdateOnStart = false
-    // 自定义标题栏（窗口圆角需要）
-    store.config.useSystemTitleBar = false
     store.startAutoRunWidgets().catch(err => {
       console.error('Failed to start autorun widgets:', err)
     })
