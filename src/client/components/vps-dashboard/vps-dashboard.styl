@@ -5,115 +5,87 @@
     background #141414
   .ant-modal-header
     background #141414
-    border-bottom 1px solid #2a2a2a
+    border-bottom 1px solid #222
   .ant-modal-body
     background #141414
-    padding 16px 24px
+    padding 20px 24px
+  .ant-tag
+    font-size 11px
 
-.vps-dash-title
-  color #e0e0e0
-  font-size 15px
-
-// 顶部统计条
-.vps-stats-strip
+// 概览
+.vps-overview
   display flex
-  gap 24px
-  padding 10px 0
-  margin-bottom 10px
-  border-bottom 1px solid #2a2a2a
+  gap 32px
+  padding 12px 0 16px
+  border-bottom 1px solid #222
+  margin-bottom 12px
 
-.stat-item
+.vps-overview-item
   text-align center
-  .stat-num
-    font-size 22px
-    font-weight bold
+  .vps-overview-num
+    font-size 28px
+    font-weight 700
     font-family 'Maple Mono', monospace
-    &.c-total
-      color #1890ff
-    &.c-good
-      color #52c41a
-    &.c-warn
-      color #faad14
-    &.c-bad
-      color #ff4d4f
-  .stat-label
+    color #e0e0e0
+    display block
+    line-height 1.2
+  .vps-overview-label
     font-size 11px
     color #888
+  &.green .vps-overview-num
+    color #52c41a
+  &.orange .vps-overview-num
+    color #faad14
+  &.red .vps-overview-num
+    color #ff4d4f
 
-// 卡片网格
-.vps-card-grid
-  display grid
-  grid-template-columns repeat(auto-fill, minmax(240px, 1fr))
-  gap 10px
-  max-height 420px
+// 表格
+.vps-table-wrap
+  max-height 480px
   overflow-y auto
 
-.vps-card
-  background #1a1a1a
-  border 1px solid #2a2a2a
-  border-radius 6px
-  padding 12px 14px
-  transition border-color 0.2s
+.vps-table
+  width 100%
+  border-collapse collapse
+  thead th
+    font-size 11px
+    font-weight 500
+    color #888
+    text-align left
+    padding 8px 12px
+    border-bottom 1px solid #222
+    background #141414
+    position sticky
+    top 0
+    z-index 1
+  tbody td
+    padding 10px 12px
+    border-bottom 1px solid #1a1a1a
+    font-size 13px
+    color #ccc
+    vertical-align middle
+  tbody tr
+    transition background 0.15s
+    &:hover
+      background rgba(255,255,255,0.03)
+    &.row-expired
+      background rgba(255, 77, 79, 0.06)
+      &:hover
+        background rgba(255, 77, 79, 0.1)
+    &.row-warning
+      background rgba(250, 173, 20, 0.04)
+      &:hover
+        background rgba(250, 173, 20, 0.08)
 
-  &.expired
-    border-color rgba(255, 77, 79, 0.3)
-  &.expiring
-    border-color rgba(250, 173, 20, 0.25)
-
-  &:hover
-    border-color #434343
-    transform translateY(-2px)
-    box-shadow 0 4px 12px rgba(0, 0, 0, 0.3)
-
-.vps-card-header
-  display flex
-  justify-content space-between
-  align-items center
-  margin-bottom 6px
+.vps-name
+  font-weight 600
+  color #e8e8e8
 
 .vps-host
-  font-size 11px
-  color #888
   font-family monospace
-
-.vps-card-link
-  color #555
-  cursor pointer
-  font-size 13px
-  &:hover
-    color #1890ff
-
-.vps-card-name
-  font-size 13px
-  font-weight 600
-  color #e0e0e0
-  margin-bottom 8px
-  overflow hidden
-  text-overflow ellipsis
-  white-space nowrap
-
-.vps-card-expiry
-  margin-bottom 6px
-
-.vps-card-info
-  display flex
-  gap 16px
   font-size 12px
   color #999
 
-.vps-info-item
+.vps-expiry-cell
   display flex
   align-items center
-  gap 3px
-
-.vps-card-recharge
-  font-size 11px
-  color #777
-  margin-top 4px
-
-.vps-no-expiry
-  color #555
-  font-size 12px
-
-.vps-empty
-  padding 40px 0
