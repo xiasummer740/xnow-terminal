@@ -12,7 +12,8 @@ const defaultValues = {
     authType: 'password',
     encode: 'utf8',
     envLang: 'en_US.UTF-8',
-    username: 'root'
+    username: 'root',
+    startDirectory: '/'
   },
   telnet: {
     port: 23
