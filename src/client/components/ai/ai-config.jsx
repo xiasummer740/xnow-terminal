@@ -212,10 +212,21 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         >
           <AutoComplete options={defaultRoles} placement='topLeft'>
             <Input.TextArea
-              placeholder='Enter AI role/system prompt'
+              placeholder='AI 角色/系统提示词'
               rows={1}
             />
           </AutoComplete>
+        </Form.Item>
+
+        <Form.Item
+          label='Agent 提示词'
+          name='agentSystemPrompt'
+          tooltip='自定义 Agent 模式的系统提示词。留空使用内置默认。修改后保存即生效。'
+        >
+          <Input.TextArea
+            placeholder='留空使用内置默认提示词。可在此自定义 Agent 的行为规则和工作流程...'
+            rows={4}
+          />
         </Form.Item>
 
         <Form.Item

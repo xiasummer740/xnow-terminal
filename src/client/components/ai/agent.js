@@ -5,6 +5,12 @@ const MAX_ITERATIONS = 150
 function buildAgentSystemPrompt (config) {
   const lang = config.languageAI || window.store.getLangName()
   const baseRole = config.roleAI || 'You are a helpful assistant.'
+  // 用户自定义提示词优先
+  const customPrompt = window.store.config?.agentSystemPrompt
+  if (customPrompt && customPrompt.trim()) {
+    return `${baseRole}\n\n${customPrompt}\n\nReply in ${lang} language.`
+  }
+  // 内置默认提示词
   return `${baseRole}
 
 You are operating inside XNOW, a terminal/SSH/SFTP client. You have access to tools that let you:
