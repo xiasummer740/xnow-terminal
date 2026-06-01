@@ -686,7 +686,7 @@ export default class RdpSession extends PureComponent {
             />
           </Tooltip>
           <HelpIcon
-            link='https://github.com/electerm/electerm/wiki/RDP-File-Transfer'
+            link='https://github.com/xiasummer740/xnow-terminal/wiki/RDP-File-Transfer'
             className='mg2r mg1l'
           />
         </div>
