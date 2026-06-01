@@ -1,10 +1,12 @@
 /**
  * VPS 监控看板 — 专业表格视图
  */
-import { Modal, Tag, Empty, Tooltip, Progress } from 'antd'
+import { useState } from 'react'
+import { Modal, Tag, Empty, Tooltip, Progress, Input } from 'antd'
 import {
   ThunderboltOutlined,
   LinkOutlined,
+  SearchOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   WarningOutlined,
@@ -25,12 +27,15 @@ function StatusDot ({ expired, expiring }) {
 }
 
 export default function VpsDashboard ({ visible, onClose }) {
+  const [keyword, setKeyword] = useState('')
   const all = window.store.bookmarks || []
 
   // 每次渲染都重新计算（reactive 数组引用不变，useMemo 不会触发）
   const vpsList = (() => {
+    const k = keyword.toLowerCase()
     return all
       .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl)
+      .filter(b => !k || (b.title || '').toLowerCase().includes(k) || (b.host || '').toLowerCase().includes(k))
       .map(b => {
         const expiryDate = b.vpsExpiry ? new Date(b.vpsExpiry) : null
         const days = expiryDate && !isNaN(expiryDate.getTime())
@@ -71,6 +76,17 @@ export default function VpsDashboard ({ visible, onClose }) {
       open={visible} onCancel={onClose} footer={null}
       width={960} className='vps-dashboard-modal' destroyOnClose
     >
+      {/* 搜索 */}
+      <div style={{ marginBottom: 12 }}>
+        <Input
+          prefix={<SearchOutlined style={{ color: '#888' }} />}
+          placeholder='搜索 VPS 名称或 IP...'
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          allowClear
+          style={{ background: '#1a1a1a', border: '1px solid #333', color: '#ccc' }}
+        />
+      </div>
       {/* 统计概览 */}
       <div className='vps-overview'>
         <div className='vps-overview-item'>

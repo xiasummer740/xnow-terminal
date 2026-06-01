@@ -584,6 +584,7 @@ class Term extends Component {
     const items = [
       { label: '复制', action: () => this.onCopy() },
       { label: '粘贴', action: () => this.onPaste() },
+      { label: '全选', action: () => this.term.selectAll() },
       { label: '清屏', action: () => this.onClear() }
     ]
     const close = () => { menu.remove(); document.removeEventListener('click', close) }
