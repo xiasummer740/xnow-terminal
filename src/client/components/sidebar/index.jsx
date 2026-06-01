@@ -202,7 +202,7 @@ export default function Sidebar (props) {
           />
         </SideIcon>
         <SideIcon
-          title={e('widgets')}
+          title='小组件'
           active={widgetsActive}
         >
           <AppstoreOutlined className='iblock font20 control-icon' onClick={openWidgetsModal} />
