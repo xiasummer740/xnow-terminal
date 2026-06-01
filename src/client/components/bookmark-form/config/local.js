@@ -7,7 +7,7 @@ import {
   getTerminalBackgroundDefaults
 } from '../common/init-values.js'
 import defaultSettings from '../../../common/default-setting.js'
-import { commonFields } from './common-fields.js'
+import { commonFields , vpsInfoTab} from './common-fields.js'
 
 const e = window.translate
 
@@ -34,7 +34,7 @@ const localConfig = {
         commonFields.enableTerminalImage,
         commonFields.runScripts,
         { type: 'input', name: 'type', label: 'type', hidden: true }
-    vpsInfoTab()
+    
       ]
     },
     {
@@ -49,7 +49,7 @@ const localConfig = {
         commonFields.terminalBackground,
         // Exec settings - stored as flat properties on bookmark
         { type: 'execSettings' }
-    vpsInfoTab()
+    
       ]
     },
     {
@@ -57,10 +57,10 @@ const localConfig = {
       label: e('quickCommands'),
       fields: [
         commonFields.quickCommands
-    vpsInfoTab()
+    
       ]
     }
-    vpsInfoTab()
+    
   ]
 }
 

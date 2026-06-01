@@ -2,7 +2,7 @@ import { formItemLayout } from '../../../common/form-layout.js'
 import { terminalVncType } from '../../../common/constants.js'
 import { createBaseInitValues, getAuthTypeDefault } from '../common/init-values.js'
 import { isEmpty } from 'lodash-es'
-import { commonFields, connectionHoppingTab } from './common-fields.js'
+import { commonFields, connectionHoppingTab , vpsInfoTab} from './common-fields.js'
 
 const e = window.translate
 
@@ -43,11 +43,11 @@ const vncConfig = {
         commonFields.description,
         commonFields.proxy,
         commonFields.type
-    vpsInfoTab()
+    
       ]
     },
     connectionHoppingTab(),
-    vpsInfoTab()
+    
   ]
 }
 

@@ -1,7 +1,7 @@
 import { formItemLayout } from '../../../common/form-layout.js'
 import { terminalFtpType } from '../../../common/constants.js'
 import { createBaseInitValues, getAuthTypeDefault } from '../common/init-values.js'
-import { commonFields } from './common-fields.js'
+import { commonFields , vpsInfoTab} from './common-fields.js'
 import { isEmpty } from 'lodash-es'
 
 const e = window.translate
@@ -36,10 +36,10 @@ const ftpConfig = {
         commonFields.encode,
         commonFields.proxy,
         commonFields.type
-    vpsInfoTab()
+    
       ]
     }
-    vpsInfoTab()
+    
   ]
 }
 

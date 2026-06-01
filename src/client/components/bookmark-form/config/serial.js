@@ -2,7 +2,7 @@ import { formItemLayout } from '../../../common/form-layout.js'
 import { terminalSerialType, commonBaudRates, commonDataBits, commonStopBits, commonParities, commonTxLineEndings, commonRxLineEndings } from '../../../common/constants.js'
 import defaultSettings from '../../../common/default-setting.js'
 import { createBaseInitValues, getTerminalBackgroundDefaults } from '../common/init-values.js'
-import { commonFields } from './common-fields.js'
+import { commonFields , vpsInfoTab} from './common-fields.js'
 
 const e = window.translate
 
@@ -62,7 +62,7 @@ const serialConfig = {
         commonFields.runScripts,
         commonFields.description,
         { type: 'input', name: 'type', label: 'type', hidden: true }
-    vpsInfoTab()
+    
       ]
     },
     {
@@ -70,7 +70,7 @@ const serialConfig = {
       label: e('settings'),
       fields: [
         { type: 'terminalBackground', name: 'terminalBackground', label: () => e('terminalBackgroundImage') }
-    vpsInfoTab()
+    
       ]
     },
     {
@@ -78,10 +78,10 @@ const serialConfig = {
       label: e('quickCommands'),
       fields: [
         { type: 'quickCommands', name: '__quick__', label: '' }
-    vpsInfoTab()
+    
       ]
     }
-    vpsInfoTab()
+    
   ]
 }
 
