@@ -34,12 +34,12 @@ export default memo(function SidebarPanel (props) {
     items: [
       {
         key: 'bookmarks',
-        label: e('bookmarks'),
+        label: '书签',
         children: null
       },
       {
         key: 'history',
-        label: e('history'),
+        label: '访问历史',
         children: null
       }
     ]
