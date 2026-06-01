@@ -35,7 +35,7 @@ exports.createWindow = async function (userConfig) {
     title: 'XNOW',
     frame: useSystemTitleBar,
     transparent: !useSystemTitleBar,
-    backgroundColor: '#0a0e1a',
+    backgroundColor: useSystemTitleBar ? '#0a0e1a' : '#00000000',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
