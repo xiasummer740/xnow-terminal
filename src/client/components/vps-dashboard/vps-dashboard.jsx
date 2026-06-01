@@ -1,7 +1,6 @@
 /**
  * VPS 监控看板 — 专业表格视图
  */
-import { useMemo } from 'react'
 import { Modal, Tag, Empty, Tooltip, Progress } from 'antd'
 import {
   ThunderboltOutlined,
@@ -28,7 +27,8 @@ function StatusDot ({ expired, expiring }) {
 export default function VpsDashboard ({ visible, onClose }) {
   const all = window.store.bookmarks || []
 
-  const vpsList = useMemo(() => {
+  // 每次渲染都重新计算（reactive 数组引用不变，useMemo 不会触发）
+  const vpsList = (() => {
     return all
       .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl)
       .map(b => {
@@ -49,7 +49,7 @@ export default function VpsDashboard ({ visible, onClose }) {
         if (b.days === null) return -1
         return a.days - b.days
       })
-  }, [all])
+  })()
 
   const stats = {
     total: vpsList.length,
