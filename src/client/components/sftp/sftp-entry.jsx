@@ -1229,12 +1229,6 @@ export default class Sftp extends Component {
         )}
       </div>
     )
-    }
-    return (
-      <div className='sftp-panel-title pd1t pd1b pd1x'>
-        {e('local')}
-      </div>
-    )
   }
 
   renderSection (type, style, width) {
