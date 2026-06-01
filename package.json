@@ -1,6 +1,6 @@
 {
   "name": "xnow",
-  "version": "3.12.5",
+  "version": "3.12.6",
   "description": "XNOW - 科技风终端管理工具 Terminal/ssh/telnet/serialport/sftp client(linux, mac, win)",
   "main": "app.js",
   "bin": "npm/electerm",
