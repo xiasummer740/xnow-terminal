@@ -574,6 +574,9 @@ class Term extends Component {
     if (this.state.loading) {
       return
     }
+    // 移除旧菜单
+    const old = document.querySelector('.term-context-menu')
+    if (old) old.remove()
     // 自定义右键菜单
     const menu = document.createElement('div')
     menu.className = 'term-context-menu'
@@ -583,18 +586,21 @@ class Term extends Component {
       { label: '粘贴', action: () => this.onPaste() },
       { label: '清屏', action: () => this.onClear() }
     ]
+    const close = () => { menu.remove(); document.removeEventListener('click', close) }
     items.forEach(item => {
       const el = document.createElement('div')
       el.textContent = item.label
       el.style.cssText = 'padding:6px 16px;cursor:pointer;color:#ccc;font-size:13px'
       el.onmouseenter = () => { el.style.background = '#333' }
       el.onmouseleave = () => { el.style.background = 'transparent' }
-      el.onclick = () => { item.action(); menu.remove() }
+      el.onclick = () => { item.action(); close() }
       menu.appendChild(el)
     })
     document.body.appendChild(menu)
-    const close = () => { menu.remove(); document.removeEventListener('click', close) }
     setTimeout(() => document.addEventListener('click', close), 0)
+    // 右键菜单也响应 ESC 关闭
+    const escHandler = (ev) => { if (ev.key === 'Escape') close() }
+    document.addEventListener('keydown', escHandler, { once: true })
   }
 
   onCopy = () => {

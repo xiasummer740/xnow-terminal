@@ -24,16 +24,19 @@ export default function FooterPing ({ store }) {
   const [ping, setPing] = useState('')
   const [color, setColor] = useState('#666')
   const [level, setLevel] = useState(-1)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     const measure = async () => {
       const tab = store.currentTab
       if (!tab || !tab.host || !tab.id) {
-        setPing('')
+        if (mountedRef.current) setPing('')
         return
       }
       try {
         const latency = await tcpPing(tab.id)
+        if (!mountedRef.current) return
         if (latency > 0) {
           setPing(latency + 'ms')
           if (latency < 60) { setColor('#52c41a'); setLevel(3) }
@@ -45,7 +48,7 @@ export default function FooterPing ({ store }) {
     }
     measure()
     const timer = setInterval(measure, 1000)
-    return () => clearInterval(timer)
+    return () => { mountedRef.current = false; clearInterval(timer) }
   }, [store.currentTab?.id, store.currentTab?.host])
 
   if (!store.currentTab?.host || !ping) return null
