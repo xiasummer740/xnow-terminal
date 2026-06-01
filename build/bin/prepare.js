@@ -50,8 +50,12 @@ require('fs').writeFileSync(
   )
 )
 
-exec(`cd work/app && npm i --omit=dev && cd ${cwd}`)
+// 从项目根复制 node_modules 到 work/app（避免 node-pty 编译失败）
+rm('-rf', 'work/app/node_modules')
+cp('-r', 'node_modules', 'work/app/node_modules')
 rm('-rf', 'work/app/node_modules/.bin')
+rm('-rf', 'work/app/node_modules/node-pty')
+echo('copied node_modules from project root')
 // Remove axios browser/ESM builds and unnecessary files (keep only lib/ and node CJS)
 rm('-rf', 'work/app/node_modules/axios/dist/esm')
 rm('-rf', 'work/app/node_modules/axios/dist/browser')
