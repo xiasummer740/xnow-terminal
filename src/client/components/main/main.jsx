@@ -24,6 +24,7 @@ import { NotificationContainer } from '../common/notification'
 import InfoModal from '../sidebar/info-modal.jsx'
 import RightSidePanel from '../side-panel-r/side-panel-r'
 import ConnectionHoppingWarning from './connection-hopping-warnning'
+import QuickSearch from '../quick-search/quick-search'
 import SshConfigLoadNotify from '../ssh-config/ssh-config-load-notify'
 import LoadSshConfigs from '../ssh-config/load-ssh-configs'
 import AIChat from '../ai/ai-chat-entry'
@@ -296,6 +297,7 @@ export default auto(function Index (props) {
         <WorkspaceSaveModal store={store} />
         <BookmarkFromHistoryModal />
         <NotificationContainer />
+        <QuickSearch />
         <BatchOpRunner />
         <AIConfigModal store={store} />
         <UnixTimestampTooltip />

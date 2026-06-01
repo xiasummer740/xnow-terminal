@@ -8,10 +8,11 @@ import {
   UpCircleOutlined,
   AppstoreOutlined,
   ThunderboltOutlined,
-  DashboardOutlined
+  DashboardOutlined,
+  BulbOutlined
 } from '@ant-design/icons'
 import { Tooltip, Popover } from 'antd'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SideBarPanel from './sidebar-panel'
 import TransferList from './transfer-list'
 import MenuBtn from '../sys-menu/menu-btn'
@@ -50,6 +51,23 @@ export default function Sidebar (props) {
 
   const { store } = window
   const [vpsDashboardOpen, setVpsDashboardOpen] = useState(false)
+  const [lightTheme, setLightTheme] = useState(() => localStorage.getItem('xnow_light_theme') === '1')
+
+  const toggleTheme = () => {
+    const next = !lightTheme
+    setLightTheme(next)
+    localStorage.setItem('xnow_light_theme', next ? '1' : '0')
+    if (next) {
+      document.body.classList.add('light-theme')
+    } else {
+      document.body.classList.remove('light-theme')
+    }
+  }
+
+  // 初始化主题
+  useEffect(() => {
+    if (lightTheme) document.body.classList.add('light-theme')
+  }, [])
 
   const handleClickOutside = (event) => {
     // Don't close if pinned or has active input
@@ -236,6 +254,14 @@ export default function Sidebar (props) {
               )
             : null
         }
+        <div className='control-icon-wrap' title={lightTheme ? '切换暗色主题' : '切换浅色主题'}>
+          <BulbOutlined
+            className='font18 iblock pointer control-icon'
+            onClick={toggleTheme}
+            style={{ color: lightTheme ? '#faad14' : undefined }}
+          />
+          <div className='control-icon-label'>{lightTheme ? '暗色' : '浅色'}</div>
+        </div>
       </div>
       <SidePanel
         sideProps={sideProps}
