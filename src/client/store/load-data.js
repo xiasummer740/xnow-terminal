@@ -216,6 +216,8 @@ export default (Store) => {
     store.config.checkUpdateOnStart = false
     // 强制中文
     store.config.language = 'zh_cn'
+    // 不自动创建新连接标签
+    store.config.initDefaultTabOnStart = false
     store.startAutoRunWidgets().catch(err => {
       console.error('Failed to start autorun widgets:', err)
     })
