@@ -574,9 +574,27 @@ class Term extends Component {
     if (this.state.loading) {
       return
     }
-    if (this.props.config.pasteWhenContextMenu) {
-      return this.onPaste()
-    }
+    // 自定义右键菜单
+    const menu = document.createElement('div')
+    menu.className = 'term-context-menu'
+    menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:4px 0;min-width:120px;box-shadow:0 4px 12px rgba(0,0,0,0.5)`
+    const items = [
+      { label: '复制', action: () => this.onCopy() },
+      { label: '粘贴', action: () => this.onPaste() },
+      { label: '清屏', action: () => this.onClear() }
+    ]
+    items.forEach(item => {
+      const el = document.createElement('div')
+      el.textContent = item.label
+      el.style.cssText = 'padding:6px 16px;cursor:pointer;color:#ccc;font-size:13px'
+      el.onmouseenter = () => { el.style.background = '#333' }
+      el.onmouseleave = () => { el.style.background = 'transparent' }
+      el.onclick = () => { item.action(); menu.remove() }
+      menu.appendChild(el)
+    })
+    document.body.appendChild(menu)
+    const close = () => { menu.remove(); document.removeEventListener('click', close) }
+    setTimeout(() => document.addEventListener('click', close), 0)
   }
 
   onCopy = () => {
