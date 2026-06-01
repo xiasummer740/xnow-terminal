@@ -1357,10 +1357,10 @@ export default class Sftp extends Component {
       return this.renderSection(typeMap.local, { width, left: 0, top: 0, height }, width)
     }
     if (localCollapsed && remoteCollapsed) {
-      // 都收起，只显示标题栏
-      return arr.map((t) => {
+      // 都收起，并排显示标题栏
+      return arr.map((t, i) => {
         const halfW = width / 2
-        return this.renderSection(t, { width: halfW, left: 0, top: 0, height }, halfW)
+        return this.renderSection(t, { width: halfW, left: i * halfW, top: 0, height }, halfW)
       })
     }
     return arr.map((t, i) => {
