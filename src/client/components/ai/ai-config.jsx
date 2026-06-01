@@ -16,6 +16,7 @@ import {
 import Password from '../common/password'
 import AiHistory, { addHistoryItem } from './ai-history'
 import message from '../common/message'
+import { clearAgentMemories, getAgentMemories } from './agent'
 
 const STORAGE_KEY_CONFIG = 'ai_config_history'
 const EVENT_NAME_CONFIG = 'ai-config-history-update'
@@ -227,6 +228,17 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
             placeholder='留空使用内置默认提示词。可在此自定义 Agent 的行为规则和工作流程...'
             rows={4}
           />
+        </Form.Item>
+
+        <Form.Item label='Agent 记忆'>
+          <Space>
+            <span style={{ color: '#888', fontSize: 12 }}>
+              已积累 {getAgentMemories().length} 条经验。Agent 完成任务后会自动总结学习。
+            </span>
+            <Button size='small' danger onClick={() => { clearAgentMemories(); message.success('记忆已清除') }}>
+              清除记忆
+            </Button>
+          </Space>
         </Form.Item>
 
         <Form.Item

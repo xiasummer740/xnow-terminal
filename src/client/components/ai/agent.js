@@ -1,17 +1,37 @@
 import { agentTools, executeToolCall } from './agent-tools'
 
 const MAX_ITERATIONS = 150
+const MEMORY_KEY = 'xnow_agent_memory'
+const MAX_MEMORIES = 20
+
+function loadMemories () {
+  try {
+    const raw = localStorage.getItem(MEMORY_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveMemories (list) {
+  if (list.length > MAX_MEMORIES) list = list.slice(-MAX_MEMORIES)
+  localStorage.setItem(MEMORY_KEY, JSON.stringify(list))
+}
 
 function buildAgentSystemPrompt (config) {
   const lang = config.languageAI || window.store.getLangName()
   const baseRole = config.roleAI || 'You are a helpful assistant.'
-  // 用户自定义提示词优先
   const customPrompt = window.store.config?.agentSystemPrompt
-  if (customPrompt && customPrompt.trim()) {
-    return `${baseRole}\n\n${customPrompt}\n\nReply in ${lang} language.`
-  }
-  // 内置默认提示词
-  return `${baseRole}
+
+  // 加载历史经验
+  const memories = loadMemories()
+  const memoryText = memories.length > 0
+    ? '\n\n## 历史经验（从过去任务中学到的技能）\n' +
+      memories.map((m, i) => `${i + 1}. ${m}`).join('\n') +
+      '\n\n完成任务后，如果学到了新的可复用经验，在回复末尾用 [LEARN: 一句话总结] 格式记录。'
+    : '\n\n完成任务后，如果学到了新的可复用经验，在回复末尾用 [LEARN: 一句话总结] 格式记录。'
+
+  const basePrompt = customPrompt && customPrompt.trim()
+    ? `${baseRole}\n\n${customPrompt}\n\nReply in ${lang} language.`
+    : `${baseRole}
 
 You are operating inside XNOW, a terminal/SSH/SFTP client. You have access to tools that let you:
 - Run commands in terminal tabs and read their output
@@ -27,19 +47,31 @@ You are operating inside XNOW, a terminal/SSH/SFTP client. You have access to to
 4. 安全第一 — 删除文件、修改系统配置前必须确认。rm -rf 等危险命令需特别谨慎
 
 ## 工作流程
-- 用户说"检查所有服务器" → 先用 list_bookmarks 列出所有书签，再用 open_bookmark 逐个连接，每个执行相关检查命令
+- 用户说"检查所有服务器" → 先用 list_bookmarks 列出所有书签，再用 open_bookmark 逐个连接
 - 用户说"帮我装个东西" → 先确认系统类型（cat /etc/os-release），再选择正确包管理器
 - 用户说"看日志" → 先定位日志文件位置，再用 tail/less 查看，不要直接 cat 大文件
 - 遇到错误 → 先读错误信息，分析根因，再提出修复方案，不盲目重试
 
 ## 工具使用指南
-- send_terminal_command — 执行命令并等待输出（30秒超时）。适合短命令如 free -h、ls、cat
-- get_terminal_output — 读取终端当前显示的内容，适合查看已有输出
-- list_bookmarks + open_bookmark — 管理多台服务器的首选方式。每打开一个连接，完成后用 close_tab 清理
+- send_terminal_command — 执行命令并等待输出（30秒超时）
+- get_terminal_output — 读取终端当前显示的内容
+- list_bookmarks + open_bookmark — 管理多台服务器的首选方式
 - sftp_list / sftp_read_file — 查看远程文件，比 cat 更高效
 - list_tabs — 查看当前打开了哪些连接
 
 Reply in ${lang} language.`
+
+  return basePrompt + memoryText
+}
+
+function extractLearnings (text) {
+  const learnings = []
+  const regex = /\[LEARN:\s*([^\]]+)\]/gi
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    learnings.push(match[1].trim())
+  }
+  return learnings
 }
 
 function updateChatEntry (chatEntry, updates) {
@@ -115,6 +147,19 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
     }
 
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
+      // Agent 完成了，提取学到的经验
+      const newLearnings = extractLearnings(accumulatedContent)
+      if (newLearnings.length > 0) {
+        const existing = loadMemories()
+        for (const l of newLearnings) {
+          if (!existing.includes(l)) existing.push(l)
+        }
+        saveMemories(existing)
+        // 清理回复中的 LEARN 标记
+        const cleaned = accumulatedContent.replace(/\[LEARN:\s*[^\]]+\]/gi, '')
+        accumulatedContent = cleaned
+      }
+
       setIsStreaming(false)
       updateChatEntry(chatEntry, {
         response: accumulatedContent
@@ -176,4 +221,13 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming)
   updateChatEntry(chatEntry, {
     response: accumulatedContent + '\n\n*(Agent reached maximum iterations)*'
   })
+}
+
+// 导出手动管理记忆的接口
+export function getAgentMemories () { return loadMemories() }
+export function clearAgentMemories () { saveMemories([]) }
+export function addAgentMemory (text) {
+  const existing = loadMemories()
+  if (!existing.includes(text)) existing.push(text)
+  saveMemories(existing)
 }
