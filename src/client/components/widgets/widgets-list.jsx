@@ -12,6 +12,7 @@ import highlight from '../common/highlight'
 import {
   auto
 } from 'manate/react'
+import { t } from './widget-i18n'
 
 const e = window.translate
 
@@ -54,7 +55,7 @@ export default auto(function WidgetsList ({ activeItemId, store }) {
   }
 
   const renderWidgetItem = (widget, i) => {
-    const title = widget.info.name
+    const title = t(widget.info.name)
     const tag = ''
     const cls = classnames(
       'item-list-unit',
@@ -92,7 +93,7 @@ export default auto(function WidgetsList ({ activeItemId, store }) {
         <div className='pd1y'>
           <Input.Search
             type='text'
-            placeholder='Search widgets...'
+            placeholder='搜索小组件...'
             value={keyword}
             onChange={handleSearch}
             className='form-control'
@@ -106,11 +107,11 @@ export default auto(function WidgetsList ({ activeItemId, store }) {
   }
 
   const renderTabs = () => {
-    const instancesTag = e('runningInstances') + ` (${widgetInstances.length})`
+    const instancesTag = t('RunningInstances') + ` (${widgetInstances.length})`
     const items = [
       {
         key: 'widgets',
-        label: e('widgets'),
+        label: t('Widgets'),
         children: null
       },
       {

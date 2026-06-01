@@ -7,6 +7,7 @@ import { formItemLayout, tailFormItemLayout } from '../../common/form-layout'
 import HelpIcon from '../common/help-icon'
 import { nanoid } from 'nanoid'
 import BatchOpEditor from '../batch-op/batch-op-editor'
+import { t } from './widget-i18n'
 
 export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInstance }) {
   const [form] = Form.useForm()
@@ -36,7 +37,7 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
   const { configs, type, singleInstance } = info
   const isInstanceWidget = type === 'instance'
   const isFrontendWidget = type === 'frontend'
-  const txt = isInstanceWidget ? 'Start widget' : 'Run widget'
+  const txt = isInstanceWidget ? t('Start widget') : t('Run widget')
   const isDisabled = loading || (singleInstance && hasRunningInstance)
 
   const handleSubmit = async (values) => {
@@ -68,7 +69,7 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
                 <Button
                   onClick={() => form.setFieldValue(name, 'ett_' + nanoid())}
                 >
-                  Generate
+                  {t('Generate')}
                 </Button>
               </Space.Compact>
             </Form.Item>
@@ -114,9 +115,9 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
       <Form.Item
         key={name}
         {...formItemLayout}
-        label={name}
+        label={t(name)}
         name={name}
-        tooltip={description}
+        tooltip={t(description)}
       >
         {control}
       </Form.Item>
@@ -129,7 +130,7 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
     }
     return (
       <Alert
-        title='Downloading package may take some time on first use...'
+        title={t('Downloading package may take some time on first use...')}
         type='warning'
         showIcon
         className='mg1t'
@@ -150,12 +151,12 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
     <div className='widget-form'>
       <div className='pd1b alignright'>
         <h4>
-          {info.name}
+          {t(info.name)}
           {info.name === 'MCP Server' && (
             <HelpIcon link='https://github.com/electerm/electerm/wiki/MCP-Widget-Usage-Guide' />
           )}
         </h4>
-        <p>{info.description}</p>
+        <p>{t(info.description)}</p>
       </div>
 
       <Form
@@ -168,7 +169,7 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
         <Form.Item
           {...tailFormItemLayout}
         >
-          <Tooltip title={isDisabled && singleInstance && hasRunningInstance ? 'Already running, only one instance allowed' : ''}>
+          <Tooltip title={isDisabled && singleInstance && hasRunningInstance ? t('Already running, only one instance allowed') : ''}>
             <Button
               type='primary'
               htmlType='submit'
