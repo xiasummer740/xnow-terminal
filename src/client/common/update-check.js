@@ -1,85 +1,54 @@
 /**
- * check latest release for update warn
+ * 检查 XNOW 最新 Release 版本
  */
-
 import fetch from './fetch-from-server'
-import {
-  baseUpdateCheckUrls, packInfo
-} from './constants'
+import { packInfo } from './constants'
 import dayjs from 'dayjs'
 
-async function fetchData (url, options) {
+const RELEASE_API = 'https://api.github.com/repos/xiasummer740/xnow-terminal/releases/latest'
+const RELEASE_PAGE = 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
+
+async function fetchData (url) {
   const data = {
     action: 'fetch',
     options: {
-      ...options,
       url,
-      timeout: 15000
+      timeout: 15000,
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'XNOW-Terminal'
+      }
     },
     proxy: window.store.getProxySetting()
   }
-  return fetch(data)
+  return fetch(data).catch(() => null)
 }
 
-function getInfo (url) {
-  const n = Date.now()
-  const tail = url.includes('?') ? '' : '?_=' + n
-  return fetchData(url + tail, {
-    action: 'get-update-info',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36'
-    },
-    timeout: 1000 * 60 * 5
-  })
-    .catch(() => {
-      return null
-    })
-}
-
-export async function getLatestReleaseVersion (n) {
-  let q = ''
-  if (n) {
-    const { store } = window
-    const info = {
-      load_time: store.loadTime,
-      bookmark_count: store.bookmarks.length,
-      lang: store.config.language,
-      sync_with_github: !!store.config.syncSetting?.githubGistId,
-      sync_with_gitee: !!store.config.syncSetting?.giteeGistId,
-      version: packInfo.version,
-      installSrc: store.installSrc,
-      n: Date.now()
+export async function getLatestReleaseVersion () {
+  try {
+    const res = await fetchData(RELEASE_API)
+    if (res?.tag_name) {
+      // 去掉 v 前缀
+      const ver = res.tag_name.replace(/^v/, '')
+      const currentVer = packInfo.version
+      if (ver && ver !== currentVer) {
+        return { tag_name: ver, html_url: res.html_url }
+      }
     }
-    q = Object.keys(info).reduce((p, k, i) => {
-      const pre = i ? '&' : '?'
-      return p + pre + k + '=' + encodeURIComponent(info[k])
-    }, '')
-  }
-
-  let url = `${baseUpdateCheckUrls[0]}/version.html${q}`
-  let tagName = await getInfo(url)
-  if (!tagName) {
-    url = `${baseUpdateCheckUrls[1]}/version.html${q}`
-    tagName = await getInfo(url)
-  }
-  if (tagName) {
-    return {
-      tag_name: tagName
-    }
-  }
+    return null
+  } catch { return null }
 }
 
 export async function getLatestReleaseInfo () {
-  let url = `${baseUpdateCheckUrls[0]}/data/electerm-github-release.json`
-  let res = await getInfo(url)
-  if (!res?.release?.body) {
-    url = `${baseUpdateCheckUrls[1]}/data/electerm-github-release.json`
-    res = await getInfo(url)
-  }
-  return res && res.release
-    ? {
-        body: res.release.body,
-        date: dayjs(res.release.published_at).format('YYYY-MM-DD')
+  try {
+    const res = await fetchData(RELEASE_API)
+    if (res?.body) {
+      return {
+        body: res.body,
+        date: dayjs(res.published_at).format('YYYY-MM-DD'),
+        html_url: res.html_url || RELEASE_PAGE
       }
-    : undefined
+    }
+    return null
+  } catch { return null }
 }

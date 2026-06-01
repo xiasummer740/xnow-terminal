@@ -191,7 +191,6 @@ export default (Store) => {
       })
     ext.lastDataUpdateTime = await getData('lastDataUpdateTime') || 0
     // 强制设置（必须在 openInitSessions 之前）
-    store.config.checkUpdateOnStart = false
     store.config.language = 'zh_cn'
     store.config.initDefaultTabOnStart = false
     store.config.sshSftpSplitView = true

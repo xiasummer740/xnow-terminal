@@ -260,83 +260,23 @@ export default class Upgrade extends PureComponent {
   }
 
   renderLinks = () => {
+    const { releaseInfo } = this.props.upgradeInfo
+    const url = releaseInfo?.html_url || 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
     return (
       <div>
         <p>
-          {e('manuallyDownloadFrom')}:
-          {
-            downloadMirrors.map((d) => {
-              return (
-                <Link to={d.url} className='mg1l' key={d.url}>{d.name}</Link>
-              )
-            })
-          }
+          下载地址：<Link to={url} className='mg1l'>GitHub Releases</Link>
         </p>
         {this.renderChangeLog()}
       </div>
     )
   }
 
-  renderMirrorSelector = () => {
-    return (
-      <Select
-        value={this.state.mirror}
-        onChange={this.handleMirrorChange}
-        getPopupContainer={() => document.body}
-        size='small'
-        style={{ height: 32 }}
-      >
-        {downloadMirrorList.map((opt) => (
-          <Select.Option key={opt} value={opt}>{opt}</Select.Option>
-        ))}
-      </Select>
-    )
-  }
-
-  renderUpgradeButton = () => {
-    const { upgrading, upgradePercent, checkingRemoteVersion } = this.props.upgradeInfo
-    if (upgrading) {
-      const percent = upgradePercent || 0
-      return (
-        <Button
-          type='primary'
-          icon={<UpCircleOutlined />}
-          loading={checkingRemoteVersion}
-          disabled={checkingRemoteVersion}
-          onClick={() => this.cancel()}
-          className='mg1b'
-        >
-          <span>{`${e('upgrading')}... ${percent}% ${e('cancel')}`}</span>
-        </Button>
-      )
-    }
-    return (
-      <Space.Compact>
-        {this.renderMirrorSelector()}
-        <Button
-          type='primary'
-          icon={<UpCircleOutlined />}
-          loading={checkingRemoteVersion}
-          disabled={checkingRemoteVersion}
-          onClick={() => this.doUpgrade()}
-          className='mg1b'
-        >
-          {e('upgrade')}
-        </Button>
-      </Space.Compact>
-    )
-  }
-
   renderUpgradeContent = () => {
-    const { installSrc } = this.props
-    const skip = checkSkipSrc(installSrc)
-    if (skip) {
-      return this.renderLinks()
-    }
+    const { remoteVersion, releaseInfo } = this.props.upgradeInfo
     return (
       <div>
-        {this.renderUpgradeButton()}
-        {this.renderSkipVersion()}
+        <p style={{ color: '#888' }}>当前已是最新版本，可手动检查更新。</p>
         <div className='pd1t'>
           {this.renderLinks()}
         </div>
