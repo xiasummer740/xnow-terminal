@@ -210,10 +210,10 @@ export const syncTypes = buildConst([
 ])
 export const syncTokenCreateUrls = {
   gitee: 'https://gitee.com/github-zxdong262/electerm/wikis/Create%20personal%20access%20token?sort_id=3028409',
-  github: 'https://github.com/electerm/electerm/wiki/Create-personal-access-token',
-  custom: 'https://github.com/electerm/electerm/wiki/Custom-sync-server',
-  cloud: 'https://electerm-cloud.html5beta.com',
-  webdav: 'https://github.com/electerm/electerm/wiki/WebDAV-sync'
+  github: 'https://github.com/xiasummer740/xnow-terminal/wiki/Create-personal-access-token',
+  custom: 'https://github.com/xiasummer740/xnow-terminal/wiki/Custom-sync-server',
+  cloud: 'https://xnow-terminal.github.io',
+  webdav: 'https://github.com/xiasummer740/xnow-terminal/wiki/WebDAV-sync'
 }
 export const settingSyncId = 'setting-sync'
 export const settingTerminalId = 'setting-terminal'
@@ -251,11 +251,11 @@ export const checkedKeysLsKey = 'checked-keys'
 export const quickCommandLabelsLsKey = 'quick-command-label'
 export const localAddrBookmarkLsKey = 'local-addr-bookmark-keys'
 export const dismissDelKeyTipLsKey = 'dismiss-del-key-tip'
-export const sshTunnelHelpLink = 'https://github.com/electerm/electerm/wiki/How-to-use-ssh-tunnel'
-export const proxyHelpLink = 'https://github.com/electerm/electerm/wiki/proxy-format'
-export const regexHelpLink = 'https://github.com/electerm/electerm/wiki/Terminal-keywords-highlight-regular-expression-exmaples'
-export const connectionHoppingWikiLink = 'https://github.com/electerm/electerm/wiki/Connection-Hopping-Behavior-Change-in-electerm-since-v1.50.65'
-export const aiConfigWikiLink = 'https://github.com/electerm/electerm/wiki/AI-model-config-guide'
+export const sshTunnelHelpLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/ssh-tunnel'
+export const proxyHelpLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/proxy-format'
+export const regexHelpLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/keywords-highlight'
+export const connectionHoppingWikiLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/connection-hopping'
+export const aiConfigWikiLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/AI-config'
 export const aiChatModeLsKey = 'ai-chat-mode'
 export const modals = {
   hide: 0,

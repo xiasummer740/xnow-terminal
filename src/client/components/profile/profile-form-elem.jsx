@@ -56,7 +56,7 @@ export default function ProfileFormElem (props) {
     form,
     store: props.store
   }
-  const profileDefaultWikiLink = 'https://github.com/electerm/electerm/wiki/Default-Profile'
+  const profileDefaultWikiLink = 'https://github.com/xiasummer740/xnow-terminal/wiki/Default-Profile'
   const defaultLabel = (
     <span>
       {e('default')} <HelpIcon link={profileDefaultWikiLink} />

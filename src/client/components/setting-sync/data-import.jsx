@@ -113,7 +113,7 @@ export default function DataTransport (props) {
           </Space>
         )}
         <HelpIcon
-          link='https://github.com/electerm/electerm/wiki/Auto-data-Sync'
+          link='https://github.com/xiasummer740/xnow-terminal/wiki/Auto-data-Sync'
         />
       </div>
     </div>

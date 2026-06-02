@@ -26,7 +26,7 @@ export default function SshAgent () {
         >
           <Input placeholder={e('SSH Agent Path')} />
         </FormItem>
-        <HelpIcon link='https://github.com/electerm/electerm/wiki/ssh-agent' />
+        <HelpIcon link='https://github.com/xiasummer740/xnow-terminal/wiki/ssh-agent' />
       </Space>
     </FormItem>
   )

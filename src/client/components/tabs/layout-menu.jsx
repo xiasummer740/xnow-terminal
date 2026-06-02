@@ -38,7 +38,7 @@ export default function LayoutMenu (props) {
       label: (
         <span>
           <AppstoreOutlined /> {e('workspaces')}
-          <HelpIcon link='https://github.com/electerm/electerm/wiki/Workspace-Feature' />
+          <HelpIcon link='https://github.com/xiasummer740/xnow-terminal/wiki/Workspace-Feature' />
         </span>
       )
     }

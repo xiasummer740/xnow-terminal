@@ -153,7 +153,7 @@ export default function WidgetForm ({ widget, onSubmit, loading, hasRunningInsta
         <h4>
           {t(info.name)}
           {info.name === 'MCP Server' && (
-            <HelpIcon link='https://github.com/electerm/electerm/wiki/MCP-Widget-Usage-Guide' />
+            <HelpIcon link='https://github.com/xiasummer740/xnow-terminal/wiki/MCP-Widget-Usage-Guide' />
           )}
         </h4>
         <p>{t(info.description)}</p>
