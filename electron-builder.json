@@ -1,6 +1,6 @@
 {
   "appId": "com.xnow.terminal",
-  "productName": "XNOW",
+  "productName": "XNOW Terminal",
   "directories": {
     "app": "work/app",
     "output": "dist"
