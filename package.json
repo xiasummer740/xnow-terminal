@@ -32,7 +32,7 @@
     "sync-upstream": "git fetch upstream && git merge upstream/master --no-edit"
   },
   "license": "MIT",
-  "langugeRepo": "https://github.com/electerm/electerm-locales",
+  "langugeRepo": "https://github.com/xiasummer740/xnow-terminal",
   "privacyNoticeLink": "https://github.com/xiasummer740/xnow-terminal",
   "knownIssuesLink": "https://github.com/xiasummer740/xnow-terminal/issues",
   "sponsorLink": "https://github.com/xiasummer740/xnow-terminal",

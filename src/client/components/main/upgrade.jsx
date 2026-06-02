@@ -129,7 +129,7 @@ export default class Upgrade extends PureComponent {
           ...newTerm(undefined, true),
           runScripts: [
             {
-              script: 'npm install -g electerm',
+              script: 'npm install -g xnow-terminal',
               delay: 500
             }
           ]
