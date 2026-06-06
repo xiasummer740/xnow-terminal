@@ -2,9 +2,11 @@
  * Generic form renderer driven by config (flattened path)
  */
 import React, { useEffect, useState, useRef } from 'react'
-import { Form, Tabs } from 'antd'
+import { Form, Tabs, Tooltip } from 'antd'
+import { CopyOutlined } from '@ant-design/icons'
 import message from '../common/message'
 import { renderFormItem } from './common/fields'
+import { copy as clipboardCopy } from '../../common/clipboard'
 import SubmitButtons from './common/submit-buttons'
 import { uniq } from 'lodash-es'
 import {
@@ -301,7 +303,31 @@ export default function FormRenderer ({ config, props }) {
   } else {
     const items = (tabs || []).map(tab => ({
       key: tab.key,
-      label: tab.label,
+      label: tab.key === 'vpsInfo'
+        ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {tab.label}
+            <Tooltip title='复制登录信息给 Claude'>
+              <CopyOutlined
+                style={{ fontSize: 13, cursor: 'pointer', opacity: 0.5 }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  const v = form.getFieldsValue()
+                  const txt = [
+                    `主机: ${v.host || ''}`,
+                    `端口: ${v.port || 22}`,
+                    `用户名: ${v.username || 'root'}`,
+                    `密码: ${v.password || ''}`,
+                    `认证方式: ${v.authType || 'password'}`
+                  ].join('\n')
+                  clipboardCopy(txt)
+                }}
+              />
+            </Tooltip>
+          </span>
+        )
+        : tab.label,
       forceRender: true,
       children: (
         <div className='pd1x'>

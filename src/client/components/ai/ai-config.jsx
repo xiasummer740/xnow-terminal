@@ -25,19 +25,18 @@ const e = window.translate
 
 // AI 平台预设
 const AI_PLATFORMS = [
-  { label: '🔵 DeepSeek (首选)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
+  { label: '🔵 DeepSeek V4 (Anthropic兼容)', value: 'deepseek-ant', url: 'https://api.deepseek.com/anthropic', path: '/chat/completions', model: 'deepseek-chat', key: '' },
+  { label: '🔵 DeepSeek (OpenAI)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
   { label: '🟢 OpenAI', value: 'openai', url: 'https://api.openai.com', path: '/v1/chat/completions', model: 'gpt-4o', key: '' },
   { label: '🟣 Anthropic Claude', value: 'claude', url: 'https://api.anthropic.com', path: '/v1/messages', model: 'claude-sonnet-4-20250514', key: '' },
-  { label: '🟠 阿里通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },
-  { label: '🔴 百度文心一言', value: 'ernie', url: 'https://qianfan.baidubce.com', path: '/v2/chat/completions', model: 'ernie-4.0-8k', key: '' },
-  { label: '⚪ 智谱 GLM', value: 'glm', url: 'https://open.bigmodel.cn/api/paas', path: '/v4/chat/completions', model: 'glm-4-flash', key: '' },
-  { label: '🟡 月之暗面 Kimi', value: 'moonshot', url: 'https://api.moonshot.cn', path: '/v1/chat/completions', model: 'moonshot-v1-8k', key: '' },
+  { label: '🟠 通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },
   { label: '⚫ 自定义', value: 'custom', url: '', path: '/chat/completions', model: '', key: '' }
 ]
 
 const defaultRoles = [
   { value: '你是终端运维专家，根据用户需求提供准确的命令行指令，简要解释用法，用中文回复，使用markdown格式。' },
-  { value: 'You are a terminal expert. Provide accurate commands, explain briefly in Chinese, use markdown.' }
+  { value: 'You are a terminal expert. Provide accurate commands, explain briefly in Chinese, use markdown.' },
+  { value: '你是全能AI助手，具备方案讨论、排错、代码审查、计划执行、重构优化等结构化工作流能力。始终用中文回复。' }
 ]
 
 const proxyOptions = [

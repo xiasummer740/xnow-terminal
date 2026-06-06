@@ -78,7 +78,8 @@ exports.AIchat = async (
   path = defaultSettings.apiPathAI,
   apiKey,
   proxy = defaultSettings.proxyAI,
-  stream = true
+  stream = true,
+  history = []
 ) => {
   try {
     const client = createAIClient(baseURL, apiKey, proxy)
@@ -88,18 +89,19 @@ exports.AIchat = async (
     const isCommandSuggestion = prompt.includes('give me max 5 command suggestions')
     const useStream = stream && !isCommandSuggestion
 
+    // 构建消息列表：系统提示 → 最近对话历史 → 当前问题
+    const msgs = [
+      { role: 'system', content: role }
+    ]
+    for (const h of history) {
+      if (h.prompt) msgs.push({ role: 'user', content: h.prompt })
+      if (h.response) msgs.push({ role: 'assistant', content: h.response })
+    }
+    msgs.push({ role: 'user', content: prompt })
+
     const requestData = {
       model,
-      messages: [
-        {
-          role: 'system',
-          content: role
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
+      messages: msgs,
       stream: useStream
     }
 

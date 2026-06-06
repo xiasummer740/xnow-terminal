@@ -238,6 +238,87 @@ function initIpc () {
           .filter(k => process.env[k] !== undefined)
           .map(k => [k, process.env[k]])
       )
+    },
+    // ===== 文件系统工具 (AI Agent) =====
+    readLocalFile: async (filePath) => {
+      try {
+        const fs = require('fs')
+        const stat = fs.statSync(filePath)
+        if (!stat.isFile()) return JSON.stringify({ error: '不是文件' })
+        if (stat.size > 1048576) return JSON.stringify({ error: '文件超过1MB，请用终端命令' })
+        return JSON.stringify({ content: fs.readFileSync(filePath, 'utf-8'), size: stat.size, path: filePath })
+      } catch (e) { return JSON.stringify({ error: e.message }) }
+    },
+    writeLocalFile: async (filePath, content) => {
+      try {
+        const fs = require('fs'), path = require('path')
+        fs.mkdirSync(path.dirname(filePath), { recursive: true })
+        fs.writeFileSync(filePath, content, 'utf-8')
+        return JSON.stringify({ success: true, path: filePath, bytes: Buffer.byteLength(content, 'utf-8') })
+      } catch (e) { return JSON.stringify({ error: e.message }) }
+    },
+    listDirectory: async (dirPath) => {
+      try {
+        const fs = require('fs'), path = require('path')
+        const items = fs.readdirSync(dirPath, { withFileTypes: true })
+        return JSON.stringify({ path: dirPath, items: items.map(i => ({
+          name: i.name, type: i.isDirectory() ? 'dir' : 'file',
+          size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0
+        })) })
+      } catch (e) { return JSON.stringify({ error: e.message }) }
+    },
+    grepFiles: async (rootPath, pattern, glob = '*') => {
+      try {
+        const { execSync } = require('child_process')
+        const cmd = `grep -rn --include="${glob}" "${pattern}" "${rootPath}" 2>/dev/null | head -200`
+        const output = execSync(cmd, { maxBuffer: 2097152, timeout: 15000 }).toString()
+        return JSON.stringify({ total: output.split('\n').filter(Boolean).length, results: output })
+      } catch (e) {
+        if (e.status === 1) return JSON.stringify({ total: 0, results: '' })
+        return JSON.stringify({ error: e.message })
+      }
+    },
+    webFetchPage: async (url) => {
+      try {
+        const http = url.startsWith('https') ? require('https') : require('http')
+        return new Promise(r => {
+          http.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
+            let d = ''; res.on('data', c => { d += c; if (d.length > 500000) { req.destroy(); r(JSON.stringify({ error: '响应过大截断', preview: d.slice(0, 500000) })) } })
+            res.on('end', () => r(JSON.stringify({ status: res.statusCode, content: d.slice(0, 100000) })))
+          }).on('error', e => r(JSON.stringify({ error: e.message }))).on('timeout', function() { this.destroy(); r(JSON.stringify({ error: '请求超时' })) })
+        })
+      } catch (e) { return JSON.stringify({ error: e.message }) }
+    },
+    // ===== 书签备份工具 =====
+    exportAllBookmarks: async () => {
+      try {
+        const { dbAction } = require('./db')
+        const bookmarks = await dbAction('bookmarks', 'find')
+        const bookmarkGroups = await dbAction('bookmarkGroups', 'find')
+        const backup = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          totalBookmarks: bookmarks.length,
+          bookmarks,
+          bookmarkGroups
+        }
+        return JSON.stringify(backup)
+      } catch (e) { return JSON.stringify({ error: e.message }) }
+    },
+    importBookmarks: async (jsonStr) => {
+      try {
+        const data = JSON.parse(jsonStr)
+        if (!data.bookmarks || !Array.isArray(data.bookmarks)) {
+          return JSON.stringify({ error: '备份文件格式无效' })
+        }
+        for (const bm of data.bookmarks) {
+          await dbAction('bookmarks', 'insert', bm)
+        }
+        for (const g of (data.bookmarkGroups || [])) {
+          await dbAction('bookmarkGroups', 'insert', g)
+        }
+        return JSON.stringify({ success: true, total: data.bookmarks.length })
+      } catch (e) { return JSON.stringify({ error: e.message }) }
     }
   }
   ipcMain.handle('async', (event, { name, args }) => {

@@ -334,6 +334,73 @@ export const agentTools = [
         properties: {}
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'read_local_file',
+      description: '读取本地文件内容（文本文件，最大1MB）。用于查看代码、日志、配置文件。',
+      parameters: {
+        type: 'object',
+        properties: { filePath: { type: 'string', description: '文件的完整路径' } },
+        required: ['filePath']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'write_local_file',
+      description: '写入/创建本地文件。自动创建父目录，已存在则覆盖。',
+      parameters: {
+        type: 'object',
+        properties: {
+          filePath: { type: 'string', description: '文件的完整路径' },
+          content: { type: 'string', description: '文件内容' }
+        },
+        required: ['filePath', 'content']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_directory',
+      description: '列出目录下的文件和子目录结构。',
+      parameters: {
+        type: 'object',
+        properties: { dirPath: { type: 'string', description: '目录的完整路径' } },
+        required: ['dirPath']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'grep_files',
+      description: '在文件中搜索关键字。支持通配符过滤文件类型。',
+      parameters: {
+        type: 'object',
+        properties: {
+          rootPath: { type: 'string', description: '搜索根目录' },
+          pattern: { type: 'string', description: '要搜索的关键字或正则' },
+          glob: { type: 'string', description: '文件匹配模式如 *.js, *.py（默认所有文件）' }
+        },
+        required: ['rootPath', 'pattern']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'web_fetch_page',
+      description: '获取网页内容。用于查看文档、API返回、网页信息。',
+      parameters: {
+        type: 'object',
+        properties: { url: { type: 'string', description: '完整URL如 https://example.com' } },
+        required: ['url']
+      }
+    }
   }
 ]
 
@@ -391,6 +458,17 @@ export async function executeToolCall (toolName, args) {
       return JSON.stringify(store.mcpSftpTransferList())
     case 'sftp_transfer_history':
       return JSON.stringify(store.mcpSftpTransferHistory())
+    // ===== 新工具：文件系统 =====
+    case 'read_local_file':
+      return await window.pre.runGlobalAsync('readLocalFile', args.filePath)
+    case 'write_local_file':
+      return await window.pre.runGlobalAsync('writeLocalFile', args.filePath, args.content)
+    case 'list_directory':
+      return await window.pre.runGlobalAsync('listDirectory', args.dirPath)
+    case 'grep_files':
+      return await window.pre.runGlobalAsync('grepFiles', args.rootPath, args.pattern, args.glob || '*')
+    case 'web_fetch_page':
+      return await window.pre.runGlobalAsync('webFetchPage', args.url)
     default:
       throw new Error(`Unknown agent tool: ${toolName}`)
   }

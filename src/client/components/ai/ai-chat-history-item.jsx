@@ -70,6 +70,11 @@ export default function AIChatHistoryItem ({ item }) {
   }, [item.id])
 
   const startRequest = useCallback(async () => {
+    // 收集最近对话历史作为上下文（最多10条非当前记录）
+    const recentHistory = (window.store.aiChatHistory || [])
+      .filter(h => h.id !== item.id && h.response)
+      .slice(-10)
+
     try {
       const aiResponse = await window.pre.runGlobalAsync(
         'AIchat',
@@ -80,7 +85,8 @@ export default function AIChatHistoryItem ({ item }) {
         apiPathAI,
         apiKeyAI,
         proxyAI,
-        true
+        true,
+        recentHistory
       )
 
       if (aiResponse && aiResponse.error) {
@@ -119,7 +125,11 @@ export default function AIChatHistoryItem ({ item }) {
       proxyAI,
       languageAI
     }
-    await runAgentLoop(item, config, abortRef, setIsStreaming)
+    // 收集最近对话历史作为上下文（最多10条非当前记录）
+    const recentHistory = (window.store.aiChatHistory || [])
+      .filter(h => h.id !== item.id && h.response)
+      .slice(-10)
+    await runAgentLoop(item, config, abortRef, setIsStreaming, recentHistory)
   }, [modelAI, roleAI, baseURLAI, apiPathAI, apiKeyAI, proxyAI, languageAI, item.id])
 
   useEffect(() => {
