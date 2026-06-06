@@ -90,7 +90,7 @@ export default function VpsDashboard ({ visible, onClose }) {
       if (ir.error) { message.error('导入失败: ' + ir.error); return }
 
       // 4. 刷新前端书签数据
-      const reloadData = await window.pre.runGlobalAsync('dbAction', 'find', 'bookmarks', {})
+      const reloadData = await window.pre.runGlobalAsync('dbAction', 'bookmarks', 'find')
       window.store.setItems('bookmarks', reloadData)
 
       message.success('✅ 恢复成功！已导入 ' + ir.total + ' 条书签', 4)
