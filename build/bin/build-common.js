@@ -319,19 +319,20 @@ exports.uploadToRelease = async function uploadToRelease (src) {
     return
   }
 
-  const repoUrl = pkg.repository.url.replace(/^git\+https:\/\//, 'https://').replace(/\.git$/, '')
-  const cmd = 'gh release upload "' + tag + '" "' + filePath + '" --clobber --repo ' + repoUrl
-  console.log('[release] Uploading ' + path.basename(filePath) + ' to ' + tag + '...')
+  const basename = path.basename(filePath)
+  console.log('[release] Uploading ' + basename + ' to ' + tag + '...')
   try {
-    execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 120000 })
-    console.log('[release] ✅ Uploaded ' + path.basename(filePath) + ' to ' + tag)
+    const stdout = execSync('gh release upload "' + tag + '" "' + filePath + '" --clobber', {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      timeout: 120000
+    })
+    console.log('[release] ✅ Uploaded ' + basename + ' to ' + tag)
+    if (stdout.trim()) console.log('[release] gh output:', stdout.trim())
   } catch (e) {
-    console.error('[release] Upload failed: ' + e.message)
-    try {
-      execSync('gh release upload "' + tag + '" "' + filePath + '" --clobber', { encoding: 'utf8', stdio: 'pipe', timeout: 120000 })
-      console.log('[release] ✅ Uploaded ' + path.basename(filePath) + ' to ' + tag)
-    } catch (e2) {
-      console.error('[release] Fallback upload also failed: ' + e2.message)
-    }
+    console.error('[release] ❌ Upload failed')
+    console.error('[release] stdout:', e.stdout)
+    console.error('[release] stderr:', e.stderr)
+    console.error('[release] error:', e.message)
   }
 }

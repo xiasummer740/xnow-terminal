@@ -11,7 +11,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
-  uploadToRelease,
+    uploadToRelease,
   builder: pb
 } = require('./build-common')
 
