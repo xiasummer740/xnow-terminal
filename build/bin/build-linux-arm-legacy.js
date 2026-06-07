@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+  uploadToRelease,
   builder: pb,
   renameDist,
   reBuild,
@@ -47,6 +48,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.arm64.deb ====')
@@ -64,6 +66,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.aarch64.rpm ====')
@@ -81,6 +84,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.arm64.AppImage ====')
@@ -98,6 +102,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.armv7l.tar.gz ====')
@@ -116,6 +121,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.armv7l.deb ====')
@@ -133,6 +139,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.armv7l.rpm ====')
@@ -150,6 +157,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('============================================')
   echo('==== Start: build linux.armv7l.AppImage ====')
@@ -167,6 +175,7 @@ async function main () {
     console.error(error)
   })
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('✅ All Linux ARM builds completed successfully')
 }

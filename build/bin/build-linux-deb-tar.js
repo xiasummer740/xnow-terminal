@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+  uploadToRelease,
   builder: pb,
   replaceJSON,
   renameDist
@@ -17,6 +18,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --linux tar.gz`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('build deb')
@@ -25,6 +27,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --linux deb`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('build linux-x86_64.AppImage')
@@ -38,6 +41,7 @@ async function main () {
   )
   await run(`${pb} --linux`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 }
 

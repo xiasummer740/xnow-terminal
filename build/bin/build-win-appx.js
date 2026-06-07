@@ -5,6 +5,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+  uploadToRelease,
   builder
 } = require('./build-common')
 
@@ -20,6 +21,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --win appx`)
   await uploadToR2(src)
+  await uploadToRelease(src)
 }
 
 main()

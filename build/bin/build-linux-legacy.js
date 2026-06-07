@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+  uploadToRelease,
   builder: pb,
   replaceJSON,
   renameDist
@@ -37,6 +38,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --linux tar.gz`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('============')
@@ -47,6 +49,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --linux deb`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('============')
@@ -60,6 +63,7 @@ async function main () {
   })
   await run(`${pb} --linux rpm`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('============')
@@ -73,6 +77,7 @@ async function main () {
   })
   await run(`${pb} --linux`)
   await uploadToR2(src)
+  await uploadToRelease(src)
   renameDist()
 
   echo('============')

@@ -274,3 +274,64 @@ exports.patchSnapClassicSandbox = function patchSnapClassicSandbox () {
     console.log('Snap classic sandbox patch: applied successfully')
   }
 }
+
+/**
+ * Upload the built installer to the GitHub Release matching the current version.
+ * Uses `gh release upload` — available on GitHub Actions runners.
+ * Only runs in CI.
+ */
+exports.uploadToRelease = async function uploadToRelease (src) {
+  if (!process.env.CI) {
+    console.log('[release] Skipping upload: not in CI environment')
+    return
+  }
+  const { execSync } = require('child_process')
+  const path = require('path')
+  const fs = require('fs')
+  const distDir = resolve(__dirname, '../../dist')
+
+  const pkg = require('../../package.json')
+  const tag = 'v' + pkg.version
+  console.log('[release] Looking for "' + src + '" in dist/ for release tag "' + tag + '"')
+
+  let filePath = null
+  if (fs.existsSync(distDir)) {
+    const files = fs.readdirSync(distDir)
+    const match = files.find(f => f.endsWith(src))
+    if (match) filePath = path.join(distDir, match)
+  }
+  if (!filePath && fs.existsSync(distDir)) {
+    const entries = fs.readdirSync(distDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const subDir = path.join(distDir, entry.name)
+        const subFiles = fs.readdirSync(subDir)
+        const match = subFiles.find(f => f.endsWith(src))
+        if (match) {
+          filePath = path.join(subDir, match)
+          break
+        }
+      }
+    }
+  }
+  if (!filePath) {
+    console.error('[release] Could not find built file matching "' + src + '" in dist/')
+    return
+  }
+
+  const repoUrl = pkg.repository.url.replace(/^git\+https:\/\//, 'https://').replace(/\.git$/, '')
+  const cmd = 'gh release upload "' + tag + '" "' + filePath + '" --clobber --repo ' + repoUrl
+  console.log('[release] Uploading ' + path.basename(filePath) + ' to ' + tag + '...')
+  try {
+    execSync(cmd, { encoding: 'utf8', stdio: 'pipe', timeout: 120000 })
+    console.log('[release] ✅ Uploaded ' + path.basename(filePath) + ' to ' + tag)
+  } catch (e) {
+    console.error('[release] Upload failed: ' + e.message)
+    try {
+      execSync('gh release upload "' + tag + '" "' + filePath + '" --clobber', { encoding: 'utf8', stdio: 'pipe', timeout: 120000 })
+      console.log('[release] ✅ Uploaded ' + path.basename(filePath) + ' to ' + tag)
+    } catch (e2) {
+      console.error('[release] Fallback upload also failed: ' + e2.message)
+    }
+  }
+}
