@@ -274,3 +274,65 @@ exports.patchSnapClassicSandbox = function patchSnapClassicSandbox () {
     console.log('Snap classic sandbox patch: applied successfully')
   }
 }
+
+/**
+ * Upload the built installer to the GitHub Release matching the current version.
+ * Uses `gh release upload` — available on GitHub Actions runners.
+ * Only runs in CI.
+ */
+exports.uploadToRelease = async function uploadToRelease (src) {
+  if (!process.env.CI) {
+    console.log('[release] Skipping upload: not in CI environment')
+    return
+  }
+  const { execSync } = require('child_process')
+  const path = require('path')
+  const fs = require('fs')
+  const distDir = resolve(__dirname, '../../dist')
+
+  const pkg = require('../../package.json')
+  const tag = 'v' + pkg.version
+  console.log('[release] Looking for "' + src + '" in dist/ for release tag "' + tag + '"')
+
+  let filePath = null
+  if (fs.existsSync(distDir)) {
+    const files = fs.readdirSync(distDir)
+    const match = files.find(f => f.endsWith(src))
+    if (match) filePath = path.join(distDir, match)
+  }
+  if (!filePath && fs.existsSync(distDir)) {
+    const entries = fs.readdirSync(distDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const subDir = path.join(distDir, entry.name)
+        const subFiles = fs.readdirSync(subDir)
+        const match = subFiles.find(f => f.endsWith(src))
+        if (match) {
+          filePath = path.join(subDir, match)
+          break
+        }
+      }
+    }
+  }
+  if (!filePath) {
+    console.error('[release] Could not find built file matching "' + src + '" in dist/')
+    return
+  }
+
+  const basename = path.basename(filePath)
+  console.log('[release] Uploading ' + basename + ' to ' + tag + '...')
+  try {
+    const stdout = execSync('gh release upload "' + tag + '" "' + filePath + '" --clobber', {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      timeout: 120000
+    })
+    console.log('[release] ✅ Uploaded ' + basename + ' to ' + tag)
+    if (stdout.trim()) console.log('[release] gh output:', stdout.trim())
+  } catch (e) {
+    console.error('[release] ❌ Upload failed')
+    console.error('[release] stdout:', e.stdout)
+    console.error('[release] stderr:', e.stderr)
+    console.error('[release] error:', e.message)
+  }
+}

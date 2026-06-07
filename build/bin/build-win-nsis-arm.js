@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+    uploadToRelease,
   builder: pb,
   reBuild,
   replaceJSON,
@@ -27,6 +28,7 @@ async function main () {
   await run(`${reBuild} --arch arm64 -f work/app`)
   await run(`${pb} --win --arm64`)
   await uploadToR2(src)
+  await uploadToRelease(src)
 }
 
 main()

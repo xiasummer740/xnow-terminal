@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+    uploadToRelease,
   builder: pb,
   patchSnapClassicSandbox
 } = require('./build-common')
@@ -16,6 +17,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --linux rpm`)
   await uploadToR2(src)
+  await uploadToRelease(src)
 
   echo('build snap')
   rm('-rf', 'dist')
@@ -24,6 +26,7 @@ async function main () {
   patchSnapClassicSandbox()
   await run(`${pb} --linux snap -p always`)
   await uploadToR2(src)
+  await uploadToRelease(src)
 }
 
 main()

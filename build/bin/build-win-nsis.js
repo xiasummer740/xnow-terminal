@@ -3,6 +3,7 @@ const {
   run,
   writeSrc,
   uploadToR2,
+    uploadToRelease,
   builder,
   patchNsisKeepShortcuts
 } = require('./build-common')
@@ -19,6 +20,7 @@ async function main () {
   writeSrc(src)
   await run(`${pb} --win nsis`)
   await uploadToR2(src)
+  await uploadToRelease(src)
 }
 
 main()
