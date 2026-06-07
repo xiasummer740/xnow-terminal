@@ -109,6 +109,17 @@ exports.createApp = async function () {
   const opts = progs?.options
   globalState.set('serverPort', opts?.serverPort)
 
+  // --clear-config: 清除所有旧数据，全新启动
+  if (opts?.clearConfig) {
+    const { resolve } = require('path')
+    const dataPath = resolve(app.getPath('appData'), 'electerm')
+    const fs = require('fs')
+    if (fs.existsSync(dataPath)) {
+      fs.rmSync(dataPath, { recursive: true, force: true })
+      console.log('[clear-config] 已清除旧配置数据:', dataPath)
+    }
+  }
+
   const { allowMultiInstance = false } = await getUserConfigNoEnc()
 
   // Setup deep link handlers (open-url for macOS, etc.)
