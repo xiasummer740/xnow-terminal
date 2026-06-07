@@ -1,16 +1,15 @@
 import { PureComponent } from 'react'
 import { CloseOutlined, MinusSquareOutlined, UpCircleOutlined } from '@ant-design/icons'
 import { Button, Select, Space } from 'antd'
-import { getLatestReleaseInfo, getLatestReleaseVersion } from '../../common/update-check'
+import {
+  getLatestReleaseInfo,
+  getLatestReleaseVersion,
+  clearReleaseCache,
+} from '../../common/update-check'
 import upgrade from '../../common/upgrade'
 import compare from '../../common/version-compare'
 import Link from '../common/external-link'
-import {
-  isMac,
-  isWin,
-  packInfo,
-  downloadUpgradeTimeout
-} from '../../common/constants'
+import { isMac, isWin, packInfo, downloadUpgradeTimeout } from '../../common/constants'
 import { checkSkipSrc } from '../../common/check-skip-src'
 import { debounce } from 'lodash-es'
 import newTerm from '../../common/new-terminal'
@@ -21,25 +20,18 @@ import message from '../common/message'
 import './upgrade.styl'
 
 const e = window.translate
-const {
-  homepage
-} = packInfo
+const { homepage } = packInfo
 
-const downloadMirrorList = [
-  'github',
-  'gh-proxy',
-  'sourceforge',
-  'r2'
-]
+const downloadMirrorList = ['github', 'gh-proxy', 'sourceforge', 'r2']
 
 export default class Upgrade extends PureComponent {
   state = {
-    mirror: downloadMirrorList[1]
+    mirror: downloadMirrorList[1],
   }
 
   downloadTimer = null
 
-  componentDidMount () {
+  componentDidMount() {
     if (window.et.isWebApp) {
       return
     }
@@ -54,7 +46,7 @@ export default class Upgrade extends PureComponent {
     }, 1000)
   }
 
-  componentWillUnmount () {
+  componentWillUnmount() {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer)
     }
@@ -65,14 +57,12 @@ export default class Upgrade extends PureComponent {
   }
 
   changeProps = (update) => {
-    Object.assign(
-      window.store.upgradeInfo, update
-    )
+    Object.assign(window.store.upgradeInfo, update)
   }
 
   handleMinimize = () => {
     this.changeProps({
-      showUpgradeModal: false
+      showUpgradeModal: false,
     })
     window.store.focus()
   }
@@ -83,7 +73,7 @@ export default class Upgrade extends PureComponent {
 
   handleMirrorChange = (mirror) => {
     this.setState({
-      mirror
+      mirror,
     })
   }
 
@@ -94,13 +84,13 @@ export default class Upgrade extends PureComponent {
       return this.handleClose()
     }
     this.changeProps({
-      upgradePercent
+      upgradePercent,
     })
   }
 
   onError = (e) => {
     this.changeProps({
-      error: e.message
+      error: e.message,
     })
   }
 
@@ -108,7 +98,7 @@ export default class Upgrade extends PureComponent {
     this.update && this.update.destroy()
     this.changeProps({
       upgrading: false,
-      upgradePercent: 0
+      upgradePercent: 0,
     })
   }
 
@@ -124,20 +114,18 @@ export default class Upgrade extends PureComponent {
   doUpgrade = debounce(async () => {
     const { installSrc } = this.props
     if (!isMac && !isWin && installSrc === 'npm') {
-      return window.store.addTab(
-        {
-          ...newTerm(undefined, true),
-          runScripts: [
-            {
-              script: 'npm install -g xnow-terminal',
-              delay: 500
-            }
-          ]
-        }
-      )
+      return window.store.addTab({
+        ...newTerm(undefined, true),
+        runScripts: [
+          {
+            script: 'npm install -g xnow-terminal',
+            delay: 500,
+          },
+        ],
+      })
     }
     this.changeProps({
-      upgrading: true
+      upgrading: true,
     })
     const proxy = window.store.getProxySetting()
     this.update = await upgrade({
@@ -145,14 +133,14 @@ export default class Upgrade extends PureComponent {
       proxy,
       onData: this.onData,
       onEnd: this.onEnd,
-      onError: this.onError
+      onError: this.onError,
     })
     this.downloadTimer = setTimeout(this.timeout, downloadUpgradeTimeout)
   }, 100)
 
   handleSkipVersion = () => {
     window.store.setConfig({
-      skipVersion: this.props.upgradeInfo.remoteVersion
+      skipVersion: this.props.upgradeInfo.remoteVersion,
     })
     this.handleClose()
   }
@@ -162,17 +150,27 @@ export default class Upgrade extends PureComponent {
     if (checkSkipSrc(installSrc)) {
       return
     }
+    // 手动检查时跳过缓存
+    if (isManual) {
+      clearReleaseCache()
+    }
     this.changeProps({
       checkingRemoteVersion: true,
-      error: ''
+      error: '',
     })
     const releaseVer = await getLatestReleaseVersion()
     this.changeProps({
-      checkingRemoteVersion: false
+      checkingRemoteVersion: false,
     })
+    // 检查是否返回了错误信息
+    if (releaseVer?.error) {
+      return this.changeProps({
+        error: releaseVer.error,
+      })
+    }
     if (!releaseVer) {
       return this.changeProps({
-        error: 'Can not get version info'
+        error: '无法获取版本信息，请检查网络连接',
       })
     }
     const { skipVersion = 'v0.0.0' } = this.props
@@ -186,7 +184,7 @@ export default class Upgrade extends PureComponent {
       if (isManual) {
         this.changeProps({
           noUpdateMessage: e('noNeed'),
-          noUpdateMessageExpires: Date.now() + 3000
+          noUpdateMessageExpires: Date.now() + 3000,
         })
       }
       return
@@ -201,59 +199,52 @@ export default class Upgrade extends PureComponent {
       releaseInfo,
       remoteVersion: latestVer,
       canAutoUpgrade,
-      showUpgradeModal: true
+      showUpgradeModal: true,
     })
   }
 
   renderError = (err) => {
     return (
-      <div className='upgrade-panel'>
-        <div className='upgrade-panel-title fix'>
-          <span className='fleft'>
+      <div className="upgrade-panel">
+        <div className="upgrade-panel-title fix">
+          <span className="fleft">
             {e('fail')}: {err}
           </span>
-          <span className='fright'>
-            <CloseOutlined className='pointer font16 close-upgrade-panel' onClick={this.handleClose} />
+          <span className="fright">
+            <CloseOutlined
+              className="pointer font16 close-upgrade-panel"
+              onClick={this.handleClose}
+            />
           </span>
         </div>
-        <div className='upgrade-panel-body'>
+        <div className="upgrade-panel-body">
           You can visit
-          <Link
-            to={homepage}
-            className='mg1x'
-          >{homepage}
-          </Link> to download new version.
+          <Link to={homepage} className="mg1x">
+            {homepage}
+          </Link>{' '}
+          to download new version.
         </div>
       </div>
     )
   }
 
   renderChangeLog = () => {
-    const {
-      releaseInfo
-    } = this.props.upgradeInfo
+    const { releaseInfo } = this.props.upgradeInfo
     if (!releaseInfo) {
       return null
     }
     return (
-      <div className='pd1t'>
-        <div className='bold'>Changelog:</div>
+      <div className="pd1t">
+        <div className="bold">Changelog:</div>
         <Markdown text={releaseInfo.body} />
-        <Link
-          to={packInfo.releases}
-        >{e('moreChangeLog')}
-        </Link>
+        <Link to={packInfo.releases}>{e('moreChangeLog')}</Link>
       </div>
     )
   }
 
   renderSkipVersion = () => {
     return (
-      <Button
-        onClick={this.handleSkipVersion}
-        icon={<CloseOutlined />}
-        className='mg1l mg1b'
-      >
+      <Button onClick={this.handleSkipVersion} icon={<CloseOutlined />} className="mg1l mg1b">
         {e('skipThisVersion')}
       </Button>
     )
@@ -261,11 +252,15 @@ export default class Upgrade extends PureComponent {
 
   renderLinks = () => {
     const { releaseInfo } = this.props.upgradeInfo
-    const url = releaseInfo?.html_url || 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
+    const url =
+      releaseInfo?.html_url || 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
     return (
       <div>
         <p>
-          下载地址：<Link to={url} className='mg1l'>GitHub Releases</Link>
+          下载地址：
+          <Link to={url} className="mg1l">
+            GitHub Releases
+          </Link>
         </p>
         {this.renderChangeLog()}
       </div>
@@ -277,9 +272,7 @@ export default class Upgrade extends PureComponent {
     return (
       <div>
         <p style={{ color: '#888' }}>当前已是最新版本，可手动检查更新。</p>
-        <div className='pd1t'>
-          {this.renderLinks()}
-        </div>
+        <div className="pd1t">{this.renderLinks()}</div>
       </div>
     )
   }
@@ -291,22 +284,26 @@ export default class Upgrade extends PureComponent {
       : 'animate upgrade-panel upgrade-panel-hide'
     return (
       <div className={cls}>
-        <div className='upgrade-panel-title fix'>
-          <span className='fleft'>
-            {e('newVersion')} <b>{remoteVersion} [{releaseInfo.date}]</b>
+        <div className="upgrade-panel-title fix">
+          <span className="fleft">
+            {e('newVersion')}{' '}
+            <b>
+              {remoteVersion} [{releaseInfo.date}]
+            </b>
           </span>
-          <span className='fright'>
-            <MinusSquareOutlined className='pointer font16 close-upgrade-panel' onClick={this.handleMinimize} />
+          <span className="fright">
+            <MinusSquareOutlined
+              className="pointer font16 close-upgrade-panel"
+              onClick={this.handleMinimize}
+            />
           </span>
         </div>
-        <div className='upgrade-panel-body'>
-          {this.renderUpgradeContent()}
-        </div>
+        <div className="upgrade-panel-body">{this.renderUpgradeContent()}</div>
       </div>
     )
   }
 
-  render () {
+  render() {
     const { shouldUpgrade, checkingRemoteVersion, error } = this.props.upgradeInfo
     if (error) {
       return this.renderError(error)
