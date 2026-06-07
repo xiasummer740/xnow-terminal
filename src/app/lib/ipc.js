@@ -9,7 +9,7 @@ const {
   dialog,
   powerMonitor,
   globalShortcut,
-  shell
+  shell,
 } = require('electron')
 const globalState = require('./glob-state')
 const ipcSyncFuncs = require('./ipc-sync')
@@ -18,25 +18,11 @@ const { listItermThemes } = require('./iterm-theme')
 const installSrc = require('./install-src')
 const { getConfig } = require('./get-config')
 const loadSshConfig = require('./ssh-config')
-const {
-  listWidgets,
-  runWidget,
-  stopWidget,
-  runWidgetFunc
-} = require('../widgets/load-widget')
-const {
-  checkMigrate,
-  migrate
-} = require('../migrate/migrate-1-to-2')
-const {
-  setPassword,
-  checkPassword
-} = require('./auth')
+const { listWidgets, runWidget, stopWidget, runWidgetFunc } = require('../widgets/load-widget')
+const { checkMigrate, migrate } = require('../migrate/migrate-1-to-2')
+const { setPassword, checkPassword } = require('./auth')
 const initServer = require('./init-server')
-const {
-  getLang,
-  loadLocales
-} = require('./locales')
+const { getLang, loadLocales } = require('./locales')
 const { saveUserConfig } = require('./user-config-controller')
 const { changeHotkeyReg, initShortCut } = require('./shortcut')
 const lastStateManager = require('./last-state')
@@ -44,7 +30,7 @@ const {
   registerDeepLink,
   unregisterDeepLink,
   checkProtocolRegistration,
-  getPendingDeepLink
+  getPendingDeepLink,
 } = require('./deep-link')
 const {
   packInfo,
@@ -52,13 +38,9 @@ const {
   isMac,
   exePath,
   isPortable,
-  sshKeysPath
+  sshKeysPath,
 } = require('../common/app-props')
-const {
-  getScreenSize,
-  maximize,
-  unmaximize
-} = require('./window-control')
+const { getScreenSize, maximize, unmaximize } = require('./window-control')
 const { openFileWithEditor } = require('./open-file-with-editor')
 const { loadFontList } = require('./font-list')
 const { checkDbUpgrade, doUpgrade } = require('../upgrade')
@@ -73,43 +55,136 @@ const { AIchat, AIchatWithTools, getStreamContent, stopStream } = require('./ai'
 
 // Security: whitelist of safe environment variables for Linux/Mac/Windows
 const SAFE_ENV_KEYS = [
-  'SHELL', 'TERM', 'TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'COLORTERM',
-  'LANG', 'LC_ALL', 'LC_CTYPE', 'LC_TERMINAL', 'LC_TERMINAL_VERSION',
-  'HOME', 'USER', 'LOGNAME', 'USERNAME',
-  'PATH', 'PATHEXT',
-  'TMPDIR', 'TMP', 'TEMP',
-  'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'XDG_RUNTIME_DIR',
-  'XDG_DATA_DIRS', 'XDG_CONFIG_DIRS', 'XDG_CURRENT_DESKTOP', 'XDG_SEAT', 'XDG_VTNR',
-  'SSH_AUTH_SOCK', 'SSH_AGENT_PID', 'SSH_CLIENT', 'SSH_CONNECTION', 'SSH_TTY',
-  'NODE_PATH', 'NODE_ENV', 'NVM_DIR', 'NVM_BIN',
-  'NPM_CONFIG_PREFIX', 'NPM_CONFIG_CACHE',
-  'GIT_EDITOR', 'GIT_PAGER', 'GIT_TERMINAL_PROMPT',
-  'EDITOR', 'VISUAL', 'PAGER',
-  'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
-  'APPDATA', 'LOCALAPPDATA', 'ProgramFiles', 'ProgramFiles(x86)', 'CommonProgramFiles',
-  'ComSpec', 'SystemRoot', 'SystemDrive', 'USERPROFILE', 'USERDOMAIN',
-  'COMPUTERNAME', 'NUMBER_OF_PROCESSORS', 'PROCESSOR_ARCHITECTURE', 'OS',
+  'SHELL',
+  'TERM',
+  'TERM_PROGRAM',
+  'TERM_PROGRAM_VERSION',
+  'COLORTERM',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'LC_TERMINAL',
+  'LC_TERMINAL_VERSION',
+  'HOME',
+  'USER',
+  'LOGNAME',
+  'USERNAME',
+  'PATH',
+  'PATHEXT',
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'XDG_SESSION_TYPE',
+  'XDG_RUNTIME_DIR',
+  'XDG_DATA_DIRS',
+  'XDG_CONFIG_DIRS',
+  'XDG_CURRENT_DESKTOP',
+  'XDG_SEAT',
+  'XDG_VTNR',
+  'SSH_AUTH_SOCK',
+  'SSH_AGENT_PID',
+  'SSH_CLIENT',
+  'SSH_CONNECTION',
+  'SSH_TTY',
+  'NODE_PATH',
+  'NODE_ENV',
+  'NVM_DIR',
+  'NVM_BIN',
+  'NPM_CONFIG_PREFIX',
+  'NPM_CONFIG_CACHE',
+  'GIT_EDITOR',
+  'GIT_PAGER',
+  'GIT_TERMINAL_PROMPT',
+  'EDITOR',
+  'VISUAL',
+  'PAGER',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'ProgramFiles',
+  'ProgramFiles(x86)',
+  'CommonProgramFiles',
+  'ComSpec',
+  'SystemRoot',
+  'SystemDrive',
+  'USERPROFILE',
+  'USERDOMAIN',
+  'COMPUTERNAME',
+  'NUMBER_OF_PROCESSORS',
+  'PROCESSOR_ARCHITECTURE',
+  'OS',
   'Apple_PubSub_Socket_Render',
-  'DBUS_SESSION_BUS_ADDRESS', 'DESKTOP_SESSION', 'GNOME_DESKTOP_SESSION_ID', 'KDE_FULL_SESSION',
-  'CI', 'DOCKER_HOST', 'CONTAINER'
+  'DBUS_SESSION_BUS_ADDRESS',
+  'DESKTOP_SESSION',
+  'GNOME_DESKTOP_SESSION_ID',
+  'KDE_FULL_SESSION',
+  'CI',
+  'DOCKER_HOST',
+  'CONTAINER',
 ]
 
-async function initAppServer () {
-  const {
-    config
-  } = await getConfig(globalState.get('serverInited'))
-  const {
-    langs,
-    sysLocale
-  } = await loadLocales()
+// ===== 安全工具函数 (AI Agent 文件操作/请求防护) =====
+const { resolve: pathResolve } = require('path')
+
+// 检测路径遍历攻击
+const PATH_TRAVERSAL_RE = /(?:^|[\\/])\.\.[\\/]/
+
+function isPathSafe(targetPath) {
+  if (PATH_TRAVERSAL_RE.test(targetPath)) return false
+  const resolved = pathResolve(targetPath)
+  // 阻止访问系统敏感目录
+  if (isWin) {
+    const blocked = ['C:\\Windows\\', 'C:\\System32\\', 'C:\\Program Files\\', 'C:\\ProgramData\\']
+    for (const p of blocked) {
+      if (resolved.toLowerCase().startsWith(p.toLowerCase())) return false
+    }
+  } else {
+    const blocked = ['/etc/', '/sys/', '/proc/', '/dev/', '/boot/', '/root/', '/var/']
+    for (const p of blocked) {
+      if (resolved.startsWith(p)) return false
+    }
+  }
+  return true
+}
+
+// 检测内网/本地地址（防 SSRF）
+function isPrivateHost(hostname) {
+  const lower = hostname.toLowerCase()
+  if (['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'].includes(lower)) return true
+  const m = lower.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/)
+  if (m) {
+    const a = +m[1]
+    const b = +m[2]
+    if (a === 10) return true
+    if (a === 192 && b === 168) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 127) return true
+  }
+  return false
+}
+
+async function initAppServer() {
+  const { config } = await getConfig(globalState.get('serverInited'))
+  const { langs, sysLocale } = await loadLocales()
   const language = getLang(config, sysLocale, langs)
   config.language = language
   if (!globalState.get('serverInited')) {
-    const child = await initServer(config, {
-      ...process.env,
-      appPath,
-      sshKeysPath
-    }, sysLocale)
+    const child = await initServer(
+      config,
+      {
+        ...process.env,
+        appPath,
+        sshKeysPath,
+      },
+      sysLocale,
+    )
     child.on('message', (m) => {
       if (m && m.showFileInFolder) {
         if (!isMac) {
@@ -122,15 +197,12 @@ async function initAppServer () {
   globalState.set('config', config)
 }
 
-function initIpc () {
+function initIpc() {
   powerMonitor.on('resume', () => {
     globalState.get('win').webContents.send('power-resume', null)
   })
-  async function init () {
-    const {
-      langs,
-      langMap
-    } = await loadLocales()
+  async function init() {
+    const { langs, langMap } = await loadLocales()
     const config = globalState.get('config')
     const globs = {
       config,
@@ -139,7 +211,7 @@ function initIpc () {
       installSrc,
       appPath,
       exePath,
-      isPortable
+      isPortable,
     }
     initApp(langMap, config)
     initShortCut(globalShortcut, globalState.get('win'), config)
@@ -234,45 +306,75 @@ function initIpc () {
         return SAFE_ENV_KEYS.includes(key) ? process.env[key] : ''
       }
       return Object.fromEntries(
-        SAFE_ENV_KEYS
-          .filter(k => process.env[k] !== undefined)
-          .map(k => [k, process.env[k]])
+        SAFE_ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]]),
       )
     },
     // ===== 文件系统工具 (AI Agent) =====
     readLocalFile: async (filePath) => {
       try {
+        if (!isPathSafe(filePath)) return JSON.stringify({ error: '路径不允许' })
         const fs = require('fs')
         const stat = fs.statSync(filePath)
         if (!stat.isFile()) return JSON.stringify({ error: '不是文件' })
         if (stat.size > 1048576) return JSON.stringify({ error: '文件超过1MB，请用终端命令' })
-        return JSON.stringify({ content: fs.readFileSync(filePath, 'utf-8'), size: stat.size, path: filePath })
-      } catch (e) { return JSON.stringify({ error: e.message }) }
+        return JSON.stringify({
+          content: fs.readFileSync(filePath, 'utf-8'),
+          size: stat.size,
+          path: filePath,
+        })
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
     },
     writeLocalFile: async (filePath, content) => {
       try {
-        const fs = require('fs'), path = require('path')
+        if (!isPathSafe(filePath)) return JSON.stringify({ error: '路径不允许' })
+        const fs = require('fs'),
+          path = require('path')
         fs.mkdirSync(path.dirname(filePath), { recursive: true })
         fs.writeFileSync(filePath, content, 'utf-8')
-        return JSON.stringify({ success: true, path: filePath, bytes: Buffer.byteLength(content, 'utf-8') })
-      } catch (e) { return JSON.stringify({ error: e.message }) }
+        return JSON.stringify({
+          success: true,
+          path: filePath,
+          bytes: Buffer.byteLength(content, 'utf-8'),
+        })
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
     },
     listDirectory: async (dirPath) => {
       try {
-        const fs = require('fs'), path = require('path')
+        if (!isPathSafe(dirPath)) return JSON.stringify({ error: '路径不允许' })
+        const fs = require('fs'),
+          path = require('path')
         const items = fs.readdirSync(dirPath, { withFileTypes: true })
-        return JSON.stringify({ path: dirPath, items: items.map(i => ({
-          name: i.name, type: i.isDirectory() ? 'dir' : 'file',
-          size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0
-        })) })
-      } catch (e) { return JSON.stringify({ error: e.message }) }
+        return JSON.stringify({
+          path: dirPath,
+          items: items.map((i) => ({
+            name: i.name,
+            type: i.isDirectory() ? 'dir' : 'file',
+            size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0,
+          })),
+        })
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
     },
     grepFiles: async (rootPath, pattern, glob = '*') => {
       try {
-        const { execSync } = require('child_process')
-        const cmd = `grep -rn --include="${glob}" "${pattern}" "${rootPath}" 2>/dev/null | head -200`
-        const output = execSync(cmd, { maxBuffer: 2097152, timeout: 15000 }).toString()
-        return JSON.stringify({ total: output.split('\n').filter(Boolean).length, results: output })
+        if (!isPathSafe(rootPath)) return JSON.stringify({ error: '路径不允许' })
+        const { execFileSync } = require('child_process')
+        const grepArgs = ['-rn']
+        if (glob && glob !== '*') grepArgs.push('--include', glob)
+        grepArgs.push('-e', pattern, rootPath)
+        const output = execFileSync('grep', grepArgs, {
+          maxBuffer: 2097152,
+          timeout: 15000,
+          encoding: 'utf8',
+          windowsHide: true,
+        })
+        const lines = output.split('\n').filter(Boolean)
+        return JSON.stringify({ total: lines.length, results: lines.slice(0, 200).join('\n') })
       } catch (e) {
         if (e.status === 1) return JSON.stringify({ total: 0, results: '' })
         return JSON.stringify({ error: e.message })
@@ -280,14 +382,38 @@ function initIpc () {
     },
     webFetchPage: async (url) => {
       try {
+        const parsed = new URL(url)
+        if (isPrivateHost(parsed.hostname)) {
+          return JSON.stringify({ error: '不允许访问内网地址' })
+        }
         const http = url.startsWith('https') ? require('https') : require('http')
-        return new Promise(r => {
-          http.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } }, res => {
-            let d = ''; res.on('data', c => { d += c; if (d.length > 500000) { req.destroy(); r(JSON.stringify({ error: '响应过大截断', preview: d.slice(0, 500000) })) } })
-            res.on('end', () => r(JSON.stringify({ status: res.statusCode, content: d.slice(0, 100000) })))
-          }).on('error', e => r(JSON.stringify({ error: e.message }))).on('timeout', function() { this.destroy(); r(JSON.stringify({ error: '请求超时' })) })
+        return new Promise((r) => {
+          const req = http.get(
+            url,
+            { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } },
+            (res) => {
+              let d = ''
+              res.on('data', (c) => {
+                d += c
+                if (d.length > 500000) {
+                  req.destroy()
+                  r(JSON.stringify({ error: '响应过大截断', preview: d.slice(0, 500000) }))
+                }
+              })
+              res.on('end', () =>
+                r(JSON.stringify({ status: res.statusCode, content: d.slice(0, 100000) })),
+              )
+            },
+          )
+          req.on('error', (e) => r(JSON.stringify({ error: e.message })))
+          req.on('timeout', function () {
+            this.destroy()
+            r(JSON.stringify({ error: '请求超时' }))
+          })
         })
-      } catch (e) { return JSON.stringify({ error: e.message }) }
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
     },
     // ===== 书签备份工具 =====
     exportAllBookmarks: async () => {
@@ -300,10 +426,12 @@ function initIpc () {
           exportedAt: new Date().toISOString(),
           totalBookmarks: bookmarks.length,
           bookmarks,
-          bookmarkGroups
+          bookmarkGroups,
         }
         return JSON.stringify(backup)
-      } catch (e) { return JSON.stringify({ error: e.message }) }
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
     },
     importBookmarks: async (jsonStr) => {
       try {
@@ -314,12 +442,14 @@ function initIpc () {
         for (const bm of data.bookmarks) {
           await dbAction('bookmarks', 'insert', bm)
         }
-        for (const g of (data.bookmarkGroups || [])) {
+        for (const g of data.bookmarkGroups || []) {
           await dbAction('bookmarkGroups', 'insert', g)
         }
         return JSON.stringify({ success: true, total: data.bookmarks.length })
-      } catch (e) { return JSON.stringify({ error: e.message }) }
-    }
+      } catch (e) {
+        return JSON.stringify({ error: e.message })
+      }
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)

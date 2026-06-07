@@ -2,21 +2,25 @@ const fs = require('original-fs')
 const globalState = require('./glob-state')
 const _ = require('./lodash.js')
 
-const onWatch = _.debounce(() => {
-  try {
-    const filePath = globalState.get('watchFilePath')
-    if (fs.existsSync(filePath)) {
-      const text = fs.readFileSync(filePath, 'utf8')
-      globalState.get('win').webContents.send('file-change', text)
-    } else {
-      console.log('Watched file no longer exists')
-      globalState.get('win').webContents.send('file-deleted')
+const onWatch = _.debounce(
+  () => {
+    try {
+      const filePath = globalState.get('watchFilePath')
+      if (fs.existsSync(filePath)) {
+        const text = fs.readFileSync(filePath, 'utf8')
+        globalState.get('win').webContents.send('file-change', text)
+      } else {
+        console.log('Watched file no longer exists')
+        globalState.get('win').webContents.send('file-deleted')
+      }
+    } catch (e) {
+      console.error('Error reading file:', e)
+      globalState.get('win').webContents.send('file-read-error', e.message)
     }
-  } catch (e) {
-    console.error('Error reading file:', e)
-    globalState.get('win').webContents.send('file-read-error', e.message)
-  }
-}, 300, { leading: false, trailing: true })
+  },
+  300,
+  { leading: false, trailing: true },
+)
 
 exports.watchFile = (path) => {
   globalState.set('watchFilePath', path)
@@ -29,8 +33,8 @@ exports.unwatchFile = (path) => {
 }
 
 exports.cleanWatchFile = () => {
-  globalState.set('watchFilePath', '')
   const filePath = globalState.get('watchFilePath')
+  globalState.set('watchFilePath', '')
   if (!filePath) {
     return
   }

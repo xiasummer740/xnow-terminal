@@ -9,7 +9,7 @@ import {
   AppstoreOutlined,
   ThunderboltOutlined,
   DashboardOutlined,
-  BulbOutlined
+  BulbOutlined,
 } from '@ant-design/icons'
 import { Tooltip, Popover } from 'antd'
 import { useState, useEffect } from 'react'
@@ -17,11 +17,7 @@ import SideBarPanel from './sidebar-panel'
 import TransferList from './transfer-list'
 import MenuBtn from '../sys-menu/menu-btn'
 import QuickConnect from '../tabs/quick-connect'
-import {
-  sidebarWidth,
-  settingMap,
-  modals
-} from '../../common/constants'
+import { sidebarWidth, settingMap, modals } from '../../common/constants'
 import SideIcon from './side-icon'
 import SidePanel from './side-panel'
 import hasActiveInput from '../../common/has-active-input'
@@ -30,7 +26,7 @@ import './sidebar.styl'
 
 const e = window.translate
 
-export default function Sidebar (props) {
+export default function Sidebar(props) {
   const {
     height,
     upgradeInfo,
@@ -46,27 +42,30 @@ export default function Sidebar (props) {
     showModal,
     showInfoModal,
     sidebarPanelTab,
-    openWidgetsModal
+    openWidgetsModal,
   } = props
 
   const { store } = window
   const [vpsDashboardOpen, setVpsDashboardOpen] = useState(false)
-  const [lightTheme, setLightTheme] = useState(() => localStorage.getItem('xnow_light_theme') === '1')
+  const [lightTheme, setLightTheme] = useState(
+    () => localStorage.getItem('xnow_light_theme') === '1',
+  )
 
   const toggleTheme = () => {
     const next = !lightTheme
     setLightTheme(next)
     localStorage.setItem('xnow_light_theme', next ? '1' : '0')
-    if (next) {
-      document.body.classList.add('light-theme')
-    } else {
-      document.body.classList.remove('light-theme')
-    }
+    // 通过 store 切换主题配置，CSS 变量会自动响应
+    store.updateConfig({
+      theme: next ? 'defaultLight' : 'defaultDark',
+    })
   }
 
   // 初始化主题
   useEffect(() => {
-    if (lightTheme) document.body.classList.add('light-theme')
+    if (lightTheme) {
+      store.updateConfig({ theme: 'defaultLight' })
+    }
   }, [])
 
   const handleClickOutside = (event) => {
@@ -113,17 +112,14 @@ export default function Sidebar (props) {
     openAbout,
     openSettingSync,
     openTerminalThemes,
-    setLeftSidePanelWidth
+    setLeftSidePanelWidth,
   } = store
-  const {
-    showUpgradeModal,
-    upgradePercent,
-    checkingRemoteVersion,
-    shouldUpgrade
-  } = upgradeInfo
+  const { showUpgradeModal, upgradePercent, checkingRemoteVersion, shouldUpgrade } = upgradeInfo
   const showSetting = showModal === modals.setting
-  const settingActive = showSetting && settingTab === settingMap.setting && settingItem.id === 'setting-common'
-  const syncActive = showSetting && settingTab === settingMap.setting && settingItem.id === 'setting-sync'
+  const settingActive =
+    showSetting && settingTab === settingMap.setting && settingItem.id === 'setting-common'
+  const syncActive =
+    showSetting && settingTab === settingMap.setting && settingItem.id === 'setting-sync'
   const themeActive = showSetting && settingTab === settingMap.terminalThemes
   const bookmarksActive = showSetting && settingTab === settingMap.bookmarks
   const widgetsActive = showSetting && settingTab === settingMap.widgets
@@ -131,136 +127,92 @@ export default function Sidebar (props) {
     ? {
         className: 'sidebar-list',
         style: {
-          width: `${leftSidebarWidth}px`
-        }
+          width: `${leftSidebarWidth}px`,
+        },
       }
     : {
-        className: 'sidebar-list'
+        className: 'sidebar-list',
       }
   const sidebarProps = {
     className: `sidebar type-${openedSideBar}`,
     style: {
       width: sidebarWidth,
-      height
-    }
+      height,
+    },
   }
   const transferProps = {
     fileTransfers,
     transferTab,
-    transferHistory
+    transferHistory,
   }
   return (
     <div {...sidebarProps}>
-      <div className='sidebar-bar btns'>
-        <div className='control-icon-wrap'>
+      <div className="sidebar-bar btns">
+        <div className="control-icon-wrap">
           <MenuBtn store={store} config={store.config} />
         </div>
-        <SideIcon
-          title={e('newBookmark')}
-        >
-          <PlusCircleOutlined
-            className='font22 iblock control-icon'
-            onClick={onNewSsh}
-          />
+        <SideIcon title={e('newBookmark')}>
+          <PlusCircleOutlined className="font22 iblock control-icon" onClick={onNewSsh} />
         </SideIcon>
-        <Popover
-          content={<QuickConnect inputOnly />}
-          trigger='click'
-          placement='right'
-        >
-          <div className='control-icon-wrap' title={e('quickConnect')}>
-            <ThunderboltOutlined
-              className='font20 iblock control-icon'
-            />
-            <div className='control-icon-label'>{e('quickConnect')}</div>
+        <Popover content={<QuickConnect inputOnly />} trigger="click" placement="right">
+          <div className="control-icon-wrap" title={e('quickConnect')}>
+            <ThunderboltOutlined className="font20 iblock control-icon" />
+            <div className="control-icon-label">{e('quickConnect')}</div>
           </div>
         </Popover>
-        <SideIcon
-          title={e(settingMap.bookmarks)}
-          active={bookmarksActive}
-        >
-          <BookOutlined
-            onClick={handleClickBookmark}
-            className='font20 iblock control-icon'
-          />
+        <SideIcon title={e(settingMap.bookmarks)} active={bookmarksActive}>
+          <BookOutlined onClick={handleClickBookmark} className="font20 iblock control-icon" />
         </SideIcon>
         <TransferList {...transferProps} />
-        <SideIcon
-          title='VPS看板'
-          active={vpsDashboardOpen}
-        >
+        <SideIcon title="VPS看板" active={vpsDashboardOpen}>
           <DashboardOutlined
-            className='font18 iblock pointer control-icon'
+            className="font18 iblock pointer control-icon"
             onClick={() => setVpsDashboardOpen(true)}
           />
         </SideIcon>
-        <SideIcon
-          title={e(settingMap.terminalThemes)}
-          active={themeActive}
-        >
+        <SideIcon title={e(settingMap.terminalThemes)} active={themeActive}>
           <PictureOutlined
-            className='font20 iblock pointer control-icon'
+            className="font20 iblock pointer control-icon"
             onClick={openTerminalThemes}
           />
         </SideIcon>
-        <SideIcon
-          title={e(settingMap.setting)}
-          active={settingActive}
-        >
-          <SettingOutlined className='iblock font20 control-icon' onClick={openSetting} />
+        <SideIcon title={e(settingMap.setting)} active={settingActive}>
+          <SettingOutlined className="iblock font20 control-icon" onClick={openSetting} />
         </SideIcon>
-        <SideIcon
-          title={e('settingSync')}
-          active={syncActive}
-        >
+        <SideIcon title={e('settingSync')} active={syncActive}>
           <CloudSyncOutlined
-            className='iblock font20 control-icon'
+            className="iblock font20 control-icon"
             onClick={openSettingSync}
             spin={isSyncingSetting}
           />
         </SideIcon>
-        <SideIcon
-          title='小组件'
-          active={widgetsActive}
-        >
-          <AppstoreOutlined className='iblock font20 control-icon' onClick={openWidgetsModal} />
+        <SideIcon title="小组件" active={widgetsActive}>
+          <AppstoreOutlined className="iblock font20 control-icon" onClick={openWidgetsModal} />
         </SideIcon>
 
-        <SideIcon
-          title={e('about')}
-          active={showInfoModal}
-        >
+        <SideIcon title={e('about')} active={showInfoModal}>
           <InfoCircleOutlined
-            className='iblock font16 control-icon open-about-icon'
+            className="iblock font16 control-icon open-about-icon"
             onClick={openAbout}
           />
         </SideIcon>
-        {
-          !checkingRemoteVersion && !showUpgradeModal && shouldUpgrade
-            ? (
-              <Tooltip
-                title={`${e('upgrading')} ${upgradePercent || 0}%`}
-                placement='right'
-              >
-                <div
-                  className='control-icon-wrap'
-                >
-                  <UpCircleOutlined
-                    className='iblock font18 control-icon upgrade-icon'
-                    onClick={handleShowUpgrade}
-                  />
-                </div>
-              </Tooltip>
-              )
-            : null
-        }
-        <div className='control-icon-wrap' title={lightTheme ? '切换暗色主题' : '切换浅色主题'}>
+        {!checkingRemoteVersion && !showUpgradeModal && shouldUpgrade ? (
+          <Tooltip title={`${e('upgrading')} ${upgradePercent || 0}%`} placement="right">
+            <div className="control-icon-wrap">
+              <UpCircleOutlined
+                className="iblock font18 control-icon upgrade-icon"
+                onClick={handleShowUpgrade}
+              />
+            </div>
+          </Tooltip>
+        ) : null}
+        <div className="control-icon-wrap" title={lightTheme ? '切换暗色主题' : '切换浅色主题'}>
           <BulbOutlined
-            className='font18 iblock pointer control-icon'
+            className="font18 iblock pointer control-icon"
             onClick={toggleTheme}
             style={{ color: lightTheme ? '#faad14' : undefined }}
           />
-          <div className='control-icon-label'>{lightTheme ? '暗色' : '浅色'}</div>
+          <div className="control-icon-label">{lightTheme ? '暗色' : '浅色'}</div>
         </div>
       </div>
       <SidePanel
@@ -268,10 +220,7 @@ export default function Sidebar (props) {
         setLeftSidePanelWidth={setLeftSidePanelWidth}
         leftSidebarWidth={leftSidebarWidth}
       >
-        <SideBarPanel
-          pinned={pinned}
-          sidebarPanelTab={sidebarPanelTab}
-        />
+        <SideBarPanel pinned={pinned} sidebarPanelTab={sidebarPanelTab} />
       </SidePanel>
       <VpsDashboard
         store={store}

@@ -12,26 +12,27 @@ const os = require('os')
 
 let _certs = null
 
-function loadMacOS () {
+function loadMacOS() {
   try {
     return execSync(
       'security find-certificate -a -p ' +
-      '/System/Library/Keychains/SystemRootCertificates.keychain ' +
-      '/Library/Keychains/System.keychain ' +
-      os.homedir() + '/Library/Keychains/login.keychain-db',
-      { encoding: 'utf8', timeout: 10000 }
+        '/System/Library/Keychains/SystemRootCertificates.keychain ' +
+        '/Library/Keychains/System.keychain ' +
+        os.homedir() +
+        '/Library/Keychains/login.keychain-db',
+      { encoding: 'utf8', timeout: 10000 },
     )
   } catch {
     return ''
   }
 }
 
-function loadLinux () {
+function loadLinux() {
   const dirs = [
     '/etc/ssl/certs',
     '/etc/pki/tls/certs',
     '/etc/pki/ca-trust/extracted/pem',
-    '/usr/local/share/certs'
+    '/usr/local/share/certs',
   ]
   const files = []
   for (const dir of dirs) {
@@ -43,7 +44,9 @@ function loadLinux () {
           }
         }
         break
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
   }
   if (!files.length) {
@@ -51,7 +54,7 @@ function loadLinux () {
     const bundlePaths = [
       '/etc/ssl/certs/ca-certificates.crt',
       '/etc/pki/tls/certs/ca-bundle.crt',
-      '/etc/ssl/ca-bundle.pem'
+      '/etc/ssl/ca-bundle.pem',
     ]
     for (const p of bundlePaths) {
       if (existsSync(p)) {
@@ -60,28 +63,36 @@ function loadLinux () {
     }
     return ''
   }
-  return files.map(f => {
-    try { return readFileSync(f, 'utf8') } catch { return '' }
-  }).join('\n')
+  return files
+    .map((f) => {
+      try {
+        return readFileSync(f, 'utf8')
+      } catch {
+        return ''
+      }
+    })
+    .join('\n')
 }
 
-function loadWindows () {
+function loadWindows() {
   try {
     return execSync(
-      'powershell -Command ' +
-      '"Get-ChildItem -Path Cert:\\LocalMachine\\Root, Cert:\\LocalMachine\\CA, Cert:\\CurrentUser\\Root, Cert:\\CurrentUser\\CA ' +
-      '| Where-Object { $_.NotAfter -gt (Get-Date) } ' +
-      '| ForEach-Object { \'-----BEGIN CERTIFICATE-----\'; ' +
-      '[System.Convert]::ToBase64String($_.RawData, \'InsertLineBreaks\'); ' +
-      '\'-----END CERTIFICATE-----\' }"',
-      { encoding: 'utf8', timeout: 10000, windowsHide: true }
+      'powershell -NoLogo -NonInteractive -Command ' +
+        '"try { ' +
+        'Get-ChildItem -Path Cert:\\LocalMachine\\Root, Cert:\\LocalMachine\\CA, Cert:\\CurrentUser\\Root, Cert:\\CurrentUser\\CA ' +
+        '-ErrorAction Stop | Where-Object { $_.NotAfter -gt (Get-Date) } ' +
+        "| ForEach-Object { '-----BEGIN CERTIFICATE-----'; " +
+        "[System.Convert]::ToBase64String($_.RawData, 'InsertLineBreaks'); " +
+        "'-----END CERTIFICATE-----' } " +
+        '} catch { }"',
+      { encoding: 'utf8', timeout: 10000, windowsHide: true },
     )
   } catch {
     return ''
   }
 }
 
-function getSystemCAs () {
+function getSystemCAs() {
   if (_certs !== null) {
     return _certs
   }

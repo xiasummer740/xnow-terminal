@@ -5,18 +5,18 @@
 const { resolve } = require('path')
 const { existsSync, mkdirSync, createWriteStream } = require('fs')
 
-function mkLogDir (logDir) {
+function mkLogDir(logDir) {
   try {
     if (!existsSync(logDir)) {
-      mkdirSync(logDir)
+      mkdirSync(logDir, { recursive: true })
     }
   } catch (e) {
-    console.debug('read default user name error')
+    console.debug('创建会话日志目录失败:', e.message)
   }
 }
 
 class SessionLog {
-  constructor (options) {
+  constructor(options) {
     this.options = options
     const { logDir } = options
     const logPath = resolve(logDir, options.fileName)
@@ -24,11 +24,11 @@ class SessionLog {
     this.stream = createWriteStream(logPath, { flags: 'a' })
   }
 
-  write (text) {
+  write(text) {
     this.stream.write(text)
   }
 
-  destroy () {
+  destroy() {
     this.stream.destroy()
   }
 }

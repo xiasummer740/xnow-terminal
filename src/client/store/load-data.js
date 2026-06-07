@@ -15,7 +15,7 @@ import safeParse from '../common/parse-json-safe'
 import initWatch from './watch'
 import { parseQuickConnect } from '../common/parse-quick-connect'
 
-function getHost (argv, opts) {
+function getHost(argv, opts) {
   const arr = argv
   let i = arr.length - 1
   const reg = /^(?:([\w\d-_]+)@)?([\w\d-_]+\.[\w\d-_.]+)(?::([\d]+))?$/
@@ -28,24 +28,19 @@ function getHost (argv, opts) {
       return {
         host: mt[2],
         username: user,
-        port: port ? parseInt10(port) : 22
+        port: port ? parseInt10(port) : 22,
       }
     }
   }
   return {}
 }
 
-export async function addTabFromCommandLine (store, opts) {
+export async function addTabFromCommandLine(store, opts) {
   console.debug('command line params', opts)
   if (!opts) {
     return false
   }
-  const {
-    isHelp,
-    helpInfo,
-    options,
-    argv
-  } = opts
+  const { isHelp, helpInfo, options, argv } = opts
   if (helpInfo) {
     store.commandLineHelp = helpInfo
   }
@@ -66,7 +61,7 @@ export async function addTabFromCommandLine (store, opts) {
     authType: 'password',
     pane: options.type || 'terminal',
     term: defaultSettings.terminalType,
-    startDirectoryLocal: options.initFolder
+    startDirectoryLocal: options.initFolder,
   }
   if (options.setEnv) {
     update.setEnv = options.setEnv
@@ -96,10 +91,7 @@ export async function addTabFromCommandLine (store, opts) {
     conf.privateKey = await fs.readFile(options.privateKeyPath)
   }
   console.debug('command line opts', conf)
-  if (
-    (conf.username && conf.host) ||
-    conf.fromCmdLine
-  ) {
+  if ((conf.username && conf.host) || conf.fromCmdLine) {
     store.ipcOpenTab(conf)
   } else if (
     options.initFolder &&
@@ -141,11 +133,10 @@ export default (Store) => {
     }
   }
   Store.prototype.fetchSshConfigItems = async function () {
-    const arr = await window.pre.runGlobalAsync('loadSshConfig')
-      .catch((err) => {
-        console.log('fetchSshConfigItems error', err)
-        return []
-      })
+    const arr = await window.pre.runGlobalAsync('loadSshConfig').catch((err) => {
+      console.log('fetchSshConfigItems error', err)
+      return []
+    })
     window.store.sshConfigs = arr
     return arr
   }
@@ -154,7 +145,7 @@ export default (Store) => {
   }
   Store.prototype.initApp = async function () {
     const { store } = window
-    const globs = window.et.globs || await window.pre.runGlobalAsync('init')
+    const globs = window.et.globs || (await window.pre.runGlobalAsync('init'))
     window.langMap = globs.langMap
     store.installSrc = globs.installSrc
     store.appPath = globs.appPath
@@ -169,33 +160,24 @@ export default (Store) => {
     const { store } = window
     await store.initApp()
     const ext = {}
-    const all = dbNames.map(async name => {
+    const all = dbNames.map(async (name) => {
       const data = await fetchInitData(name)
       return {
         name,
-        data
+        data,
       }
     })
-    await Promise.all(all)
-      .then(arr => {
-        for (const { name, data } of arr) {
-          const dt = JSON.parse(data || '[]')
-          refsStatic.add('oldState-' + name, dt)
-          if (name === 'bookmarks') {
-            ext.bookmarksMap = new Map(
-              dt.map(d => [d.id, d])
-            )
-          }
-          ext[name] = dt
+    await Promise.all(all).then((arr) => {
+      for (const { name, data } of arr) {
+        const dt = JSON.parse(data || '[]')
+        refsStatic.add('oldState-' + name, dt)
+        if (name === 'bookmarks') {
+          ext.bookmarksMap = new Map(dt.map((d) => [d.id, d]))
         }
-      })
-    ext.lastDataUpdateTime = await getData('lastDataUpdateTime') || 0
-    // 强制设置（必须在 openInitSessions 之前）
-    store.config.language = 'zh_cn'
-    store.config.initDefaultTabOnStart = false
-    store.config.sshSftpSplitView = true
-    store.config.autoReconnectTerminal = true
-
+        ext[name] = dt
+      }
+    })
+    ext.lastDataUpdateTime = (await getData('lastDataUpdateTime')) || 0
     Object.assign(store, ext)
     store.loadFontList()
     store.fetchItermThemes()
@@ -203,20 +185,14 @@ export default (Store) => {
     store.fetchSshConfigItems()
     store.initCommandLine().catch(store.onError)
     initWatch(store)
-    setTimeout(
-      () => {
-        store.fixProfiles()
-        store.fixBookmarkGroups()
-      },
-      1000
-    )
-    setTimeout(
-      () => {
-        store.autoSyncReady = true
-      },
-      2000
-    )
-    store.startAutoRunWidgets().catch(err => {
+    setTimeout(() => {
+      store.fixProfiles()
+      store.fixBookmarkGroups()
+    }, 1000)
+    setTimeout(() => {
+      store.autoSyncReady = true
+    }, 2000)
+    store.startAutoRunWidgets().catch((err) => {
       console.error('Failed to start autorun widgets:', err)
     })
   }

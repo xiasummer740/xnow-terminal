@@ -4,17 +4,12 @@
 
 self.insts = {}
 
-function createWs (
-  type,
-  id,
-  sftpId = '',
-  config
-) {
+function createWs(type, id, sftpId = '', config) {
   // init gloabl ws
   const { host, port, tokenElecterm } = config
   const wsUrl = `ws://${host}:${port}/${type}/${id}?&sftpId=${sftpId}&token=${tokenElecterm}`
   const ws = new WebSocket(wsUrl)
-  ws.s = msg => {
+  ws.s = (msg) => {
     try {
       ws.send(JSON.stringify(msg))
     } catch (e) {
@@ -24,7 +19,12 @@ function createWs (
   ws.id = id
   ws.once = (callack, id) => {
     const func = (evt) => {
-      const arg = JSON.parse(evt.data)
+      let arg
+      try {
+        arg = JSON.parse(evt.data)
+      } catch (e) {
+        return // 二进制数据（VNC/RDP/SPICE），不做事件匹配
+      }
       if (id === arg.id) {
         callack(arg)
         ws.removeEventListener('message', func)
@@ -38,7 +38,7 @@ function createWs (
     }
     send({
       id: ws.id,
-      action: 'close'
+      action: 'close',
     })
     delete self.insts[ws.id]
   }
@@ -55,27 +55,23 @@ function createWs (
   })
 }
 
-function send (data) {
+function send(data) {
   self.postMessage(data)
 }
 
-async function onMsg (e) {
-  const {
-    id,
-    wsId,
-    args,
-    action,
-    type,
-    persist
-  } = e.data
+async function onMsg(e) {
+  const { id, wsId, args, action, type, persist } = e.data
   if (action === 'create') {
     const inst = self.insts[id]
     if (inst instanceof WebSocket) {
-      return send({
-        action,
-        id,
-        persist
-      }, '*')
+      return send(
+        {
+          action,
+          id,
+          persist,
+        },
+        '*',
+      )
     } else if (inst) {
       return false
     } else {
@@ -84,11 +80,14 @@ async function onMsg (e) {
         self.insts[id] = ws
       }
     }
-    send({
-      action,
-      persist,
-      id
-    }, '*')
+    send(
+      {
+        action,
+        persist,
+        id,
+      },
+      '*',
+    )
   } else if (action === 'once') {
     const ws = self.insts[wsId]
     if (ws) {
@@ -96,7 +95,7 @@ async function onMsg (e) {
         send({
           id,
           wsId,
-          data
+          data,
         })
       }
       ws.once(cb, id)
@@ -122,8 +121,8 @@ async function onMsg (e) {
           wsId,
           id,
           data: {
-            data: e.data
-          }
+            data: e.data,
+          },
         })
       }
       ws.cbs[id] = cb
@@ -141,6 +140,6 @@ async function onMsg (e) {
 self.addEventListener('message', onMsg)
 setTimeout(() => {
   send({
-    action: 'worker-init'
+    action: 'worker-init',
   })
 }, 10)

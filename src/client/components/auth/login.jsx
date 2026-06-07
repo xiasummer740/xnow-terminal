@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import LogoElem from '../common/logo-elem.jsx'
 import store from '../../store'
-import {
-  Spin
-} from 'antd'
+import { Spin } from 'antd'
 import message from '../common/message'
-import {
-  ArrowRightOutlined
-} from '@ant-design/icons'
+import { ArrowRightOutlined } from '@ant-design/icons'
 import Main from '../main/main.jsx'
 import AppDrag from '../tabs/app-drag'
 import WindowControl from '../tabs/window-control'
@@ -18,10 +14,9 @@ const e = window.translate
 
 window.store = store
 
-export default function Login () {
+export default function Login() {
   const [pass, setPass] = useState('')
   const [logined, setLogined] = useState(!window.pre.requireAuth)
-  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -36,7 +31,7 @@ export default function Login () {
     window.et.globs = globs
   }
 
-  const handlePassChange = e => {
+  const handlePassChange = (e) => {
     setPass(e.target.value)
   }
 
@@ -54,47 +49,38 @@ export default function Login () {
     const r = await window.pre.runGlobalAsync('checkPassword', pass)
     if (r) {
       setLogined(true)
-      setLoading(false)
     } else {
       message.error('Login failed')
-      setLoading(false)
     }
     setSubmitting(false)
   }
 
   const renderAfter = () => {
-    return (
-      <ArrowRightOutlined
-        className='mg1x pointer'
-        onClick={handleSubmit}
-      />
-    )
+    return <ArrowRightOutlined className="mg1x pointer" onClick={handleSubmit} />
   }
 
   const renderLogin = () => {
     return (
-      <div className='login-wrap'>
+      <div className="login-wrap">
         <AppDrag />
-        <WindowControl
-          store={window.store}
-        />
-        <div className='pd3 aligncenter'>
+        <WindowControl store={window.store} />
+        <div className="pd3 aligncenter">
           <LogoElem />
-          <div className='pd3 aligncenter'>
+          <div className="pd3 aligncenter">
             <Password
               value={pass}
-              readOnly={loading}
+              readOnly={submitting}
               onChange={handlePassChange}
               placeholder={e('password')}
               suffix={renderAfter()}
               onPressEnter={handleSubmit}
             />
           </div>
-          <div className='aligncenter'>
-            <Spin
-              spinning={loading}
-            />
-          </div>
+          {submitting && (
+            <div className="aligncenter">
+              <Spin spinning />
+            </div>
+          )}
         </div>
       </div>
     )
@@ -103,9 +89,5 @@ export default function Login () {
   if (!logined) {
     return renderLogin()
   }
-  return (
-    <Main
-      store={store}
-    />
-  )
+  return <Main store={store} />
 }

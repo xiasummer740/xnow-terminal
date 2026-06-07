@@ -25,8 +25,7 @@ const e = window.translate
 
 // AI 平台预设
 const AI_PLATFORMS = [
-  { label: '🔵 DeepSeek V4 (Anthropic兼容)', value: 'deepseek-ant', url: 'https://api.deepseek.com/anthropic', path: '/chat/completions', model: 'deepseek-chat', key: '' },
-  { label: '🔵 DeepSeek (OpenAI)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
+  { label: '🔵 DeepSeek V4 (推荐)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
   { label: '🟢 OpenAI', value: 'openai', url: 'https://api.openai.com', path: '/v1/chat/completions', model: 'gpt-4o', key: '' },
   { label: '🟣 Anthropic Claude', value: 'claude', url: 'https://api.anthropic.com', path: '/v1/messages', model: 'claude-sonnet-4-20250514', key: '' },
   { label: '🟠 通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },

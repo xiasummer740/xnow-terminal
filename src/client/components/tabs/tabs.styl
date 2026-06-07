@@ -48,7 +48,7 @@
   &.tab-last
     margin-right 5px
   .tab-close
-    display none
+    visibility hidden
   &.active
     color var(--text)
     background var(--main)
@@ -59,7 +59,7 @@
       font-weight bold
   &:hover
     .tab-close
-      display block
+      visibility visible
   &.dragover-tab::after
     position absolute
     content ''

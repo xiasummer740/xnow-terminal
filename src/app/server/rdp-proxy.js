@@ -6,6 +6,27 @@ const proxySock = require('./socks')
 // Debug prefix for all RDP proxy messages
 const LOG_PREFIX = '[RDP-PROXY]'
 
+// ===== RDP 证书 TOFU（Trust On First Use）验证 =====
+// 内存字典: "${host}:${port}" -> sha256 指纹 (hex)
+// 持久化由前端完成，连接时传入 trustedFingerprints 即可
+const trustedRdpCerts = new Map()
+
+/**
+ * 计算 X.509 证书的 SHA-256 指纹
+ */
+function getCertFingerprint(cert) {
+  try {
+    const asn1 = forge.pki.certificateToAsn1(cert)
+    const derBytes = forge.asn1.toDer(asn1).getBytes()
+    const md = forge.md.sha256.create()
+    md.update(derBytes)
+    return md.digest().toHex()
+  } catch (e) {
+    log.error(`${LOG_PREFIX} Failed to compute cert fingerprint: ${e.message}`)
+    return null
+  }
+}
+
 // ── RDCleanPath ASN.1 DER Constants ──
 const VERSION_1 = 3390 // 3389 + 1
 
@@ -25,7 +46,7 @@ const TAG_CTX = (n) => 0xa0 + n
 /**
  * Encode ASN.1 DER length bytes.
  */
-function derEncodeLength (length) {
+function derEncodeLength(length) {
   if (length < 0x80) {
     return Buffer.from([length])
   }
@@ -41,7 +62,7 @@ function derEncodeLength (length) {
 /**
  * Wrap content with a tag and proper DER length encoding.
  */
-function derWrap (tag, content) {
+function derWrap(tag, content) {
   const len = derEncodeLength(content.length)
   return Buffer.concat([Buffer.from([tag]), len, content])
 }
@@ -49,7 +70,7 @@ function derWrap (tag, content) {
 /**
  * Encode an integer as ASN.1 DER INTEGER.
  */
-function derEncodeInteger (value) {
+function derEncodeInteger(value) {
   if (value === 0) {
     return derWrap(TAG_INTEGER, Buffer.from([0]))
   }
@@ -69,28 +90,28 @@ function derEncodeInteger (value) {
 /**
  * Encode a UTF-8 string as ASN.1 DER UTF8String.
  */
-function derEncodeUtf8String (str) {
+function derEncodeUtf8String(str) {
   return derWrap(TAG_UTF8STRING, Buffer.from(str, 'utf-8'))
 }
 
 /**
  * Encode raw bytes as ASN.1 DER OCTET STRING.
  */
-function derEncodeOctetString (buf) {
+function derEncodeOctetString(buf) {
   return derWrap(TAG_OCTET_STRING, buf)
 }
 
 /**
  * Wrap content in a context-specific EXPLICIT tag [n].
  */
-function derWrapContext (tagNum, content) {
+function derWrapContext(tagNum, content) {
   return derWrap(TAG_CTX(tagNum), content)
 }
 
 /**
  * Decode DER length at offset. Returns { length, bytesRead }.
  */
-function derDecodeLength (buf, offset) {
+function derDecodeLength(buf, offset) {
   const first = buf[offset]
   if (first < 0x80) {
     return { length: first, bytesRead: 1 }
@@ -107,7 +128,7 @@ function derDecodeLength (buf, offset) {
  * Decode a DER TLV (Tag-Length-Value) at offset.
  * Returns { tag, value: Buffer, totalLength }.
  */
-function derDecodeTLV (buf, offset) {
+function derDecodeTLV(buf, offset) {
   const tag = buf[offset]
   const { length, bytesRead } = derDecodeLength(buf, offset + 1)
   const headerLen = 1 + bytesRead
@@ -118,7 +139,7 @@ function derDecodeTLV (buf, offset) {
 /**
  * Decode an ASN.1 DER INTEGER to a JS number.
  */
-function derDecodeInteger (buf) {
+function derDecodeInteger(buf) {
   let val = 0
   for (let i = 0; i < buf.length; i++) {
     val = (val << 8) | buf[i]
@@ -130,7 +151,7 @@ function derDecodeInteger (buf) {
  * Decode all TLV elements within a constructed value (SEQUENCE, context tags, etc.).
  * Returns an array of { tag, value, totalLength }.
  */
-function derDecodeChildren (buf) {
+function derDecodeChildren(buf) {
   const children = []
   let offset = 0
   while (offset < buf.length) {
@@ -150,7 +171,7 @@ function derDecodeChildren (buf) {
  *
  * Returns: { destination, proxyAuth, x224ConnectionRequest, preconnectionBlob? }
  */
-function parseRDCleanPathRequest (data) {
+function parseRDCleanPathRequest(data) {
   const buf = Buffer.isBuffer(data) ? data : Buffer.from(data)
 
   // Outer SEQUENCE
@@ -171,27 +192,32 @@ function parseRDCleanPathRequest (data) {
     const ctxTag = child.tag & 0x1f // strip class bits to get tag number
 
     switch (ctxTag) {
-      case 0: { // version
+      case 0: {
+        // version
         const intTlv = derDecodeTLV(child.value, 0)
         version = derDecodeInteger(intTlv.value)
         break
       }
-      case 2: { // destination
+      case 2: {
+        // destination
         const strTlv = derDecodeTLV(child.value, 0)
         destination = strTlv.value.toString('utf-8')
         break
       }
-      case 3: { // proxy_auth
+      case 3: {
+        // proxy_auth
         const strTlv = derDecodeTLV(child.value, 0)
         proxyAuth = strTlv.value.toString('utf-8')
         break
       }
-      case 5: { // preconnection_blob
+      case 5: {
+        // preconnection_blob
         const strTlv = derDecodeTLV(child.value, 0)
         preconnectionBlob = strTlv.value.toString('utf-8')
         break
       }
-      case 6: { // x224_connection_pdu
+      case 6: {
+        // x224_connection_pdu
         const octTlv = derDecodeTLV(child.value, 0)
         x224ConnectionRequest = octTlv.value
         break
@@ -220,7 +246,7 @@ function parseRDCleanPathRequest (data) {
  * @param {Buffer[]} certChain - Array of DER-encoded X.509 certificates
  * @returns {Buffer} DER-encoded RDCleanPath response
  */
-function buildRDCleanPathResponse (serverAddr, x224Response, certChain) {
+function buildRDCleanPathResponse(serverAddr, x224Response, certChain) {
   const parts = []
 
   // [0] version
@@ -247,7 +273,7 @@ function buildRDCleanPathResponse (serverAddr, x224Response, certChain) {
  * @param {number} [httpStatusCode] - optional HTTP status code
  * @returns {Buffer} DER-encoded RDCleanPath error response
  */
-function buildRDCleanPathError (errorCode, httpStatusCode) {
+function buildRDCleanPathError(errorCode, httpStatusCode) {
   const errParts = []
 
   // [0] error_code
@@ -278,7 +304,7 @@ function buildRDCleanPathError (errorCode, httpStatusCode) {
  * Handles IPv6 "[::1]:3389" and regular "host:port" formats.
  * Default port is 3389.
  */
-function parseDestination (destination) {
+function parseDestination(destination) {
   // IPv6: [host]:port
   if (destination.startsWith('[')) {
     const bracketEnd = destination.indexOf(']')
@@ -322,14 +348,14 @@ function parseDestination (destination) {
  * @param {function} logPrefix - Log prefix function
  * @returns {Promise<net.Socket>}
  */
-async function createTcpConnection (host, port, options, x224Request, logPrefix) {
+async function createTcpConnection(host, port, options, x224Request, logPrefix) {
   if (options.proxy) {
     log.debug(`${logPrefix} Connecting through proxy: ${options.proxy}`)
     const proxyResult = await proxySock({
       readyTimeout: options.readyTimeout || 15000,
       host,
       port,
-      proxy: options.proxy
+      proxy: options.proxy,
     })
     const tcpSocket = proxyResult.socket
     log.debug(`${logPrefix} ✓ Proxy connection established`)
@@ -373,7 +399,7 @@ async function createTcpConnection (host, port, options, x224Request, logPrefix)
  * @param {number} options.readyTimeout - Connection timeout in ms
  * @returns {Promise<{ x224Response: Buffer, certChain: Buffer[], forgeTls: object, tcpSocket: net.Socket }>}
  */
-async function performRDPHandshake (host, port, x224Request, options = {}) {
+async function performRDPHandshake(host, port, x224Request, options = {}) {
   const logPrefix = `${LOG_PREFIX} [${host}:${port}]`
 
   // Step 1: TCP connect (direct or through proxy)
@@ -387,7 +413,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
   return new Promise((resolve, reject) => {
     let settled = false
 
-    function settle (err, result) {
+    function settle(err, result) {
       if (settled) return
       settled = true
       if (err) reject(err)
@@ -417,15 +443,40 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
 
       // Capture the cert chain from the verify callback
       let capturedCertChain = []
+      let certFingerprint = null
+      let certRejected = null // { expected, actual } 指纹不匹配时记录
 
       const forgeTls = forge.tls.createConnection({
         server: false,
         verify: function (connection, verified, depth, certs) {
-          // Accept all certificates (RDP servers use self-signed certs)
-          log.debug(`${logPrefix} TLS verify callback: depth=${depth}, verified=${verified}, certs=${certs.length}`)
+          log.debug(
+            `${logPrefix} TLS verify callback: depth=${depth}, verified=${verified}, certs=${certs.length}`,
+          )
           // Capture the full chain on the first call (depth = deepest)
           if (certs && certs.length > capturedCertChain.length) {
             capturedCertChain = certs
+          }
+          // 叶子证书（depth===0）时做 TOFU 指纹验证
+          if (depth === 0 && certs && certs.length > 0) {
+            const leafCert = certs[0]
+            const fp = getCertFingerprint(leafCert)
+            if (fp) {
+              certFingerprint = fp
+              const key = `${host}:${port}`
+              const known = trustedRdpCerts.get(key)
+              if (known) {
+                if (known !== fp) {
+                  log.error(`${logPrefix} ⚠️ 证书指纹不匹配！可能遭受中间人攻击`)
+                  log.error(`${logPrefix} 期望指纹: ${known}`)
+                  log.error(`${logPrefix} 实际指纹: ${fp}`)
+                  certRejected = { expected: known, actual: fp }
+                  return false
+                }
+              } else {
+                trustedRdpCerts.set(key, fp)
+                log.warn(`${logPrefix} 首次连接，信任证书指纹: ${fp}`)
+              }
+            }
           }
           return true
         },
@@ -439,8 +490,9 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
           settle(null, {
             x224Response: Buffer.from(x224Response),
             certChain,
+            certFingerprint,
             forgeTls,
-            tcpSocket
+            tcpSocket,
           })
         },
         tlsDataReady: function (connection) {
@@ -460,9 +512,15 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
           log.debug(`${logPrefix} node-forge TLS connection closed`)
         },
         error: function (connection, error) {
-          log.error(`${logPrefix} node-forge TLS error: ${error.message}`)
-          settle(new Error(`TLS handshake failed: ${error.message}`))
-        }
+          if (certRejected) {
+            const msg = `RDP 证书指纹不匹配！期望: ${certRejected.expected}, 实际: ${certRejected.actual}。可能遭受中间人攻击或服务器证书已更换。`
+            log.error(`${logPrefix} ${msg}`)
+            settle(new Error(msg))
+          } else {
+            log.error(`${logPrefix} node-forge TLS error: ${error.message}`)
+            settle(new Error(`TLS handshake failed: ${error.message}`))
+          }
+        },
       })
 
       // Feed received TCP data into forge TLS engine
@@ -494,7 +552,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
 /**
  * Convert an array of node-forge certificate objects to DER-encoded Buffers.
  */
-function forgeCertsToDer (certs) {
+function forgeCertsToDer(certs) {
   const result = []
   for (const cert of certs) {
     try {
@@ -522,7 +580,7 @@ function forgeCertsToDer (certs) {
  * @param {object} forgeTls - The node-forge TLS connection
  * @param {net.Socket} tcpSocket - The underlying TCP socket
  */
-function setupForgeRelay (ws, forgeTls, tcpSocket) {
+function setupForgeRelay(ws, forgeTls, tcpSocket) {
   let wsBytesForwarded = 0
   let tlsBytesForwarded = 0
 
@@ -565,11 +623,17 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
 
   // Cleanup on close
   const cleanup = (source) => {
-    log.debug(`${logPrefix} ${source} closed — WS→TLS: ${wsBytesForwarded} bytes, TLS→WS: ${tlsBytesForwarded} bytes`)
+    log.debug(
+      `${logPrefix} ${source} closed — WS→TLS: ${wsBytesForwarded} bytes, TLS→WS: ${tlsBytesForwarded} bytes`,
+    )
     if (!tcpSocket.destroyed) tcpSocket.destroy()
-    try { forgeTls.close() } catch (_) {}
+    try {
+      forgeTls.close()
+    } catch (_) {}
     if (ws.readyState === 1) {
-      try { ws.close() } catch (_) {}
+      try {
+        ws.close()
+      } catch (_) {}
     }
   }
 
@@ -606,7 +670,7 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
  * @param {string} options.proxy - Proxy URL (e.g., 'socks5://127.0.0.1:1080' or 'http://proxy:8080')
  * @param {number} options.readyTimeout - Connection timeout in ms
  */
-function handleConnection (ws, options = {}, bufferedMessages = []) {
+function handleConnection(ws, options = {}, bufferedMessages = []) {
   log.debug(`${LOG_PREFIX} New WebSocket connection for RDCleanPath proxy`)
 
   const handleFirstMessage = async (data) => {
@@ -616,24 +680,39 @@ function handleConnection (ws, options = {}, bufferedMessages = []) {
 
       // Step 1: Parse RDCleanPath request
       const request = parseRDCleanPathRequest(requestData)
-      log.debug(`${LOG_PREFIX} RDCleanPath Request → destination: ${request.destination}, proxyAuth: ${request.proxyAuth}`)
+      log.debug(
+        `${LOG_PREFIX} RDCleanPath Request → destination: ${request.destination}, proxyAuth: ${request.proxyAuth}`,
+      )
 
       // Step 2: Parse destination
       const { host, port } = parseDestination(request.destination)
       log.debug(`${LOG_PREFIX} Connecting to RDP server at ${host}:${port}`)
 
       // Step 3-5: TCP + X.224 + TLS (node-forge) + Certs
-      const { x224Response, certChain, forgeTls, tcpSocket } = await performRDPHandshake(
-        host,
-        port,
-        request.x224ConnectionRequest,
-        options
-      )
+      const { x224Response, certChain, certFingerprint, forgeTls, tcpSocket } =
+        await performRDPHandshake(host, port, request.x224ConnectionRequest, options)
 
       // Step 6: Build and send RDCleanPath response
       const serverAddr = `${host}:${port}`
+
+      // 如果证书指纹有变化，先发一个 JSON 通知给前端（WASM 客户端收到不认识的消息会忽略）
+      if (certFingerprint) {
+        try {
+          ws.send(
+            JSON.stringify({
+              type: 'rdp-cert-fingerprint',
+              host,
+              port,
+              fingerprint: certFingerprint,
+              isTrusted: trustedRdpCerts.get(`${host}:${port}`) === certFingerprint,
+            }),
+          )
+        } catch (_) {}
+      }
       const responsePdu = buildRDCleanPathResponse(serverAddr, x224Response, certChain)
-      log.debug(`${LOG_PREFIX} ✓ Sending RDCleanPath response (${responsePdu.length} bytes) to browser`)
+      log.debug(
+        `${LOG_PREFIX} ✓ Sending RDCleanPath response (${responsePdu.length} bytes) to browser`,
+      )
       ws.send(responsePdu)
 
       log.debug(`${LOG_PREFIX} ✓ RDCleanPath handshake complete — starting bidirectional relay`)
@@ -650,7 +729,9 @@ function handleConnection (ws, options = {}, bufferedMessages = []) {
         ws.send(errorPdu)
       } catch (_) {}
 
-      try { ws.close() } catch (_) {}
+      try {
+        ws.close()
+      } catch (_) {}
     }
   }
 
@@ -674,5 +755,5 @@ module.exports = {
   buildRDCleanPathError,
   parseDestination,
   performRDPHandshake,
-  setupForgeRelay
+  setupForgeRelay,
 }

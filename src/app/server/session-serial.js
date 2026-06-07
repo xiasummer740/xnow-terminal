@@ -8,14 +8,14 @@ const globalState = require('./global-state')
 // MockBinding.createPort('/dev/ROBOT', { echo: true, record: true })
 
 class TerminalSerial extends TerminalBase {
-  async init () {
+  async init() {
     const { SerialPort } = require('serialport')
     // https://serialport.io/docs/api-stream
     const {
       autoOpen = true,
       baudRate = 9600,
       dataBits = 8,
-      lock = true,
+      lock = false,
       stopBits = 1,
       parity = 'none',
       rtscts = false,
@@ -24,31 +24,34 @@ class TerminalSerial extends TerminalBase {
       xany = false,
       txLineEnding = '\r',
       rxLineEnding = 'none',
-      path
+      path,
     } = this.initOptions
     this.txLineEnding = txLineEnding
     this.rxLineEnding = rxLineEnding
     await new Promise((resolve, reject) => {
-      this.port = new SerialPort({
-        // binding: MockBinding,
-        path,
-        autoOpen,
-        baudRate,
-        dataBits,
-        lock,
-        stopBits,
-        parity,
-        rtscts,
-        xon,
-        xoff,
-        xany
-      }, (err) => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve('ok')
-        }
-      })
+      this.port = new SerialPort(
+        {
+          // binding: MockBinding,
+          path,
+          autoOpen,
+          baudRate,
+          dataBits,
+          lock,
+          stopBits,
+          parity,
+          rtscts,
+          xon,
+          xoff,
+          xany,
+        },
+        (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve('ok')
+          }
+        },
+      )
     })
     if (this.isTest) {
       this.kill()
@@ -58,11 +61,9 @@ class TerminalSerial extends TerminalBase {
     return Promise.resolve(this)
   }
 
-  resize () {
+  resize() {}
 
-  }
-
-  on (event, cb) {
+  on(event, cb) {
     if (event === 'data' && this.rxLineEnding && this.rxLineEnding !== 'none') {
       this.port.on('data', (data) => {
         const str = Buffer.isBuffer(data) ? data.toString('latin1') : String(data)
@@ -81,7 +82,7 @@ class TerminalSerial extends TerminalBase {
     }
   }
 
-  write (data) {
+  write(data) {
     try {
       const str = Buffer.isBuffer(data) ? data.toString('latin1') : String(data)
       let out = str
@@ -98,7 +99,7 @@ class TerminalSerial extends TerminalBase {
    * Write raw bytes directly to the serial port, bypassing txLineEnding transformation.
    * Used by binary protocols (XMODEM) to avoid corruption of protocol bytes.
    */
-  writeRaw (data) {
+  writeRaw(data) {
     try {
       this.port.write(data)
     } catch (e) {
@@ -106,7 +107,7 @@ class TerminalSerial extends TerminalBase {
     }
   }
 
-  kill () {
+  kill() {
     if (this.sessionLogger) {
       this.sessionLogger.destroy()
     }
@@ -127,7 +128,7 @@ exports.session = async function (initOptions, ws) {
  * @param {object} options
  */
 exports.test = (initOptions) => {
-  return (new TerminalSerial(initOptions, undefined, true))
+  return new TerminalSerial(initOptions, undefined, true)
     .init()
     .then(() => true)
     .catch(() => {
