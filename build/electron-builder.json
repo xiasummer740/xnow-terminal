@@ -8,9 +8,10 @@
   "electronLanguages": ["en-US"],
   "asar": true,
   "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "icon": "xnow-logo.png",
   "win": {
     "target": ["tar.gz", "appx", "nsis"],
-    "icon": "node_modules/@electerm/electerm-resource/build/icons-win.ico",
+    "icon": "xnow-logo.png",
     "publish": {
       "provider": "github",
       "channel": "${env.WORKFLOW_NAME}"
@@ -60,7 +61,7 @@
   "mac": {
     "category": "public.app-category.developer-tools",
     "target": "dmg",
-    "icon": "node_modules/@electerm/electerm-resource/build/icons.icns",
+    "icon": "xnow-logo.png",
     "publish": {
       "provider": "github",
       "channel": "${env.WORKFLOW_NAME}"
@@ -87,7 +88,7 @@
   },
   "linux": {
     "category": "Development;System;TerminalEmulator",
-    "icon": "node_modules/@electerm/electerm-resource/res/imgs",
+    "icon": "xnow-logo.png",
     "target": [
       "rpm",
       "deb",

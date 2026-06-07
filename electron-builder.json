@@ -5,11 +5,13 @@
     "app": "work/app",
     "output": "dist"
   },
+  "icon": "xnow-logo.png",
   "files": [
     "**/*"
   ],
   "win": {
-    "target": "nsis"
+    "target": "nsis",
+    "icon": "xnow-logo.png"
   },
   "nsis": {
     "oneClick": false,
