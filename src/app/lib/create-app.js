@@ -120,6 +120,44 @@ exports.createApp = async function () {
     }
   }
 
+  // 自动检测版本升级，升级时自动清空旧数据，确保每次安装都是全新的
+  if (app.isPackaged) {
+    const fs = require('fs')
+    const path = require('path')
+    const dataPath = path.resolve(app.getPath('appData'), 'electerm')
+    const versionFile = path.resolve(dataPath, '.xnow-version')
+    const currentVersion = packInfo.version
+
+    // 先确保目录存在
+    try { fs.mkdirSync(dataPath, { recursive: true }) } catch (_) {}
+
+    let oldVersion = ''
+    try {
+      oldVersion = fs.readFileSync(versionFile, 'utf8').trim()
+    } catch (_) {}
+
+    if (oldVersion && oldVersion !== currentVersion) {
+      // 版本变了 → 升级安装 → 清空旧数据
+      console.log(`[auto-clear] 检测到版本升级: ${oldVersion} → ${currentVersion}，正在清空旧数据...`)
+      try {
+        // 只清数据库和配置文件，保留 version 标记文件待会重写
+        const keep = ['.xnow-version']
+        const entries = fs.readdirSync(dataPath)
+        for (const entry of entries) {
+          if (!keep.includes(entry)) {
+            fs.rmSync(path.resolve(dataPath, entry), { recursive: true, force: true })
+          }
+        }
+        console.log('[auto-clear] 旧数据已清空，全新启动 ✓')
+      } catch (e) {
+        console.error('[auto-clear] 清空旧数据失败:', e.message)
+      }
+    }
+
+    // 写入当前版本号
+    try { fs.writeFileSync(versionFile, currentVersion, 'utf8') } catch (_) {}
+  }
+
   const { allowMultiInstance = false } = await getUserConfigNoEnc()
 
   // Setup deep link handlers (open-url for macOS, etc.)
