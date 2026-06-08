@@ -7,6 +7,7 @@ import {
   settingMap
 } from '../common/constants'
 import { action } from 'manate'
+import { getRandomDefaultColor } from '../common/rand-hex-color'
 
 export default Store => {
   Store.prototype.getBookmarkGroupsTotal = function () {
@@ -109,6 +110,45 @@ export default Store => {
   Store.prototype.fixBookmarkGroups = function () {
     const { store } = window
     const { bookmarks, bookmarkGroups } = store
+
+    // Ensure default group exists
+    let defaultGroupObj = bookmarkGroups.find(g => g.id === defaultBookmarkGroupId)
+    if (!defaultGroupObj) {
+      defaultGroupObj = {
+        title: e(defaultBookmarkGroupId),
+        id: defaultBookmarkGroupId,
+        bookmarkIds: [],
+        color: getRandomDefaultColor()
+      }
+      bookmarkGroups.push(defaultGroupObj)
+    }
+
+    // Deduplicate bookmarks: keep only the first occurrence of each unique identity
+    const seen = new Map()
+    const dupIds = new Set()
+    for (const bm of bookmarks) {
+      let key
+      if (bm.type === 'local') {
+        key = 'local:' + (bm.title || '')
+      } else if (bm.type === 'web') {
+        key = 'web:' + (bm.url || '')
+      } else {
+        key = (bm.type || '') + ':' + (bm.host || '') + ':' + (bm.username || '') + ':' + (bm.port || '')
+      }
+      if (seen.has(key)) {
+        dupIds.add(bm.id)
+      } else {
+        seen.set(key, bm.id)
+      }
+    }
+    if (dupIds.size > 0) {
+      for (let i = bookmarks.length - 1; i >= 0; i--) {
+        if (dupIds.has(bookmarks[i].id)) {
+          bookmarks.splice(i, 1)
+        }
+      }
+      console.log('Cleaned up ' + dupIds.size + ' duplicate bookmarks')
+    }
 
     // Create sets for quick lookup
     const bookmarkIds = new Set(bookmarks.map(b => b.id))

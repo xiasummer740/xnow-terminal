@@ -60,7 +60,7 @@ export function renderFormItem (item, formItemLayout, form, ctxProps, index) {
         control = <Input {...item.props} />
         break
       case 'textarea':
-        control = <TextArea autoSize={{ minRows: 1 }} {...item.props} />
+        control = <TextArea autoSize={{ minRows: 1, maxRows: 8 }} style={{ overflowY: 'auto' }} {...item.props} />
         break
       case 'number':
         control = <InputNumber min={1} max={65535} step={1} {...item.props} />

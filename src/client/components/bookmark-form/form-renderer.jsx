@@ -23,6 +23,7 @@ import testCon from '../../common/test-connection'
 import newTerm from '../../common/new-terminal'
 import { isValidIP } from '../../common/is-ip'
 import { action as manateAction } from 'manate'
+import { getRandomDefaultColor } from '../../common/rand-hex-color'
 
 export default function FormRenderer ({ config, props }) {
   const initialValues = config.initValues(props)
@@ -53,6 +54,17 @@ export default function FormRenderer ({ config, props }) {
       index = bookmarkGroups.findIndex(
         bg => bg.id === defaultBookmarkGroupId
       )
+    }
+    // If default group still not found, create it
+    if (index < 0) {
+      const newGroup = {
+        id: defaultBookmarkGroupId,
+        title: window.translate(defaultBookmarkGroupId),
+        bookmarkIds: [],
+        color: getRandomDefaultColor()
+      }
+      bookmarkGroups.push(newGroup)
+      index = bookmarkGroups.length - 1
     }
     const bid = bookmark.id
     const bg = bookmarkGroups[index]
@@ -337,11 +349,16 @@ export default function FormRenderer ({ config, props }) {
     }))
     content = <Tabs items={items} />
   }
+  const handleFinishFailed = (errInfo) => {
+    console.warn('Form validation failed:', errInfo.errorFields?.map(f => f.errors).flat().join('; ') || errInfo)
+  }
+
   const formName = `${config.key}-form`
   return (
     <Form
       form={form}
       onFinish={handleFinish}
+      onFinishFailed={handleFinishFailed}
       initialValues={initialValues}
       name={formName}
     >

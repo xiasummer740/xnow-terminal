@@ -32,14 +32,12 @@ import { getRandomDefaultColor } from '../common/rand-hex-color'
 const e = window.translate
 
 function getDefaultBookmarkGroups (bookmarks) {
-  return [
-    JSON.stringify({
-      title: e(defaultBookmarkGroupId),
-      id: defaultBookmarkGroupId,
-      bookmarkIds: bookmarks.map(d => d.id),
-      color: getRandomDefaultColor()
-    })
-  ]
+  return [{
+    title: e(defaultBookmarkGroupId),
+    id: defaultBookmarkGroupId,
+    bookmarkIds: bookmarks.map(d => d.id),
+    color: getRandomDefaultColor()
+  }]
 }
 
 export default () => {

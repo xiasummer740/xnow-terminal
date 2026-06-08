@@ -45,8 +45,9 @@ export default function renderRunScripts () {
               noStyle
             >
               <Input.TextArea
-                autoSize={{ minRows: 1 }}
+                autoSize={{ minRows: 1, maxRows: 8 }}
                 placeholder={e('loginScript')}
+                style={{ overflowY: 'auto' }}
               />
             </FormItem>
             <Button

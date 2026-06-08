@@ -6,7 +6,7 @@ import { formItemLayout } from '../../../common/form-layout.js'
 const FormItem = Form.Item
 const e = window.translate
 
-export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPaste, trim, ...props }) {
+export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPaste, ...props }) {
   // ips is ipaddress string[]
   function renderIps () {
     return ips.map(ip => {
@@ -32,12 +32,6 @@ export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPast
       {...formItemLayout}
       label={e('host')}
       hasFeedback
-      rules={[{
-        max: 520, message: '520 chars max'
-      }, {
-        required: true, message: 'host required'
-      }]}
-      normalize={props.trim}
     >
       {
         ips.length
@@ -48,7 +42,15 @@ export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPast
             </div>
             )
       }
-      <FormItem noStyle name='host'>
+      <FormItem
+        noStyle
+        name='host'
+        rules={[{
+          max: 520, message: '520 chars max'
+        }, {
+          required: true, message: 'host required'
+        }]}
+      >
         <InputAutoFocus
           name='host'
           onBlur={props.onBlur}
