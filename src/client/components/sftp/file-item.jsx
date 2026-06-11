@@ -702,10 +702,19 @@ export default class FileSection extends React.Component {
     const isLocal = type === typeMap.local
 
     if (isLocal) {
-      // 本地文件夹 → 新建本机终端 cd 到目标目录
-      // 用 batch 保持在同一标签组，标题显示路径名
+      // 本地文件夹 → 新建本机终端，文件浏览器跟随到同一目录
       const folderName = name || path?.split(/[\\/]/).filter(Boolean).pop() || '本机终端'
       window.store.addTab({ title: folderName, cwd: rp })
+      // 新标签页渲染后，把文件浏览器也导航到同一目录
+      const tabId = window.store.activeTabId
+      const waitAndNav = setInterval(() => {
+        const sftp = refs.get('sftp-' + tabId)
+        if (sftp) {
+          clearInterval(waitAndNav)
+          sftp.updateCwd(rp)
+        }
+      }, 200)
+      setTimeout(() => clearInterval(waitAndNav), 5000)
       return
     }
 
