@@ -876,7 +876,7 @@ export default class Sftp extends Component {
   getLocalHome = () => {
     return this.props.tab.startDirectoryLocal ||
     this.props.config.startDirectoryLocal ||
-    window.pre.homeOrTmp
+    window.pre.homeOrTmp?.replace(/^([A-Z]:\\)(?:.*)$/i, '$1') || 'C:\\'
   }
 
   localList = async (returnList = false, localPathReal, oldPath) => {
