@@ -698,6 +698,16 @@ export default class FileSection extends React.Component {
       path, name
     } = this.state.file
     const rp = path ? resolve(path, name) : this.props[`${this.props.type}Path`]
+    const { type } = this.props
+    const isLocal = type === typeMap.local
+
+    if (isLocal) {
+      // 本地文件夹 → 新建本机终端并 cd 到目标目录
+      window.store.addTab({ title: '本机终端', cwd: rp })
+      return
+    }
+
+    // 远程 SSH → 导航现有终端
     this.props.tab.pane = paneMap.terminal
     refs.get('term-' + this.props.tab.id)?.cd(rp)
   }

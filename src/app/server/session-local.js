@@ -20,11 +20,12 @@ class TerminalLocal extends TerminalBase {
 
       log.debug('[local-term] spawning:', shell, cols + 'x' + rows)
 
+      const defaultCwd = process.env.USERPROFILE || process.env.HOME || os.homedir()
       this.term = pty.spawn(shell, [], {
         name: 'xterm-color',
         cols,
         rows,
-        cwd: process.env.USERPROFILE || process.env.HOME || os.homedir(),
+        cwd: this.initOptions.cwd || defaultCwd,
         env: process.env
       })
 
