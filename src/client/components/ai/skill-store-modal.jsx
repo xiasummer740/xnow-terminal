@@ -1,9 +1,19 @@
-import { auto } from 'manate/react'
+import { useState, useEffect } from 'react'
 import Modal from '../common/modal'
 import SkillStore from './skill-store'
 
-export default auto(function SkillStoreModal ({ store }) {
-  const { showSkillStoreModal } = store
+export default function SkillStoreModal () {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    // 轮询检测 store 状态变化
+    const check = () => {
+      setVisible(!!window.store?.showSkillStoreModal)
+    }
+    const timer = setInterval(check, 200)
+    check()
+    return () => clearInterval(timer)
+  }, [])
 
   function handleClose () {
     window.store.showSkillStoreModal = false
@@ -11,15 +21,14 @@ export default auto(function SkillStoreModal ({ store }) {
 
   return (
     <Modal
-      open={showSkillStoreModal}
+      open={visible}
       onCancel={handleClose}
       footer={null}
       title='📦 技能商店'
       width='80%'
-      destroyOnClose
       className='skill-store-modal'
     >
       <SkillStore />
     </Modal>
   )
-})
+}

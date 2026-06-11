@@ -192,7 +192,7 @@ export default function AIChat (props) {
           {renderSendIcon()}
         </Flex>
       </Flex>
-      <SkillStoreModal store={window.store} />
+      <SkillStoreModal />
     </Flex>
   )
 }
