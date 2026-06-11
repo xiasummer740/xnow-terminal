@@ -301,12 +301,12 @@ export default class Sftp extends Component {
       path = this.getLocalHome()
     }
 
-    // 磁盘列表视图用 C:\ 作为显示路径
-    const displayPath = path === '_DRIVES_' ? 'C:\\' : path
+    // 磁盘列表视图用 / 作为显示路径
+    const showDrives = path === '/'
     this.setState({
-      [n]: displayPath,
-      [nt]: displayPath,
-      _showDrives: path === '_DRIVES_'
+      [n]: '/',
+      [nt]: '/',
+      _showDrives: showDrives
     }, () => this[`${type}List`]())
   }
 
@@ -878,11 +878,11 @@ export default class Sftp extends Component {
   }
 
   getLocalHome = () => {
-    // 返回驱动器列表标记（显示所有磁盘）
-    return '_DRIVES_'
+    // 返回/根目录（显示所有磁盘列表）
+    return '/'
   }
 
-  isDriveRoot = (p) => /^[A-Z]:\\$/i.test(p) || p === '_DRIVES_'
+  isDriveRoot = (p) => p === '/' || /^[A-Z]:\\$/i.test(p)
 
   localList = async (returnList = false, localPathReal, oldPath) => {
     if (!fs) return
@@ -901,7 +901,7 @@ export default class Sftp extends Component {
         this.getLocalHome()
       let locals
       // 显示磁盘列表（首次进入或点击"首页"）
-      if (this.state._showDrives || localPath === '_DRIVES_') {
+      if (this.state._showDrives || localPath === '/') {
         locals = await window.pre.runGlobalAsync('getDrives')
       } else {
         locals = await fs.readdirAsync(localPath)
