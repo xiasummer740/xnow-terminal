@@ -53,7 +53,10 @@ export default function AIChatHistoryItem ({ item }) {
         if (typeof item.id === 'string') {
           window.store.removeAiHistory(item.id)
         }
-        return window.store.onError(new Error(streamResponse.error))
+        window.store.onError(typeof streamResponse.error === 'string'
+          ? streamResponse.error
+          : 'Stream error')
+        return
       }
 
       const index = window.store.aiChatHistory.findIndex(i => i.id === item.id)
