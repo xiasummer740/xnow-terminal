@@ -1,5 +1,5 @@
 import { agentTools, executeToolCall } from './agent-tools'
-import { getInstalledSkills } from '../../common/skill-manager'
+import { getInstalledSkills, saveDraft, hasSimilarSkill } from '../../common/skill-manager'
 
 const MAX_ITERATIONS = 150
 const MEMORY_KEY = 'xnow_agent_memory'
@@ -108,31 +108,136 @@ async function callBackendAIchatWithTools (messages, config) {
   )
 }
 
-// 自动总结学习 — 用 AI 提炼经验
+// 自动总结学习 + 技能草案生成
 async function autoLearn (messages, accumulatedContent, config) {
   try {
-    const summaryMsg = [
-      { role: 'system', content: '你是一个经验提炼助手。根据以下对话，用一句中文总结本次任务中学到的可复用经验或技能。只输出总结，不要其他内容。' },
-      { role: 'user', content: '请总结这次任务的经验：\n' + accumulatedContent.substring(0, 2000) }
-    ]
-    const result = await window.pre.runGlobalAsync(
+    const modelToUse = config.skillGenModel || 'deepseek-v4-flash'
+
+    const systemPrompt = `你是一个技能提炼助手。根据以下 AI 任务对话，完成两项工作：
+
+1. 判断本次任务的操作步骤是否形成了可复用的模式（即有清晰流程、可重复使用、涉及工具调用）
+2. 如果有可复用模式，生成一个完整的技能定义
+
+可复用模式判断标准：
+- 操作步骤有清晰流程（3步以上）
+- 流程在不同场景下可重复使用
+- 涉及工具调用（命令执行、文件操作等）
+
+日常操作（如"查一下时间"、"说个笑话"）不应该生成技能。
+
+如果发现可复用的操作模式，只输出以下 JSON（不要其他内容）：
+
+{
+  "hasPattern": true,
+  "memory": "用一句中文总结这次任务的经验",
+  "skill": {
+    "name": "4-6字技能名称",
+    "description": "30字以内的功能描述",
+    "category": "从[运维工具, 监控工具, 部署工具, 安全工具, AI工具]中选择",
+    "prompt": "详细的步骤指南，告诉 AI 怎么执行这个技能。用 ## 标题 格式分段"
+  }
+}
+
+如果没有发现可复用模式，只输出：
+
+{
+  "hasPattern": false,
+  "memory": "用一句中文总结这次任务的经验（可以为空字符串）"
+}
+
+注意：
+- memory 永远有值（即使为空字符串）
+- hasPattern 为 false 时不要包含 skill 字段
+- category 必须从给定列表中选择
+- name 必须简短（4-6字）
+- description 必须在 30 字以内
+- 只输出纯 JSON，不要 markdown 代码块包裹`
+
+    const userPrompt = '请分析这次任务的操作过程，判断是否有可复用的操作模式：\n' + accumulatedContent.substring(0, 2500)
+
+    let result = await window.pre.runGlobalAsync(
       'AIchat',
-      summaryMsg[1].content,
-      config.modelAI,
-      summaryMsg[0].content,
+      userPrompt,
+      modelToUse,
+      systemPrompt,
       config.baseURLAI,
       config.apiPathAI,
       config.apiKeyAI,
       config.proxyAI,
       false
     )
+
+    // flash 失败时回退到主模型
+    if ((!result || result.error) && modelToUse !== config.modelAI) {
+      result = await window.pre.runGlobalAsync(
+        'AIchat',
+        userPrompt,
+        config.modelAI,
+        systemPrompt,
+        config.baseURLAI,
+        config.apiPathAI,
+        config.apiKeyAI,
+        config.proxyAI,
+        false
+      )
+    }
+
     if (result && result.response && !result.error) {
-      const learning = result.response.trim()
-      if (learning && learning.length > 5 && learning.length < 200) {
-        const existing = loadMemories()
-        if (!existing.includes(learning)) {
-          existing.push(learning)
-          saveMemories(existing)
+      const text = result.response.trim()
+
+      // 尝试解析 JSON（可能被 markdown 代码块包裹）
+      let parsed = null
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[1].trim()) } catch {}
+        }
+      }
+
+      if (parsed && typeof parsed === 'object' && parsed.hasPattern !== undefined) {
+        // 存 memory（经验总结）
+        if (parsed.memory && parsed.memory.length > 5 && parsed.memory.length < 200) {
+          const existing = loadMemories()
+          if (!existing.includes(parsed.memory)) {
+            existing.push(parsed.memory)
+            saveMemories(existing)
+          }
+        }
+
+        // 如果有模式，生成技能草案
+        if (parsed.hasPattern && parsed.skill) {
+          const draft = {
+            id: 'xnow-skill-draft-' + Date.now(),
+            name: parsed.skill.name,
+            version: '1.0.0',
+            author: 'xnow-auto',
+            category: parsed.skill.category,
+            description: parsed.skill.description,
+            prompt: parsed.skill.prompt,
+            tools: parsed.skill.tools || [],
+            source: 'ai_generated',
+            draftStatus: 'pending',
+            draftCreatedAt: Date.now()
+          }
+
+          if (draft.name && draft.description && !hasSimilarSkill(draft)) {
+            const saveResult = saveDraft(draft)
+            if (saveResult.success && typeof window !== 'undefined' && window.store) {
+              window.store.pendingSkillDraft = draft
+              window.store.showSkillDiscovery = true
+            }
+          }
+        }
+      } else {
+        // 原有逻辑：直接存 memory（应对 AI 没按格式输出的情况）
+        if (text.length > 5 && text.length < 200) {
+          const existing = loadMemories()
+          if (!existing.includes(text)) {
+            existing.push(text)
+            saveMemories(existing)
+          }
         }
       }
     }
