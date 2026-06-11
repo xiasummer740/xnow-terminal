@@ -7,6 +7,10 @@ const STORAGE_KEY = 'xnow_skills_index'
 const SKILL_PREFIX = 'xnow_skill_'
 const MAX_SKILLS = 50
 
+const DRAFTS_KEY = 'xnow_skill_drafts_index'
+const DRAFT_PREFIX = 'xnow_skill_draft_'
+const MAX_DRAFTS = 20
+
 // 内置技能列表（随 APP 发布）
 const BUILTIN_SKILLS = [
   {
@@ -22,7 +26,7 @@ const BUILTIN_SKILLS = [
 2. 使用 tar 打包指定目录
 3. 确认备份文件生成`,
     tools: [],
-    source: 'builtin'
+    source: 'builtin',
   },
   {
     id: 'xnow-skill-log-analyzer',
@@ -38,7 +42,7 @@ const BUILTIN_SKILLS = [
 3. 找出异常请求和错误率最高的端点
 4. 输出统计结果和分析建议`,
     tools: [],
-    source: 'builtin'
+    source: 'builtin',
   },
   {
     id: 'xnow-skill-site-monitor',
@@ -54,7 +58,7 @@ const BUILTIN_SKILLS = [
 3. 对比多次检测结果判断稳定性
 4. 出现 5xx 或超时时给出告警`,
     tools: [],
-    source: 'builtin'
+    source: 'builtin',
   },
   {
     id: 'xnow-skill-batch-deploy',
@@ -70,7 +74,7 @@ const BUILTIN_SKILLS = [
 3. 在每台服务器上执行部署命令
 4. 逐台验证部署结果`,
     tools: [],
-    source: 'builtin'
+    source: 'builtin',
   },
   {
     id: 'xnow-skill-port-scan',
@@ -86,7 +90,7 @@ const BUILTIN_SKILLS = [
 3. 标记高危端口（如 22/3306/6379 暴露公网）
 4. 给出安全加固建议`,
     tools: [],
-    source: 'builtin'
+    source: 'builtin',
   },
   {
     id: 'xnow-skill-code-review',
@@ -102,8 +106,8 @@ const BUILTIN_SKILLS = [
 3. 列出每个问题及其严重级别
 4. 给出具体的修复建议和示例代码`,
     tools: [],
-    source: 'builtin'
-  }
+    source: 'builtin',
+  },
 ]
 
 // 权限分级
@@ -112,37 +116,65 @@ const PERMISSION_LEVELS = {
   'fs:read': { label: '读取文件', risk: 'medium' },
   'fs:write': { label: '写入文件', risk: 'high' },
   'network:fetch': { label: '网络请求', risk: 'medium' },
-  'terminal:control': { label: '终端控制', risk: 'low' }
+  'terminal:control': { label: '终端控制', risk: 'low' },
 }
 
 /**
  * 从 localStorage 加载已安装技能索引
  */
-function loadIndex () {
+function loadIndex() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : []
-  } catch { return [] }
+  } catch {
+    return []
+  }
 }
 
 /**
  * 保存技能索引到 localStorage
  */
-function saveIndex (list) {
+function saveIndex(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
 }
 
 /**
  * 获取技能完整的 localStorage key
  */
-function skillKey (id) {
+function skillKey(id) {
   return SKILL_PREFIX + id
+}
+
+/**
+ * 从 localStorage 加载草案索引
+ */
+function loadDraftIndex() {
+  try {
+    const raw = localStorage.getItem(DRAFTS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 保存草案索引到 localStorage
+ */
+function saveDraftIndex(list) {
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(list))
+}
+
+/**
+ * 获取草案完整的 localStorage key
+ */
+function draftKey(id) {
+  return DRAFT_PREFIX + id
 }
 
 /**
  * 保存单个技能的完整数据
  */
-function saveSkillData (skill) {
+function saveSkillData(skill) {
   try {
     localStorage.setItem(skillKey(skill.id), JSON.stringify(skill))
     return true
@@ -155,26 +187,48 @@ function saveSkillData (skill) {
 /**
  * 加载单个技能的完整数据
  */
-function loadSkillData (id) {
+function loadSkillData(id) {
   try {
     const raw = localStorage.getItem(skillKey(id))
     return raw ? JSON.parse(raw) : null
-  } catch { return null }
+  } catch {
+    return null
+  }
 }
 
 /**
  * 删除单个技能的数据
  */
-function removeSkillData (id) {
+function removeSkillData(id) {
   localStorage.removeItem(skillKey(id))
 }
 
 /**
- * 验证签名（简单版）
- * 内置技能自动通过，云端签名验证在后续阶段实现
+ * 保存单个草案的完整数据
  */
-function verifySignature (skill) {
-  if (skill.source === 'builtin') return true
+function saveDraftData(draft) {
+  try {
+    localStorage.setItem(draftKey(draft.id), JSON.stringify(draft))
+    return true
+  } catch (e) {
+    console.error('[skill-manager] saveDraft error:', e.message)
+    return false
+  }
+}
+
+/**
+ * 删除单个草案的数据
+ */
+function removeDraftData(id) {
+  localStorage.removeItem(draftKey(id))
+}
+
+/**
+ * 验证签名（简单版）
+ * 内置技能自动通过，AI生成技能自动通过，云端签名验证在后续阶段实现
+ */
+function verifySignature(skill) {
+  if (skill.source === 'builtin' || skill.source === 'ai_generated') return true
   if (!skill.signature) return false
   return true
 }
@@ -182,23 +236,21 @@ function verifySignature (skill) {
 /**
  * 获取所有已安装技能（含完整数据）
  */
-function getInstalledSkills () {
+function getInstalledSkills() {
   const index = loadIndex()
-  return index
-    .map(entry => loadSkillData(entry.id))
-    .filter(Boolean)
+  return index.map((entry) => loadSkillData(entry.id)).filter(Boolean)
 }
 
 /**
  * 安装技能
  */
-function installSkill (skill) {
+function installSkill(skill) {
   if (!skill || !skill.id) return { success: false, error: '无效技能' }
 
   const index = loadIndex()
 
   // 检查是否已安装
-  if (index.find(e => e.id === skill.id)) {
+  if (index.find((e) => e.id === skill.id)) {
     return { success: false, error: '技能已安装' }
   }
 
@@ -228,9 +280,9 @@ function installSkill (skill) {
 /**
  * 卸载技能
  */
-function uninstallSkill (id) {
+function uninstallSkill(id) {
   const index = loadIndex()
-  const idx = index.findIndex(e => e.id === id)
+  const idx = index.findIndex((e) => e.id === id)
   if (idx === -1) return { success: false, error: '技能未安装' }
 
   removeSkillData(id)
@@ -243,21 +295,119 @@ function uninstallSkill (id) {
 /**
  * 检查技能是否已安装
  */
-function isInstalled (id) {
-  return loadIndex().some(e => e.id === id)
+function isInstalled(id) {
+  return loadIndex().some((e) => e.id === id)
 }
 
 /**
  * 获取所有可用技能（内置 + 已安装的云端/AI技能）
  */
-function getAllAvailableSkills () {
+function getAllAvailableSkills() {
   const installed = getInstalledSkills()
-  const installedIds = new Set(installed.map(s => s.id))
+  const installedIds = new Set(installed.map((s) => s.id))
 
   // 内置技能全部可用
-  const builtin = BUILTIN_SKILLS.filter(s => !installedIds.has(s.id))
+  const builtin = BUILTIN_SKILLS.filter((s) => !installedIds.has(s.id))
 
   return [...installed, ...builtin]
+}
+
+function saveDraft(draft) {
+  if (!draft || !draft.name) return { success: false, error: '无效草案' }
+
+  const index = loadDraftIndex()
+
+  // 超出上限时淘汰最旧的
+  if (index.length >= MAX_DRAFTS) {
+    const oldest = index.reduce((a, b) => ((a.createdAt || 0) < (b.createdAt || 0) ? a : b))
+    removeDraftData(oldest.id)
+    const idx = index.indexOf(oldest)
+    if (idx !== -1) index.splice(idx, 1)
+  }
+
+  draft.draftStatus = 'pending'
+  draft.draftCreatedAt = draft.draftCreatedAt || Date.now()
+
+  if (!saveDraftData(draft)) {
+    return { success: false, error: '存储失败' }
+  }
+
+  index.push({
+    id: draft.id,
+    name: draft.name,
+    version: draft.version,
+    category: draft.category,
+    createdAt: draft.draftCreatedAt,
+  })
+  saveDraftIndex(index)
+
+  return { success: true }
+}
+
+function getDrafts() {
+  const index = loadDraftIndex()
+  return index
+    .map((entry) => {
+      try {
+        const raw = localStorage.getItem(draftKey(entry.id))
+        return raw ? JSON.parse(raw) : null
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
+}
+
+function getDraftById(id) {
+  try {
+    const raw = localStorage.getItem(draftKey(id))
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function approveDraft(id) {
+  const draft = getDraftById(id)
+  if (!draft) return { success: false, error: '草案不存在' }
+
+  delete draft.draftStatus
+  delete draft.draftCreatedAt
+  delete draft.relatedTask
+
+  const result = installSkill(draft)
+  if (result.success) {
+    removeDraftData(id)
+    const index = loadDraftIndex()
+    const idx = index.findIndex((e) => e.id === id)
+    if (idx !== -1) {
+      index.splice(idx, 1)
+      saveDraftIndex(index)
+    }
+  }
+  return result
+}
+
+function rejectDraft(id) {
+  removeDraftData(id)
+  const index = loadDraftIndex()
+  const idx = index.findIndex((e) => e.id === id)
+  if (idx !== -1) {
+    index.splice(idx, 1)
+    saveDraftIndex(index)
+  }
+  return { success: true }
+}
+
+function hasSimilarSkill(draft) {
+  const allNames = [
+    ...BUILTIN_SKILLS.map((s) => s.name),
+    ...getInstalledSkills().map((s) => s.name),
+    ...getDrafts().map((s) => s.name),
+  ]
+  return allNames.some(
+    (name) => name === draft.name || name.includes(draft.name) || draft.name.includes(name),
+  )
 }
 
 export {
@@ -269,5 +419,11 @@ export {
   verifySignature,
   BUILTIN_SKILLS,
   PERMISSION_LEVELS,
-  MAX_SKILLS
+  MAX_SKILLS,
+  saveDraft,
+  getDrafts,
+  getDraftById,
+  approveDraft,
+  rejectDraft,
+  hasSimilarSkill,
 }
