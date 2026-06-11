@@ -20,21 +20,11 @@ class TerminalLocal extends TerminalBase {
 
       log.debug('[local-term] spawning:', shell, cols + 'x' + rows)
 
-      const defaultCwd = process.env.USERPROFILE || process.env.HOME || os.homedir()
-      const targetCwd = this.initOptions.cwd || defaultCwd
-      // 确保 cwd 有效，否则回退到 home
-      let finalCwd = defaultCwd
-      try {
-        require('fs').statSync(targetCwd)
-        finalCwd = targetCwd
-      } catch (_) {
-        log.warn('[local-term] cwd not accessible, fallback:', targetCwd)
-      }
       this.term = pty.spawn(shell, [], {
         name: 'xterm-color',
         cols,
         rows,
-        cwd: finalCwd,
+        cwd: this.initOptions.cwd || process.env.USERPROFILE || process.env.HOME || os.homedir(),
         env: process.env
       })
 
