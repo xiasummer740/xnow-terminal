@@ -705,16 +705,17 @@ export default class FileSection extends React.Component {
       // 本地文件夹 → 新建本机终端，文件浏览器跟随到同一目录
       const folderName = name || path?.split(/[\\/]/).filter(Boolean).pop() || '本机终端'
       window.store.addTab({ title: folderName, cwd: rp })
-      // 新标签页渲染后，把文件浏览器也导航到同一目录
+      // 等 SFTP 组件初始化完成后导航文件浏览器到目标目录
       const tabId = window.store.activeTabId
-      const waitAndNav = setInterval(() => {
+      let pollCount = 0
+      const poll = setInterval(() => {
         const sftp = refs.get('sftp-' + tabId)
-        if (sftp) {
-          clearInterval(waitAndNav)
+        if (sftp && sftp.state?.inited) {
+          clearInterval(poll)
           sftp.updateCwd(rp)
         }
+        if (++pollCount > 50) clearInterval(poll) // 超时 10s
       }, 200)
-      setTimeout(() => clearInterval(waitAndNav), 5000)
       return
     }
 
