@@ -702,8 +702,12 @@ export default class FileSection extends React.Component {
     const isLocal = type === typeMap.local
 
     if (isLocal) {
-      // 本地文件夹 → 新建本机终端
-      window.store.addTab()
+      // 本地文件夹 → 跟点➕ 完全一样的方式新建终端
+      if (!window.store.hasNodePty) {
+        window.store.onNewSsh()
+        return
+      }
+      window.store.addTab(undefined, undefined, this.props.batch)
       return
     }
 
