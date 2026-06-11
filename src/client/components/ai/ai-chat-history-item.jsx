@@ -50,7 +50,9 @@ export default function AIChatHistoryItem ({ item }) {
         if (streamResponse.error === 'Session not found') {
           return
         }
-        window.store.removeAiHistory(item.id)
+        if (typeof item.id === 'string') {
+          window.store.removeAiHistory(item.id)
+        }
         return window.store.onError(new Error(streamResponse.error))
       }
 
