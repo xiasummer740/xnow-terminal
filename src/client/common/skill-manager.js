@@ -23,6 +23,86 @@ const BUILTIN_SKILLS = [
 3. 确认备份文件生成`,
     tools: [],
     source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-log-analyzer',
+    name: '日志分析',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '运维工具',
+    description: '扫描 Nginx/Apache 日志统计 IP、状态码、请求频率',
+    prompt: `## 日志分析技能
+当你被要求分析服务器日志时：
+1. 确认日志文件路径（默认 /var/log/nginx/access.log）
+2. 使用 awk/grep 统计 IP 访问频率、状态码分布
+3. 找出异常请求和错误率最高的端点
+4. 输出统计结果和分析建议`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-site-monitor',
+    name: '网站监控',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '监控工具',
+    description: '定时检测网站 HTTP 状态码和响应时间',
+    prompt: `## 网站监控技能
+当你被要求监控网站状态时：
+1. 使用 curl 检测目标 URL 的 HTTP 状态码
+2. 记录响应时间
+3. 对比多次检测结果判断稳定性
+4. 出现 5xx 或超时时给出告警`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-batch-deploy',
+    name: '批量部署',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '部署工具',
+    description: '向多台服务器分发文件、执行远程命令',
+    prompt: `## 批量部署技能
+当你被要求批量部署时：
+1. 确认目标服务器列表
+2. 使用 scp/rsync 分发文件
+3. 在每台服务器上执行部署命令
+4. 逐台验证部署结果`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-port-scan',
+    name: '端口扫描',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '安全工具',
+    description: '扫描服务器开放端口，识别服务类型',
+    prompt: `## 端口扫描技能
+当你被要求扫描端口时：
+1. 使用 nc/ss/iptables 等工具检测端口开放状态
+2. 识别端口对应的常见服务
+3. 标记高危端口（如 22/3306/6379 暴露公网）
+4. 给出安全加固建议`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-code-review',
+    name: 'AI 代码审查',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: 'AI工具',
+    description: '读取本地代码文件，AI 自动审查并给出修复建议',
+    prompt: `## AI 代码审查技能
+当你被要求审查代码时：
+1. 读取目标代码文件
+2. 检查：逻辑正确性、安全漏洞、性能瓶颈、代码风格
+3. 列出每个问题及其严重级别
+4. 给出具体的修复建议和示例代码`,
+    tools: [],
+    source: 'builtin'
   }
 ]
 

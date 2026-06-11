@@ -24,9 +24,16 @@ describe('skill-manager', () => {
   after(() => global.localStorage.clear())
 
   it('内置技能列表不为空', () => {
-    assert.ok(BUILTIN_SKILLS.length > 0)
+    assert.ok(BUILTIN_SKILLS.length >= 6)
     assert.ok(BUILTIN_SKILLS[0].id)
     assert.ok(BUILTIN_SKILLS[0].name)
+    // 验证所有技能有必需的字段
+    BUILTIN_SKILLS.forEach(skill => {
+      assert.ok(skill.id, `技能 ${skill.name} 缺少 id`)
+      assert.ok(skill.name, `技能缺少 name`)
+      assert.ok(skill.category, `技能 ${skill.name} 缺少 category`)
+      assert.ok(skill.description, `技能 ${skill.name} 缺少 description`)
+    })
   })
 
   it('内置技能默认可用', () => {
