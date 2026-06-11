@@ -222,6 +222,13 @@ function initIpc() {
     event.returnValue = ipcSyncFuncs[name](...args)
   })
   const asyncGlobals = {
+    getDrives: () => {
+      const { execSync } = require('child_process')
+      try {
+        const out = execSync('wmic logicaldisk get name', { encoding: 'utf8', timeout: 3000 })
+        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:$/.test(l))
+      } catch { return [] }
+    },
     confirmExit: () => {
       globalState.set('confirmExit', true)
     },
