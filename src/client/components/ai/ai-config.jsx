@@ -7,7 +7,7 @@ import {
   Space,
   Select
 } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from '../common/external-link'
 import AiCache from './ai-cache'
 import {
@@ -48,6 +48,33 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
   const [form] = Form.useForm()
   const [testing, setTesting] = useState(false)
   const baseURLAI = Form.useWatch('baseURLAI', form)
+
+  // 根据已选平台提供对应模型的建议列表
+  const modelOptions = useMemo(() => {
+    const platform = AI_PLATFORMS.find(p => p.url === baseURLAI)?.value
+    const modelMap = {
+      deepseek: [
+        { value: 'deepseek-chat', label: 'deepseek-chat（V4 日常对话）' },
+        { value: 'deepseek-reasoner', label: 'deepseek-reasoner（V4 深度推理）' }
+      ],
+      openai: [
+        { value: 'gpt-4o', label: 'GPT-4o（最强多模态）' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o-mini（快速便宜）' },
+        { value: 'o3-mini', label: 'o3-mini（推理模型）' }
+      ],
+      claude: [
+        { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4（平衡）' },
+        { value: 'claude-opus-4-20250514', label: 'Claude Opus 4（最强）' },
+        { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4（快速）' }
+      ],
+      qwen: [
+        { value: 'qwen-plus', label: 'Qwen Plus' },
+        { value: 'qwen-max', label: 'Qwen Max' },
+        { value: 'qwen-turbo', label: 'Qwen Turbo' }
+      ]
+    }
+    return modelMap[platform] || []
+  }, [baseURLAI])
 
   useEffect(() => {
     if (initialValues) {
@@ -188,13 +215,17 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
           </Space.Compact>
         </Form.Item>
         <Form.Item
-          label={e('modelAi')}
+          label='AI 模型'
           name='modelAI'
-          rules={[{ required: true, message: 'Please input or select a model!' }]}
+          rules={[{ required: true, message: '请选择 AI 模型' }]}
         >
-          <Input
-            placeholder='Enter or select AI model'
-          />
+          <AutoComplete
+            options={modelOptions}
+            placeholder='输入或选择 AI 模型'
+            allowClear
+          >
+            <Input />
+          </AutoComplete>
         </Form.Item>
 
         <Form.Item
