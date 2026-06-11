@@ -118,6 +118,8 @@ export default () => {
     rightPanelWidth: parseInt(ls.getItem(rightSidebarWidthKey), 10) || 500,
     showAIConfigModal: false,
     showSkillStoreModal: false,
+    showSkillDiscovery: false,
+    pendingSkillDraft: null,
 
     // for settings related
     settingItem: initSettingItem([], settingMap.bookmarks),

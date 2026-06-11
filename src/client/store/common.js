@@ -58,6 +58,15 @@ export default Store => {
     this.showSkillStoreModal = !this.showSkillStoreModal
   }
 
+  Store.prototype.toggleSkillDiscovery = function () {
+    this.showSkillDiscovery = !this.showSkillDiscovery
+  }
+
+  Store.prototype.clearPendingDraft = function () {
+    this.pendingSkillDraft = null
+    this.showSkillDiscovery = false
+  }
+
   Store.prototype.onResize = debounce(async function () {
     const { width, height } = await window.pre.runGlobalAsync('getScreenSize')
     const isMaximized = window.pre.runSync('isMaximized')
