@@ -702,9 +702,10 @@ export default class FileSection extends React.Component {
     const isLocal = type === typeMap.local
 
     if (isLocal) {
-      // 本地文件夹 → 在当前标签页打开终端并 cd 到目标目录，不刷新文件浏览器
-      this.props.tab.pane = paneMap.terminal
-      this.props.tab.cwd = rp
+      // 本地文件夹 → 新建本机终端 cd 到目标目录
+      // 用 batch 保持在同一标签组，标题显示路径名
+      const folderName = name || path?.split(/[\\/]/).filter(Boolean).pop() || '本机终端'
+      window.store.addTab({ title: folderName, cwd: rp })
       return
     }
 

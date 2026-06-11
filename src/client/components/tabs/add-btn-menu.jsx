@@ -36,7 +36,7 @@ export default function AddBtnMenu ({
         className={cls}
         onClick={onTabAdd}
       >
-        <RightSquareFilled /> {e('newTab')}
+        <RightSquareFilled /> 本机终端
       </div>
       )
     : null

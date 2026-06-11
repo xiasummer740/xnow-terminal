@@ -93,8 +93,11 @@ export default class AddBtn extends Component {
       window.store.onNewSsh()
       return
     }
+    // 取 home 目录的最末段作为默认标题
+    const home = window.et?.homeDir || process.env.USERPROFILE || '本机终端'
+    const defaultTitle = home.split(/[\\/]/).filter(Boolean).pop() || '本机终端'
     window.store.addTab(
-      { title: '本机终端' }, undefined,
+      { title: defaultTitle }, undefined,
       this.props.batch
     )
   }
