@@ -3,6 +3,7 @@ import { Tabs, Input, Button, Tag, Collapse, Modal as AntModal, Popconfirm } fro
 import {
   SearchOutlined,
   CheckCircleFilled,
+  CheckCircleOutlined,
   DownloadOutlined,
   DeleteOutlined
 } from '@ant-design/icons'
@@ -12,7 +13,10 @@ import {
   installSkill,
   uninstallSkill,
   BUILTIN_SKILLS,
-  PERMISSION_LEVELS
+  PERMISSION_LEVELS,
+  getDrafts,
+  approveDraft,
+  rejectDraft
 } from '../../common/skill-manager'
 import message from '../common/message'
 import './skill-store.styl'
@@ -283,6 +287,88 @@ function InstalledSkillsTab ({ refresh }) {
 }
 
 /**
+ * 待审核 Tab — 待确认的 AI 生成技能草案
+ */
+function PendingSkillsTab ({ refresh }) {
+  const drafts = useMemo(() => getDrafts(), [refresh])
+
+  if (drafts.length === 0) {
+    return <div className='empty-state'>没有待审核的技能草案</div>
+  }
+
+  const categoryColors = {
+    '运维工具': 'blue',
+    '监控工具': 'cyan',
+    '部署工具': 'geekblue',
+    '安全工具': 'red',
+    'AI工具': 'purple'
+  }
+
+  return (
+    <div>
+      <div className='installed-count'>待审核技能 {drafts.length}</div>
+      <div className='installed-list'>
+        {drafts.map(draft => {
+          const timeStr = draft.draftCreatedAt
+            ? new Date(draft.draftCreatedAt).toLocaleString('zh-CN')
+            : ''
+
+          return (
+            <div key={draft.id} className='installed-item'>
+              <div className='installed-item-info'>
+                <div className='installed-item-name'>
+                  {draft.name}
+                  <span className='installed-item-version'>{draft.category ? ` [${draft.category}]` : ''}</span>
+                  <span className='installed-item-source source-ai_generated'>AI生成</span>
+                </div>
+                <div className='installed-item-desc'>{draft.description}</div>
+                {timeStr && (
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+                    生成于 {timeStr}
+                  </div>
+                )}
+              </div>
+              <div className='installed-item-actions' style={{ gap: 6 }}>
+                <Button
+                  size='small'
+                  type='primary'
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => {
+                    const result = approveDraft(draft.id)
+                    if (result.success) {
+                      message.success(`「${draft.name}」已加入技能库！`)
+                      window.store.triggerResize()
+                    } else {
+                      message.error(result.error || '安装失败')
+                    }
+                  }}
+                >
+                  加入技能库
+                </Button>
+                <Popconfirm
+                  title={`确定忽略「${draft.name}」？`}
+                  onConfirm={() => {
+                    rejectDraft(draft.id)
+                    message.info(`已忽略「${draft.name}」`)
+                    window.store.triggerResize()
+                  }}
+                  okText='确定'
+                  cancelText='取消'
+                >
+                  <Button size='small' danger icon={<DeleteOutlined />}>
+                    忽略
+                  </Button>
+                </Popconfirm>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
  * 技能商店主内容
  */
 export default function SkillStore () {
@@ -304,6 +390,11 @@ export default function SkillStore () {
       key: 'installed',
       label: '📦 已安装',
       children: <InstalledSkillsTab refresh={refresh} />
+    },
+    {
+      key: 'pending',
+      label: '📋 待审核',
+      children: <PendingSkillsTab refresh={refresh} />
     }
   ]
 
@@ -316,4 +407,4 @@ export default function SkillStore () {
   )
 }
 
-export { SkillStoreTab, InstalledSkillsTab }
+export { SkillStoreTab, InstalledSkillsTab, PendingSkillsTab }
