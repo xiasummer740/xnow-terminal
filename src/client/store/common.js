@@ -54,6 +54,10 @@ export default Store => {
     window.store.showAIConfigModal = true
   }
 
+  Store.prototype.toggleSkillStore = function () {
+    this.showSkillStoreModal = !this.showSkillStoreModal
+  }
+
   Store.prototype.onResize = debounce(async function () {
     const { width, height } = await window.pre.runGlobalAsync('getScreenSize')
     const isMaximized = window.pre.runSync('isMaximized')
