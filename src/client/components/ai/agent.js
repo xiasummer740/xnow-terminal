@@ -1,4 +1,5 @@
 import { agentTools, executeToolCall } from './agent-tools'
+import { getInstalledSkills } from '../../common/skill-manager'
 
 const MAX_ITERATIONS = 150
 const MEMORY_KEY = 'xnow_agent_memory'
@@ -25,6 +26,15 @@ function buildAgentSystemPrompt (config) {
   const memoryText = memories.length > 0
     ? '\n\n## 已掌握的经验技能\n' +
       memories.map((m, i) => `${i + 1}. ${m}`).join('\n')
+    : ''
+
+  // 加载已安装技能
+  const installedSkills = getInstalledSkills()
+  const skillsText = installedSkills.length > 0
+    ? '\n\n## 已安装技能\n' +
+      installedSkills.map(s =>
+        `### ${s.name}\n${s.description || ''}\n${s.prompt || ''}`
+      ).join('\n\n')
     : ''
 
   const basePrompt = customPrompt && customPrompt.trim()
@@ -74,7 +84,7 @@ You are operating inside XNOW, a terminal/SSH/SFTP client with AI superpowers. Y
 
 Reply in ${lang} language.`
 
-  return basePrompt + memoryText
+  return basePrompt + memoryText + skillsText
 }
 
 function updateChatEntry (chatEntry, updates) {
@@ -250,4 +260,8 @@ export function addAgentMemory (text) {
   const existing = loadMemories()
   if (!existing.includes(text)) existing.push(text)
   saveMemories(existing)
+}
+
+export function getSkillTools () {
+  return getInstalledSkills().flatMap(s => s.tools || [])
 }
