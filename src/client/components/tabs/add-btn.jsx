@@ -94,7 +94,7 @@ export default class AddBtn extends Component {
       return
     }
     window.store.addTab(
-      undefined, undefined,
+      { title: '本机终端' }, undefined,
       this.props.batch
     )
   }

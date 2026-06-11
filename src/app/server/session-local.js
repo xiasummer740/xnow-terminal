@@ -2,6 +2,7 @@
  * terminal/sftp/serial class
  */
 
+const log = require('../common/log')
 const { resolve: pathResolve } = require('path')
 const { TerminalBase } = require('./session-base')
 const globalState = require('./global-state')
@@ -17,6 +18,8 @@ class TerminalLocal extends TerminalBase {
       const cols = this.initOptions.cols || 80
       const rows = this.initOptions.rows || 30
 
+      log.debug('[local-term] spawning:', shell, cols + 'x' + rows)
+
       this.term = pty.spawn(shell, [], {
         name: 'xterm-color',
         cols,
@@ -26,15 +29,13 @@ class TerminalLocal extends TerminalBase {
       })
 
       this.isLocal = true
+      globalState.setSession(this.pid, this)
+      log.debug('[local-term] spawned PID:', this.term.pid)
 
-      // 发送初始提示
-      this.term.write('\r')
-
-      // Data forwarding happens via session-server's term.on('data') → this.on()
-      // Exit handling via session-server's term.on('exit') → this.on()
-      // on('close') is not supported by node-pty, map to on('exit')
+      // Data forwarding via session-server's term.on('data') → this.on()
       const origOn = this.on.bind(this)
       this.on = (event, cb) => {
+        log.debug('[local-term] on event:', event)
         if (event === 'close') {
           return this.term.on('exit', cb)
         }
@@ -43,6 +44,7 @@ class TerminalLocal extends TerminalBase {
 
       return Promise.resolve()
     } catch (e) {
+      log.error('[local-term] init error:', e.message)
       return Promise.reject(new Error('本地终端启动失败: ' + e.message))
     }
   }
@@ -56,7 +58,9 @@ class TerminalLocal extends TerminalBase {
   }
 
   write (data) {
-    this.term.write(data)
+    const str = Buffer.isBuffer(data) ? data.toString('utf8') : data
+    log.debug('[local-term] → write(' + str.length + '):', str.substring(0, 80))
+    this.term.write(str)
   }
 
   kill () {
