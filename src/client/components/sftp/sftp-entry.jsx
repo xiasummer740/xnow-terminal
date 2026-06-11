@@ -301,13 +301,19 @@ export default class Sftp extends Component {
       path = this.getLocalHome()
     }
 
-    // 磁盘列表视图用 / 作为显示路径
-    const showDrives = path === '/'
-    this.setState({
-      [n]: '/',
-      [nt]: '/',
-      _showDrives: showDrives
-    }, () => this[`${type}List`]())
+    // 磁盘列表视图用 / 作为显示路径（仅本地）
+    if (type === typeMap.local && path === '/') {
+      this.setState({
+        [n]: '/',
+        [nt]: '/',
+        _showDrives: true
+      }, () => this[`${type}List`]())
+    } else {
+      this.setState({
+        [n]: path,
+        [nt]: path
+      }, () => this[`${type}List`]())
+    }
   }
 
   updateCwd = (cwd = this.props.cwd) => {
