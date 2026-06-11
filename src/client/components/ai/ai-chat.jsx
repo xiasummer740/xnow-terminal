@@ -11,6 +11,7 @@ import {
   UnorderedListOutlined
 } from '@ant-design/icons'
 import SkillStoreModal from './skill-store-modal'
+import SkillDiscoveryNotification from './skill-discovery-notification'
 import {
   aiConfigWikiLink,
   aiChatModeLsKey
@@ -193,6 +194,7 @@ export default function AIChat (props) {
         </Flex>
       </Flex>
       <SkillStoreModal />
+      <SkillDiscoveryNotification />
     </Flex>
   )
 }
