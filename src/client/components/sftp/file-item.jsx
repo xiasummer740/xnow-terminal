@@ -702,19 +702,30 @@ export default class FileSection extends React.Component {
     const isLocal = type === typeMap.local
 
     if (isLocal) {
-      // 本地文件夹 → 新建本机终端，文件浏览器跟随到同一目录
+      // 本地文件夹 → 新建本机终端，cd 到目标目录
       const folderName = name || path?.split(/[\\/]/).filter(Boolean).pop() || '本机终端'
-      window.store.addTab({ title: folderName, cwd: rp })
-      // 等 SFTP 组件初始化完成后导航文件浏览器到目标目录
+      window.store.addTab({ title: folderName })
+      // 终端就绪后 cd 到目标目录
       const tabId = window.store.activeTabId
-      let pollCount = 0
-      const poll = setInterval(() => {
-        const sftp = refs.get('sftp-' + tabId)
+      let attempts = 0
+      const waitForTerm = setInterval(() => {
+        const term = refs.get('term-' + tabId)
+        if (term) {
+          clearInterval(waitForTerm)
+          setTimeout(() => term.cd(rp), 500)
+        }
+        if (++attempts > 50) clearInterval(waitForTerm)
+      }, 200)
+      // 等 SFTP 初始化完成后导航文件浏览器到目标目录
+      const sftpTabId = tabId
+      let sftpAttempts = 0
+      const waitForSftp = setInterval(() => {
+        const sftp = refs.get('sftp-' + sftpTabId)
         if (sftp && sftp.state?.inited) {
-          clearInterval(poll)
+          clearInterval(waitForSftp)
           sftp.updateCwd(rp)
         }
-        if (++pollCount > 50) clearInterval(poll) // 超时 10s
+        if (++sftpAttempts > 50) clearInterval(waitForSftp)
       }, 200)
       return
     }
