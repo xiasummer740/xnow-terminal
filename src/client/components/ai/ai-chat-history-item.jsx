@@ -53,9 +53,7 @@ export default function AIChatHistoryItem ({ item }) {
         if (typeof item.id === 'string') {
           window.store.removeAiHistory(item.id)
         }
-        window.store.onError(typeof streamResponse.error === 'string'
-          ? streamResponse.error
-          : 'Stream error')
+        console.warn('[AI Stream] error:', streamResponse.error)
         return
       }
 
@@ -69,8 +67,12 @@ export default function AIChatHistoryItem ({ item }) {
         setTimeout(() => pollStreamContent(sid), 200)
       }
     } catch (error) {
-      window.store.removeAiHistory(item.id)
-      window.store.onError(error)
+      try {
+        if (typeof item.id === 'string') {
+          window.store.removeAiHistory(item.id)
+        }
+      } catch (_) { /* 静默 */ }
+      console.warn('[AI Stream] poll error:', error?.message || error)
     }
   }, [item.id])
 
@@ -96,7 +98,8 @@ export default function AIChatHistoryItem ({ item }) {
 
       if (aiResponse && aiResponse.error) {
         window.store.removeAiHistory(item.id)
-        return window.store.onError(new Error(aiResponse.error))
+        console.warn('[AI] response error:', aiResponse.error)
+        return
       }
 
       if (aiResponse && aiResponse.isStream && aiResponse.sessionId) {
@@ -114,8 +117,12 @@ export default function AIChatHistoryItem ({ item }) {
         }
       }
     } catch (error) {
-      window.store.removeAiHistory(item.id)
-      window.store.onError(error)
+      try {
+        if (typeof item.id === 'string') {
+          window.store.removeAiHistory(item.id)
+        }
+      } catch (_) { /* 静默 */ }
+      console.warn('[AI] request error:', error?.message || error)
     }
   }, [prompt, modelAI, baseURLAI, apiPathAI, apiKeyAI, proxyAI, item.id, pollStreamContent])
 
