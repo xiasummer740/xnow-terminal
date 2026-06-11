@@ -87,3 +87,74 @@ describe('skill-manager', () => {
     assert.strictEqual(result.success, false)
   })
 })
+
+describe('skill-manager drafts', () => {
+  before(() => {
+    global.localStorage.clear()
+  })
+
+  it('保存草案', () => {
+    const draft = {
+      id: 'test-draft-1',
+      name: '测试草案',
+      description: '测试描述',
+      category: '运维工具',
+      prompt: '测试 prompt',
+      tools: [],
+      source: 'ai_generated'
+    }
+    const result = skillManager.saveDraft(draft)
+    assert.strictEqual(result.success, true)
+  })
+
+  it('获取草案列表', () => {
+    const drafts = skillManager.getDrafts()
+    assert.ok(Array.isArray(drafts))
+    assert.ok(drafts.length >= 1)
+    assert.ok(drafts.some(d => d.id === 'test-draft-1'))
+  })
+
+  it('按 ID 获取草案', () => {
+    const draft = skillManager.getDraftById('test-draft-1')
+    assert.ok(draft)
+    assert.strictEqual(draft.name, '测试草案')
+  })
+
+  it('批准草案转为正式技能', () => {
+    const result = skillManager.approveDraft('test-draft-1')
+    assert.strictEqual(result.success, true)
+    assert.ok(skillManager.isInstalled('test-draft-1'))
+    // 批准后草案应该被删除
+    const draft = skillManager.getDraftById('test-draft-1')
+    assert.strictEqual(draft, null)
+  })
+
+  it('拒绝草案', () => {
+    // 先保存一个新草案
+    const draft = {
+      id: 'test-draft-2',
+      name: '测试草案2',
+      description: '测试描述2',
+      category: '运维工具',
+      prompt: '测试 prompt',
+      tools: [],
+      source: 'ai_generated'
+    }
+    skillManager.saveDraft(draft)
+
+    const result = skillManager.rejectDraft('test-draft-2')
+    assert.strictEqual(result.success, true)
+    const gone = skillManager.getDraftById('test-draft-2')
+    assert.strictEqual(gone, null)
+  })
+
+  it('类似技能检测 — 名称相同', () => {
+    const draft = { name: '一键备份' }
+    assert.ok(skillManager.hasSimilarSkill(draft))
+  })
+
+  it('类似技能检测 — 新名称不冲突', () => {
+    const draft = { name: '全新技能名称_xx_test' }
+    assert.ok(!skillManager.hasSimilarSkill(draft))
+  })
+})
