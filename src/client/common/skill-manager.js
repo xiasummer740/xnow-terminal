@@ -260,7 +260,7 @@ function getAllAvailableSkills () {
   return [...installed, ...builtin]
 }
 
-module.exports = {
+export {
   installSkill,
   uninstallSkill,
   isInstalled,

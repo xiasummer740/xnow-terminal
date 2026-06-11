@@ -1,4 +1,4 @@
-const { describe, it, before, after } = require('node:test')
+const { describe, it, before } = require('node:test')
 const assert = require('node:assert')
 
 // 模拟 localStorage
@@ -10,25 +10,20 @@ global.localStorage = {
   clear: () => { Object.keys(store).forEach(k => delete store[k]) }
 }
 
-const {
-  installSkill,
-  uninstallSkill,
-  isInstalled,
-  getInstalledSkills,
-  getAllAvailableSkills,
-  BUILTIN_SKILLS
-} = require('../../src/client/common/skill-manager.js')
+let skillManager
 
 describe('skill-manager', () => {
-  before(() => global.localStorage.clear())
-  after(() => global.localStorage.clear())
+  before(async () => {
+    skillManager = await import('../../src/client/common/skill-manager.js')
+    global.localStorage.clear()
+  })
 
   it('内置技能列表不为空', () => {
-    assert.ok(BUILTIN_SKILLS.length >= 6)
-    assert.ok(BUILTIN_SKILLS[0].id)
-    assert.ok(BUILTIN_SKILLS[0].name)
+    assert.ok(skillManager.BUILTIN_SKILLS.length >= 6)
+    assert.ok(skillManager.BUILTIN_SKILLS[0].id)
+    assert.ok(skillManager.BUILTIN_SKILLS[0].name)
     // 验证所有技能有必需的字段
-    BUILTIN_SKILLS.forEach(skill => {
+    skillManager.BUILTIN_SKILLS.forEach(skill => {
       assert.ok(skill.id, `技能 ${skill.name} 缺少 id`)
       assert.ok(skill.name, `技能缺少 name`)
       assert.ok(skill.category, `技能 ${skill.name} 缺少 category`)
@@ -37,7 +32,7 @@ describe('skill-manager', () => {
   })
 
   it('内置技能默认可用', () => {
-    const all = getAllAvailableSkills()
+    const all = skillManager.getAllAvailableSkills()
     assert.ok(all.some(s => s.source === 'builtin'))
   })
 
@@ -50,9 +45,9 @@ describe('skill-manager', () => {
       signature: 'test-sig-1',
       tools: []
     }
-    const result = installSkill(skill)
+    const result = skillManager.installSkill(skill)
     assert.strictEqual(result.success, true)
-    assert.ok(isInstalled('test-skill-1'))
+    assert.ok(skillManager.isInstalled('test-skill-1'))
   })
 
   it('重复安装返回错误', () => {
@@ -64,19 +59,19 @@ describe('skill-manager', () => {
       signature: 'test-sig-1',
       tools: []
     }
-    const result = installSkill(skill)
+    const result = skillManager.installSkill(skill)
     assert.strictEqual(result.success, false)
     assert.strictEqual(result.error, '技能已安装')
   })
 
   it('卸载技能', () => {
-    const result = uninstallSkill('test-skill-1')
+    const result = skillManager.uninstallSkill('test-skill-1')
     assert.strictEqual(result.success, true)
-    assert.ok(!isInstalled('test-skill-1'))
+    assert.ok(!skillManager.isInstalled('test-skill-1'))
   })
 
   it('卸载不存在的技能返回错误', () => {
-    const result = uninstallSkill('not-exist')
+    const result = skillManager.uninstallSkill('not-exist')
     assert.strictEqual(result.success, false)
   })
 
@@ -88,7 +83,7 @@ describe('skill-manager', () => {
       source: 'market',
       tools: []
     }
-    const result = installSkill(skill)
+    const result = skillManager.installSkill(skill)
     assert.strictEqual(result.success, false)
   })
 })
