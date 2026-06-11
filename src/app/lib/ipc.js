@@ -225,8 +225,8 @@ function initIpc() {
     getDrives: () => {
       const { execSync } = require('child_process')
       try {
-        const out = execSync('wmic logicaldisk get name', { encoding: 'utf8', timeout: 3000 })
-        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:$/.test(l)).map(d => d + '\\')
+        const out = execSync('powershell -c "Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root"', { encoding: 'utf8', timeout: 5000 })
+        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:\\$/i.test(l))
       } catch { return [] }
     },
     confirmExit: () => {
