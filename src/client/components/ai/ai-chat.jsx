@@ -7,8 +7,10 @@ import { pick } from 'lodash-es'
 import {
   SettingOutlined,
   SendOutlined,
+  ShopOutlined,
   UnorderedListOutlined
 } from '@ant-design/icons'
+import SkillStoreModal from './skill-store-modal'
 import {
   aiConfigWikiLink,
   aiChatModeLsKey
@@ -82,6 +84,10 @@ export default function AIChat (props) {
 
   function toggleConfig () {
     window.store.toggleAIConfig()
+  }
+
+  function toggleSkillStore () {
+    window.store.toggleSkillStore()
   }
 
   function clearHistory () {
@@ -163,6 +169,11 @@ export default function AIChat (props) {
               onClick={toggleConfig}
               className='mg1l pointer icon-hover toggle-ai-setting-icon'
             />
+            <ShopOutlined
+              onClick={toggleSkillStore}
+              className='mg1l pointer icon-hover toggle-skill-store-icon'
+              title='技能商店'
+            />
             <Popconfirm
               title={window.translate('clear') + ' AI ' + window.translate('history') + '?'}
               okText={window.translate('ok')}
@@ -181,6 +192,7 @@ export default function AIChat (props) {
           {renderSendIcon()}
         </Flex>
       </Flex>
+      <SkillStoreModal store={window.store} />
     </Flex>
   )
 }
