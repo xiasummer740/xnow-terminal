@@ -5,13 +5,46 @@
 const { resolve: pathResolve } = require('path')
 const { TerminalBase } = require('./session-base')
 const globalState = require('./global-state')
+const os = require('os')
 // const { MockBinding } = require('@serialport/binding-mock')
 // MockBinding.createPort('/dev/ROBOT', { echo: true, record: true })
 
 class TerminalLocal extends TerminalBase {
   init () {
-    // 本地终端功能已禁用（node-pty 模块未编译）
-    return Promise.reject(new Error('本地终端功能暂不可用，请使用 SSH 连接远程服务器'))
+    try {
+      const pty = require('node-pty')
+      const shell = process.env.COMSPEC || 'powershell.exe'
+      const cols = this.initOptions.cols || 80
+      const rows = this.initOptions.rows || 30
+
+      this.term = pty.spawn(shell, [], {
+        name: 'xterm-color',
+        cols,
+        rows,
+        cwd: process.env.USERPROFILE || process.env.HOME || os.homedir(),
+        env: process.env
+      })
+
+      this.isLocal = true
+
+      // 发送初始提示
+      this.term.write('\r')
+
+      // Data forwarding happens via session-server's term.on('data') → this.on()
+      // Exit handling via session-server's term.on('exit') → this.on()
+      // on('close') is not supported by node-pty, map to on('exit')
+      const origOn = this.on.bind(this)
+      this.on = (event, cb) => {
+        if (event === 'close') {
+          return this.term.on('exit', cb)
+        }
+        return origOn(event, cb)
+      }
+
+      return Promise.resolve()
+    } catch (e) {
+      return Promise.reject(new Error('本地终端启动失败: ' + e.message))
+    }
   }
 
   resize (cols, rows) {
@@ -35,8 +68,10 @@ class TerminalLocal extends TerminalBase {
   }
 }
 
-exports.session = function (initOptions, ws) {
-  return (new TerminalLocal(initOptions, ws)).init()
+exports.session = async function (initOptions, ws) {
+  const inst = new TerminalLocal(initOptions, ws)
+  await inst.init()
+  return inst
 }
 
 /**
