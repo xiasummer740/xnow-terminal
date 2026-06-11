@@ -226,7 +226,7 @@ function initIpc() {
       const { execSync } = require('child_process')
       try {
         const out = execSync('wmic logicaldisk get name', { encoding: 'utf8', timeout: 3000 })
-        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:$/.test(l))
+        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:$/.test(l)).map(d => d + '\\')
       } catch { return [] }
     },
     confirmExit: () => {
