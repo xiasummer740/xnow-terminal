@@ -103,7 +103,13 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
     try {
       r = JSON.parse(raw || '{}')
     } catch (e) {
-      console.error(`Error parsing JSON for row ${row._id}:`, e.message)
+      // 当 safeStorage 解密失败时，加密原文 (v2:safe:...) 无法 JSON.parse
+      // 静默忽略，当该字段不存在处理
+      if (raw && raw.includes('v2:safe:')) {
+        r = {}
+      } else {
+        console.error(`Error parsing JSON for row ${row._id}:`, e.message)
+      }
     }
     return {
       ...r,

@@ -7,10 +7,10 @@
  * Basic Format:
  * protocol://[username:password@]host[:port]?anyQueryParam=anyValue&opts={"key":"value"}
  *
- * electerm:// Format (default type is ssh):
- * electerm://[username:password@]host[:port]?type=ssh&anyQueryParam=anyValue
- * electerm://host?type=telnet
- * electerm://user@host:22?type=vnc
+ * xnow-terminal:// Format (default type is ssh):
+ * xnow-terminal://[username:password@]host[:port]?type=ssh&anyQueryParam=anyValue
+ * xnow-terminal://host?type=telnet
+ * xnow-terminal://user@host:22?type=vnc
  *
  * Shortcut Format (SSH default):
  * user@host

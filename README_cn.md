@@ -32,7 +32,7 @@
 git clone https://github.com/xiasummer740/xnow-terminal.git
 cd xnow-terminal
 npm install && cd server && npm install && cd ../client && npm install && cd ..
-npm run dev
+npm start
 ```
 
 ## 同步官方更新

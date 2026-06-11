@@ -98,6 +98,12 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
       const { _encdata: _, ...rest } = doc
       return { ...rest, ...parsed }
     } catch (e) {
+      // 当 safeStorage 解密失败时，加密原文 (v2:safe:...) 无法 JSON.parse
+      // 静默忽略，当该字段不存在处理
+      if (typeof doc._encdata === 'string' && doc._encdata.includes('v2:safe:')) {
+        const { _encdata: _, ...rest } = doc
+        return rest
+      }
       return doc
     }
   }
