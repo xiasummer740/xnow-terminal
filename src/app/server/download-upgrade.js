@@ -24,7 +24,7 @@ function getUrl (url, mirror) {
     const len = arr.length
     return `https://master.dl.sourceforge.net/project/electerm.mirror/${arr[len - 2]}/${arr[len - 1]}?viasf=1`
   } else if (mirror === 'r2') {
-    return `https://electerm-store.html5beta.com/r/${url.split('/').pop()}`
+    return `https://pub-3a40c788aa6548eb91ed27a48ec6a9b1.r2.dev/r/${url.split('/').pop()}`
   } else {
     return url
   }
