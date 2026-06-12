@@ -40,14 +40,14 @@ function fmtTime (t) {
  *   detail       — second line below the gauge (e.g. "13.55%(3.5%/2.4Gi)")
  */
 
-function Gauge ({ percent = 0, size = 120, strokeWidth = 8, label, detail }) {
+function Gauge ({ percent = 0, size = 72, strokeWidth = 5, label, detail }) {
   const cx = size / 2
   const cy = size / 2
-  const r = (size - strokeWidth) / 2
+  const r = (size - strokeWidth) / 2 - 1
   const circumference = 2 * Math.PI * r
   const offset = circumference * (1 - Math.min(Math.max(percent, 0), 100) / 100)
   const color = percentColor(percent)
-  const fontSize = Math.max(size * 0.14, 12)
+  const fontSize = Math.max(size * 0.24, 14)
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -94,8 +94,8 @@ function Gauge ({ percent = 0, size = 120, strokeWidth = 8, label, detail }) {
           {percent.toFixed(2)}%
         </text>
       </svg>
-      {label && <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 4, lineHeight: 1.3 }}>{label}</div>}
-      {detail && <div style={{ fontSize: 11, color: 'var(--text-dark, #999)', lineHeight: 1.3 }}>{detail}</div>}
+      {label && <div style={{ fontSize: 11, color: 'var(--text)', marginTop: 2, lineHeight: 1.2 }}>{label}</div>}
+      {detail && <div style={{ fontSize: 10, color: 'var(--text-dark, #999)', lineHeight: 1.2 }}>{detail}</div>}
     </div>
   )
 }
@@ -111,28 +111,28 @@ function Gauge ({ percent = 0, size = 120, strokeWidth = 8, label, detail }) {
 
 function CpuHistoryChart ({ history = [] }) {
   const width = 400
-  const height = 120
-  const padL = 40
-  const padR = 10
-  const padT = 10
-  const padB = 20
+  const height = 70
+  const padL = 36
+  const padR = 6
+  const padT = 4
+  const padB = 16
   const chartW = width - padL - padR
   const chartH = height - padT - padB
 
   if (history.length < 2) {
     return (
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>
+      <div style={{ marginTop: 6 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-dark, #999)', marginBottom: 4 }}>
           <LineChartOutlined style={{ marginRight: 4 }} />CPU 历史
         </div>
-        <svg width={width} height={height} style={{ display: 'block' }}>
+        <svg width='100%' height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
           <text
             x={width / 2}
             y={height / 2}
             textAnchor='middle'
             dominantBaseline='central'
             fill='var(--text-dark, #999)'
-            fontSize={13}
+            fontSize={11}
           >
             等待数据...
           </text>
@@ -166,11 +166,11 @@ function CpuHistoryChart ({ history = [] }) {
   const timeIndices = [0, Math.floor(n / 2), n - 1]
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>
+    <div style={{ marginTop: 6 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-dark, #999)', marginBottom: 2 }}>
         <LineChartOutlined style={{ marginRight: 4 }} />CPU 历史
       </div>
-      <svg width={width} height={height} style={{ display: 'block' }}>
+      <svg width='100%' height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
         {/* dashed grid lines + y labels */}
         {gridYLabels.map((label, i) => (
           <g key={label}>
@@ -180,8 +180,8 @@ function CpuHistoryChart ({ history = [] }) {
               x2={padL + chartW}
               y2={gridYPositions[i]}
               stroke='var(--border-color, #333)'
-              strokeWidth={1}
-              strokeDasharray='4,4'
+              strokeWidth={0.5}
+              strokeDasharray='3,3'
             />
             <text
               x={padL - 4}
@@ -189,7 +189,7 @@ function CpuHistoryChart ({ history = [] }) {
               textAnchor='end'
               dominantBaseline='central'
               fill='var(--text-dark, #999)'
-              fontSize={10}
+              fontSize={9}
             >
               {label}
             </text>
@@ -201,10 +201,10 @@ function CpuHistoryChart ({ history = [] }) {
           <text
             key={i}
             x={padL + (i / (n - 1)) * chartW}
-            y={padT + chartH + 14}
+            y={padT + chartH + 12}
             textAnchor='middle'
             fill='var(--text-dark, #999)'
-            fontSize={10}
+            fontSize={9}
           >
             {fmtTime(history[i].time)}
           </text>
@@ -221,7 +221,7 @@ function CpuHistoryChart ({ history = [] }) {
           points={linePoints.join(' ')}
           fill='none'
           stroke='#1890ff'
-          strokeWidth={2}
+          strokeWidth={1.5}
           strokeLinejoin='round'
           strokeLinecap='round'
         />
@@ -270,7 +270,8 @@ export default function TerminalInfoResource (props) {
   const [, forceUpdate] = useState(0)
   const cpuRef = useRef('')
 
-  // Keep a ref to cpu so the interval callback always reads the latest value
+  // Poll CPU every 2 s for realtime feedback (PureComponent parent may skip
+  // re-render when value stays constant, so we use our own interval)
   cpuRef.current = cpu
 
   // Poll CPU value every 5 s regardless of prop changes (PureComponent parent
@@ -286,7 +287,7 @@ export default function TerminalInfoResource (props) {
       arr.push({ value: cp, time: Date.now() })
       if (arr.length > 60) arr.shift()
       forceUpdate(n => n + 1)
-    }, 5000)
+    }, 2000)
     return () => clearInterval(id)
   }, [terminalInfos])
 
@@ -382,7 +383,7 @@ export default function TerminalInfoResource (props) {
 
   return (
     <div className='terminal-info-section terminal-info-resource'>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '4px 0', justifyItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', padding: '2px 0', justifyItems: 'center' }}>
         {gauges}
       </div>
       {showCpu && <CpuHistoryChart history={historyRef.current} />}
