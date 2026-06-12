@@ -14,7 +14,10 @@ class TerminalLocal extends TerminalBase {
   init () {
     try {
       const pty = require('node-pty')
-      const shell = process.env.COMSPEC || 'powershell.exe'
+      const isWin = process.platform === 'win32'
+      const shell = isWin
+        ? (process.env.COMSPEC || 'cmd.exe')
+        : (process.env.SHELL || '/bin/bash')
       const cols = this.initOptions.cols || 80
       const rows = this.initOptions.rows || 30
 
@@ -24,7 +27,7 @@ class TerminalLocal extends TerminalBase {
         name: 'xterm-color',
         cols,
         rows,
-        cwd: this.initOptions.cwd || process.env.USERPROFILE || process.env.HOME || os.homedir(),
+        cwd: this.initOptions.cwd || (isWin ? process.env.USERPROFILE : process.env.HOME) || os.homedir(),
         env: process.env
       })
 

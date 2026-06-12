@@ -2,6 +2,7 @@
  * run cmd with terminal
  */
 
+const net = require('net')
 const {
   terminals
 } = require('./remote-common')
@@ -79,18 +80,24 @@ async function startTerminalLogFile (body) {
 async function tcpPing (body) {
   const { pid } = body
   const term = terminals(pid)
-  if (!term || !term.conn || !term.conn._protocol || !term.conn._callbacks) {
-    return -1
-  }
-  // SSH协议层 keepalive ping，单次往返RTT（类似FinalShell原理）
+  const { host, port = 22, readyTimeout = 3000 } = term?.initOptions || {}
+  if (!host) return -1
+  // 新建TCP连接测三次握手耗时（类似FinalShell原理），比SSH协议ping更准
   return new Promise((resolve) => {
     const start = Date.now()
-    const timeout = setTimeout(() => resolve(-1), 3000)
-    term.conn._callbacks.push(() => {
-      clearTimeout(timeout)
-      resolve(Date.now() - start)
+    const sock = net.createConnection({ host, port }, () => {
+      const elapsed = Date.now() - start
+      sock.destroy()
+      resolve(elapsed)
     })
-    term.conn._protocol.ping()
+    sock.on('error', () => {
+      sock.destroy()
+      resolve(-1)
+    })
+    sock.setTimeout(readyTimeout, () => {
+      sock.destroy()
+      resolve(-1)
+    })
   })
 }
 
