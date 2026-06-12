@@ -578,10 +578,12 @@ export default (Store) => {
       } else if (n === settingMap.bookmarks) {
         arr = fixBookmarks(arr)
       }
-      store.setItems(n, objs[n])
+      store.setItems(n, arr)
     }
-    store.updateConfig(objs.config)
-    store.setTheme(objs.config.theme)
+    if (objs.config) {
+      store.updateConfig(objs.config)
+      store.setTheme(objs.config.theme)
+    }
   }
 
   Store.prototype.handleAutoSync = function (v) {

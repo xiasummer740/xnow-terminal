@@ -11,7 +11,8 @@ import {
   HeartOutlined,
   ExportOutlined,
   ImportOutlined,
-  CloudDownloadOutlined
+  CloudDownloadOutlined,
+  ArrowUpOutlined
 } from '@ant-design/icons'
 import { Tabs, Button, message, Upload, Space, Modal as AntModal } from 'antd'
 import Modal from '../common/modal'
@@ -23,6 +24,7 @@ import { useState } from 'react'
 import copy from 'json-deep-copy'
 import time from '../../common/time'
 import download from '../../common/download'
+import { refsStatic } from '../common/ref'
 
 import {
   packInfo,
@@ -54,12 +56,48 @@ export default auto(function InfoModal (props) {
       upgradeInfo
     } = props
     const onCheckUpdating = upgradeInfo.checkingRemoteVersion || upgradeInfo.upgrading
-    const { noUpdateMessage, noUpdateMessageExpires } = upgradeInfo
+    const { noUpdateMessage, noUpdateMessageExpires, shouldUpgrade, remoteVersion, upgrading } = upgradeInfo
     const showMessage = noUpdateMessage && noUpdateMessageExpires && Date.now() < noUpdateMessageExpires
+
+    const handleUpgrade = () => {
+      refsStatic.get('upgrade')?.doUpgrade()
+    }
+
     return (
       <div className='mg1b mg2t'>
+        {shouldUpgrade && remoteVersion ? (
+          <div style={{
+            background: 'var(--primary, #1890ff)',
+            borderRadius: 8,
+            padding: '12px 16px',
+            marginBottom: 12,
+            color: '#fff'
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
+              <ArrowUpOutlined style={{ marginRight: 6 }} />发现新版本 {remoteVersion}
+            </div>
+            <Space>
+              <Button
+                type='default'
+                ghost
+                loading={upgrading}
+                onClick={handleUpgrade}
+                icon={<ArrowUpOutlined />}
+              >
+                一键升级
+              </Button>
+              <Button
+                type='link'
+                style={{ color: 'rgba(255,255,255,0.8)' }}
+                onClick={() => onCheckUpdate(true)}
+              >
+                查看详情
+              </Button>
+            </Space>
+          </div>
+        ) : null}
         <Button
-          type='primary'
+          type={shouldUpgrade ? 'default' : 'primary'}
           loading={onCheckUpdating}
           onClick={() => onCheckUpdate(true)}
         >

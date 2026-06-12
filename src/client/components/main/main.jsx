@@ -50,6 +50,8 @@ export default auto(function Index (props) {
     setTimeout(store.triggerResize, 200)
     const { ipcOnEvent } = window.pre
     ipcOnEvent('checkupdate', store.onCheckUpdate)
+    // 启动后自动检查更新（延迟5秒，避免启动卡顿）
+    setTimeout(() => store.onCheckUpdate(false), 5000)
     ipcOnEvent('open-about', store.openAbout)
     ipcOnEvent('new-ssh', store.onNewSsh)
     ipcOnEvent('add-tab-from-command-line', store.addTabFromCommandLine)

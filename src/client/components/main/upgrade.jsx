@@ -50,10 +50,12 @@ export default class Upgrade extends PureComponent {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer)
     }
+    clearTimeout(this.downloadTimer)
+    this.update?.destroy()
   }
 
   appUpdateCheck = (isManual) => {
-    this.getLatestRelease(isManual)
+    this.getLatestRelease(isManual)?.catch(() => {})
   }
 
   changeProps = (update) => {
@@ -68,7 +70,10 @@ export default class Upgrade extends PureComponent {
   }
 
   handleClose = () => {
-    window.store.upgradeInfo = {}
+    this.changeProps({
+      showUpgradeModal: false,
+      shouldUpgrade: false,
+    })
   }
 
   handleMirrorChange = (mirror) => {

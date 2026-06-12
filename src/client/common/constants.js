@@ -101,6 +101,7 @@ export const settingMap = buildConst([
   'terminalThemes',
   'bookmarkGroups',
   'quickCommands',
+  'history',
   'addressBookmarks',
   'profiles',
   'widgets',

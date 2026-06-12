@@ -84,7 +84,7 @@ export default function SyncForm (props) {
     }
 
     window.store.updateSyncSetting(up)
-    const test = await window.store.testSyncToken(syncType, res.gistId)
+    const test = await window.store.testSyncToken(syncType)
     if (isError(test)) {
       return notification.error({
         message: test.message || 'Request failed',
