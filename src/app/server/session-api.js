@@ -83,14 +83,21 @@ async function tcpPing (body) {
   const opts = term?.initOptions || {}
   const { proxy, readyTimeout = 3000 } = opts
 
-  // SSH 会话：通过已有 SSH 通道发送快速命令测 RTT（类似 FinalShell）
-  if (typeof term?.runCmd === 'function') {
-    const start = Date.now()
-    try {
-      await term.runCmd('echo ping')
-      return Date.now() - start
-    } catch {
-      return -1
+  // SSH 会话：使用 SSH 协议层 keepalive ping 测量网络 RTT
+  // 这是最接近真实网络延迟的方式（不含命令执行开销）
+  const conn = term?.conn
+  if (conn && conn._protocol && conn._protocol.ping) {
+    const cbs = conn._callbacks
+    if (cbs) {
+      return new Promise((resolve) => {
+        const start = Date.now()
+        const timeout = setTimeout(() => resolve(-1), readyTimeout)
+        cbs.push(() => {
+          clearTimeout(timeout)
+          resolve(Date.now() - start)
+        })
+        conn._protocol.ping()
+      })
     }
   }
 
