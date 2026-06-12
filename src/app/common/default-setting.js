@@ -48,6 +48,7 @@ module.exports = exports.default = {
     'uptime',
     'cpu',
     'mem',
+    'swap',
     'activities',
     'network',
     'disks',
