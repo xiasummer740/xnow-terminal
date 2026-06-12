@@ -85,20 +85,24 @@
 .control-icon-wrap
   padding 10px 0 6px 0
   text-align center
+  cursor pointer
+  transition transform 0.12s ease
+  &:hover
+    .control-icon
+      color var(--text-light)
+      filter drop-shadow(0 0 8px rgba(0, 245, 255, 0.5))
+      transform scale(1.15)
   &.active
     .control-icon
       color var(--text-light)
       filter drop-shadow(0 0 6px rgba(0, 245, 255, 0.4))
     .control-icon-label
       color var(--text-light)
+  &:active
+    transform scale(0.88)
   .control-icon
     color var(--text-dark)
-    cursor pointer
     transition all 0.2s ease
-    &:hover
-      color var(--text-light)
-      filter drop-shadow(0 0 8px rgba(0, 245, 255, 0.5))
-      transform scale(1.15)
 .sidebar-list
   position absolute
   left 58px

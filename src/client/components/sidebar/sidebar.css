@@ -1,0 +1,171 @@
+.animate-fast {
+  animation-duration: 0.2s;
+}
+.sidebar-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 200;
+  width: 0;
+  overflow-y: scroll;
+  background: var(--main);
+}
+.sidebar-panel .item-list-unit:hover .list-item-remove {
+  display: none !important;
+}
+.sidebar-panel {
+  top: 36px;
+}
+.sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;
+  z-index: 100;
+  bottom: 0;
+  background: var(--main-dark);
+}
+.sidebar .item-list {
+  padding-right: 0;
+}
+.sidebar-pin-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 112px;
+}
+.sidebar-panel-bookmarks,
+.sidebar-panel-history {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 112px;
+  bottom: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-panel-bookmarks .sidebar-inner,
+.sidebar-panel-history .sidebar-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.sidebar-panel-bookmarks .history-header,
+.sidebar-panel-history .history-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--main);
+}
+.sidebar-panel-bookmarks .history-header .history-clear-icon,
+.sidebar-panel-history .history-header .history-clear-icon {
+  margin-left: auto;
+  margin-right: 0;
+  color: var(--text-dark);
+}
+.sidebar-panel-bookmarks .history-header .history-clear-icon:hover,
+.sidebar-panel-history .history-header .history-clear-icon:hover {
+  color: var(--error);
+}
+.sidebar-panel-bookmarks .history-body,
+.sidebar-panel-history .history-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.not-system-ui.is-mac .sidebar-bar {
+  margin-top: 20px;
+}
+.type-bookmarks .bookmarks-panel {
+  width: 100%;
+}
+.type-history .history-panel {
+  width: 100%;
+}
+.control-icon-label {
+  font-size: 11px;
+  color: var(--text-light);
+  line-height: 1.3;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.control-icon-wrap {
+  padding: 10px 0 6px 0;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.control-icon-wrap:hover .control-icon {
+  color: var(--text-light);
+  filter: drop-shadow(0 0 8px rgba(0,245,255,0.5));
+  transform: scale(1.15);
+}
+.control-icon-wrap.active .control-icon {
+  color: var(--text-light);
+  filter: drop-shadow(0 0 6px rgba(0,245,255,0.4));
+}
+.control-icon-wrap.active .control-icon-label {
+  color: var(--text-light);
+}
+.control-icon-wrap:active {
+  transform: scale(0.88);
+}
+.control-icon-wrap .control-icon {
+  color: var(--text-dark);
+  transition: all 0.2s ease;
+}
+.sidebar-list {
+  position: absolute;
+  left: 58px;
+  top: 0;
+  bottom: 0;
+  z-index: 200;
+  width: 0;
+}
+.pinned .sidebar-list {
+  top: 0;
+}
+.pinned .sidebar-list .sidebar-panel {
+  top: 36px;
+  padding-top: 0;
+}
+.pinned .drag-handle {
+  display: block;
+}
+.pinned .sidebar-panel .pinned {
+  color: var(--success);
+}
+.btns {
+  background: var(--main-dark);
+  border-color: var(--primary);
+}
+.btns .open-about-icon {
+  color: var(--text-dark);
+}
+.btns .open-about-icon:hover {
+  color: var(--text-light);
+}
+.btns .upgrade-icon {
+  color: var(--success);
+}
+.close-info-modal {
+  cursor: pointer;
+}
+.close-info-modal:hover {
+  color: var(--text-light);
+}
+.logo-filter {
+  filter: invert(80%);
+}
+.sidebar-inner {
+  padding-right: 8px;
+}

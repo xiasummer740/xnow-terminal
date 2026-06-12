@@ -151,8 +151,8 @@ export default function Sidebar(props) {
         <div className="control-icon-wrap">
           <MenuBtn store={store} config={store.config} />
         </div>
-        <SideIcon title={e('newBookmark')}>
-          <PlusCircleOutlined className="font22 iblock control-icon" onClick={onNewSsh} />
+        <SideIcon title={e('newBookmark')} onClick={onNewSsh}>
+          <PlusCircleOutlined className="font22 iblock control-icon" />
         </SideIcon>
         <Popover content={<QuickConnect inputOnly />} trigger="click" placement="right">
           <div className="control-icon-wrap" title={e('quickConnect')}>
@@ -160,56 +160,44 @@ export default function Sidebar(props) {
             <div className="control-icon-label">{e('quickConnect')}</div>
           </div>
         </Popover>
-        <SideIcon title={e(settingMap.bookmarks)} active={bookmarksActive}>
-          <BookOutlined onClick={handleClickBookmark} className="font20 iblock control-icon" />
+        <SideIcon title={e(settingMap.bookmarks)} active={bookmarksActive} onClick={handleClickBookmark}>
+          <BookOutlined className="font20 iblock control-icon" />
         </SideIcon>
         <TransferList {...transferProps} />
-        <SideIcon title="VPS看板" active={vpsDashboardOpen}>
-          <DashboardOutlined
-            className="font18 iblock pointer control-icon"
-            onClick={() => setVpsDashboardOpen(true)}
-          />
+        <SideIcon title="VPS看板" active={vpsDashboardOpen} onClick={() => setVpsDashboardOpen(true)}>
+          <DashboardOutlined className="font18 iblock pointer control-icon" />
         </SideIcon>
-        <SideIcon title={e(settingMap.terminalThemes)} active={themeActive}>
-          <PictureOutlined
-            className="font20 iblock pointer control-icon"
-            onClick={openTerminalThemes}
-          />
+        <SideIcon title={e(settingMap.terminalThemes)} active={themeActive} onClick={openTerminalThemes}>
+          <PictureOutlined className="font20 iblock pointer control-icon" />
         </SideIcon>
-        <SideIcon title={e(settingMap.setting)} active={settingActive}>
-          <SettingOutlined className="iblock font20 control-icon" onClick={openSetting} />
+        <SideIcon title={e(settingMap.setting)} active={settingActive} onClick={openSetting}>
+          <SettingOutlined className="iblock font20 control-icon" />
         </SideIcon>
-        <SideIcon title={e('settingSync')} active={syncActive}>
+        <SideIcon title={e('settingSync')} active={syncActive} onClick={openSettingSync}>
           <CloudSyncOutlined
             className="iblock font20 control-icon"
-            onClick={openSettingSync}
             spin={isSyncingSetting}
           />
         </SideIcon>
-        <SideIcon title="小组件" active={widgetsActive}>
-          <AppstoreOutlined className="iblock font20 control-icon" onClick={openWidgetsModal} />
+        <SideIcon title="小组件" active={widgetsActive} onClick={openWidgetsModal}>
+          <AppstoreOutlined className="iblock font20 control-icon" />
         </SideIcon>
 
-        <SideIcon title={e('about')} active={showInfoModal}>
+        <SideIcon title={e('about')} active={showInfoModal} onClick={openAbout}>
           <InfoCircleOutlined
             className="iblock font16 control-icon open-about-icon"
-            onClick={openAbout}
           />
         </SideIcon>
         {!checkingRemoteVersion && !showUpgradeModal && shouldUpgrade ? (
           <Tooltip title={`${e('upgrading')} ${upgradePercent || 0}%`} placement="right">
-            <div className="control-icon-wrap">
-              <UpCircleOutlined
-                className="iblock font18 control-icon upgrade-icon"
-                onClick={handleShowUpgrade}
-              />
+            <div className="control-icon-wrap" onClick={handleShowUpgrade}>
+              <UpCircleOutlined className="iblock font18 control-icon upgrade-icon" />
             </div>
           </Tooltip>
         ) : null}
-        <div className="control-icon-wrap" title={lightTheme ? '切换暗色主题' : '切换浅色主题'}>
+        <div className="control-icon-wrap" title={lightTheme ? '切换暗色主题' : '切换浅色主题'} onClick={toggleTheme}>
           <BulbOutlined
-            className="font18 iblock pointer control-icon"
-            onClick={toggleTheme}
+            className="font18 iblock control-icon"
             style={{ color: lightTheme ? '#faad14' : undefined }}
           />
           <div className="control-icon-label">{lightTheme ? '暗色' : '浅色'}</div>
