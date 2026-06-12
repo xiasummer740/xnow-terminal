@@ -81,7 +81,8 @@ async function tcpPing (body) {
   const { pid } = body
   const term = terminals(pid)
   const opts = term?.initOptions || {}
-  const { host, port = 22, proxy, readyTimeout = 3000 } = opts
+  const { host, port = 22, proxy, connectionHoppings, readyTimeout = 3000 } = opts
+  console.error('[tcpPing] host=%s port=%s proxy=%s hoppings=%d', host, port, proxy || '', (connectionHoppings||[]).length)
   if (!host) return -1
 
   // 有代理（SOCKS5/HTTP）时通过代理建连，走真正的网络链路
