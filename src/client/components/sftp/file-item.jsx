@@ -702,9 +702,15 @@ export default class FileSection extends React.Component {
     const isLocal = type === typeMap.local
 
     if (isLocal) {
-      // 本地文件夹 → 新建终端（延迟执行避免上下文干扰）
+      // 本地文件夹 → 新建终端，终端就绪后 cd 到目标目录
+      // 用 startDirectory（runInitScript 在 WebSocket 就绪后 cd）
+      // 不用 cwd（node-pty 目录校验不通过会崩溃）、不用轮询（ref 未就绪会崩溃）
+      if (!window.store.hasNodePty) {
+        window.store.onNewSsh()
+        return
+      }
       setTimeout(() => {
-        window.store.addTab()
+        window.store.addTab({ startDirectory: rp })
       }, 0)
       return
     }
