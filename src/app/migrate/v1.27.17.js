@@ -41,7 +41,7 @@ async function fixBookmarks () {
   log.info('bookmarks count:', len)
   for (const b of arr) {
     const proxy = buildProxyString(b.proxy || {})
-    console.log(i + 1, b._id, proxy)
+    log.info(i + 1, b._id, proxy)
     await dbAction('bookmarks', 'update', {
       _id: b._id
     }, {

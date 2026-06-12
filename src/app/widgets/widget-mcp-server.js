@@ -5,6 +5,7 @@
  * Uses a simple local MCP implementation
  */
 
+const log = require("../common/log")
 const { ipcMain } = require('electron')
 const { McpServer } = require('../mcp/server/mcp.js')
 const { StreamableHTTPServerTransport } = require('../mcp/server/streamableHttp.js')
@@ -895,7 +896,7 @@ class ElectermMCPServer {
 
         await transport.handleRequest(req, res, req.body)
       } catch (error) {
-        console.error('Error handling MCP request:', error)
+        log.error('Error handling MCP request:', error)
         if (!res.headersSent) {
           res.status(500).json({
             jsonrpc: '2.0',
@@ -936,7 +937,7 @@ class ElectermMCPServer {
     return new Promise((resolve, reject) => {
       this.httpServer = app.listen(port, host, (err) => {
         if (err) {
-          console.error('MCP Server error:', err)
+          log.error('MCP Server error:', err)
           reject(err)
           return
         }
@@ -956,7 +957,7 @@ class ElectermMCPServer {
       })
 
       this.httpServer.on('error', (err) => {
-        console.error('MCP Server error:', err)
+        log.error('MCP Server error:', err)
         reject(err)
       })
     })
@@ -982,7 +983,7 @@ class ElectermMCPServer {
       try {
         await this.transports[sessionId].close()
       } catch (e) {
-        console.error(`Error closing transport ${sessionId}:`, e)
+        log.error(`Error closing transport ${sessionId}:`, e)
       }
     }
     this.transports = {}
@@ -998,7 +999,7 @@ class ElectermMCPServer {
       if (this.httpServer) {
         this.httpServer.close((err) => {
           if (err) {
-            console.error('Error stopping MCP server:', err)
+            log.error('Error stopping MCP server:', err)
             reject(err)
           } else {
             this.httpServer = null

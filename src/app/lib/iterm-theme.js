@@ -5,7 +5,7 @@
 exports.listItermThemes = async () => {
   const all = require('@electerm/electerm-themes/dist/index.js')
   return Promise.all(all).catch(e => {
-    console.log(e)
+    log.info(e)
     return []
   })
 }

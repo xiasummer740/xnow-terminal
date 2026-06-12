@@ -14,7 +14,7 @@ async function fixBookmarks () {
   let i = 0
   log.info('bookmarks count:', len)
   for (const b of arr) {
-    console.log(i + 1, b._id, b.loginScript ? 'has loginScript' : 'no loginScript')
+    log.info(i + 1, b._id, b.loginScript ? 'has loginScript' : 'no loginScript')
     if (b.loginScript) {
       const runScripts = buildRunScripts(b)
       delete b.loginScript

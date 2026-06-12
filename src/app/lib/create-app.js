@@ -42,14 +42,14 @@ Example:
 // Handle GPU process crashes
 app.on('gpu-process-crashed', (event, killed) => {
   log.error(`GPU process crashed, killed: ${killed}`)
-  console.error(GPU_ERROR_SUGGESTION)
+  log.error(GPU_ERROR_SUGGESTION)
 })
 
 // Handle render process gone events
 app.on('render-process-gone', (event, webContents, details) => {
   if (details.reason === 'crashed' || details.reason === 'abnormal-exit') {
     log.error(`Render process gone: ${details.reason}`, details)
-    console.error(GPU_ERROR_SUGGESTION)
+    log.error(GPU_ERROR_SUGGESTION)
   }
 })
 
@@ -64,7 +64,7 @@ process.on('uncaughtException', (error) => {
     errorMsg.includes('Vulkan') ||
     errorMsg.includes('DXGI')
   ) {
-    console.error(GPU_ERROR_SUGGESTION)
+    log.error(GPU_ERROR_SUGGESTION)
   }
 })
 
@@ -116,7 +116,7 @@ exports.createApp = async function () {
     const fs = require('fs')
     if (fs.existsSync(dataPath)) {
       fs.rmSync(dataPath, { recursive: true, force: true })
-      console.log('[clear-config] 已清除旧配置数据:', dataPath)
+      log.info('[clear-config] 已清除旧配置数据:', dataPath)
     }
   }
 
@@ -138,7 +138,7 @@ exports.createApp = async function () {
 
     if (oldVersion && oldVersion !== currentVersion) {
       // 版本变了 → 升级安装 → 清空旧数据
-      console.log(`[auto-clear] 检测到版本升级: ${oldVersion} → ${currentVersion}，正在清空旧数据...`)
+      log.info(`[auto-clear] 检测到版本升级: ${oldVersion} → ${currentVersion}，正在清空旧数据...`)
       try {
         // 只清数据库和配置文件，保留 version 标记文件待会重写
         const keep = ['.xnow-version']
@@ -148,9 +148,9 @@ exports.createApp = async function () {
             fs.rmSync(path.resolve(dataPath, entry), { recursive: true, force: true })
           }
         }
-        console.log('[auto-clear] 旧数据已清空，全新启动 ✓')
+        log.info('[auto-clear] 旧数据已清空，全新启动 ✓')
       } catch (e) {
-        console.error('[auto-clear] 清空旧数据失败:', e.message)
+        log.error('[auto-clear] 清空旧数据失败:', e.message)
       }
     }
 

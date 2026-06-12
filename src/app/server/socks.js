@@ -2,6 +2,7 @@
  * socks proxy wrapper
  */
 
+const log = require("../common/log")
 const { request } = require('http')
 
 function isValidIP (input) {
@@ -25,7 +26,7 @@ function parseUrl (str) {
   try {
     return new URL(str)
   } catch (e) {
-    console.log(`parse url error: ${e.message}, url: ${str}`)
+    log.info(`parse url error: ${e.message}, url: ${str}`)
   }
 }
 
@@ -38,7 +39,7 @@ module.exports = (initOptions) => {
   } = initOptions
   const proxyURL = parseUrl(proxy)
   if (!proxyURL) {
-    throw new Error('proxy format not right:', proxy)
+    throw new Error(`proxy format not right: ${proxy}`)
   }
   // use http proxy
   const {
@@ -68,7 +69,7 @@ module.exports = (initOptions) => {
       }
       request(opts)
         .on('error', (e) => {
-          console.error(`fail to connect proxy: ${e.message}`)
+          log.error(`fail to connect proxy: ${e.message}`)
           reject(e)
         })
         .on('connect', (res, socket) => {

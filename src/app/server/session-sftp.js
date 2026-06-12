@@ -5,6 +5,7 @@ const {
   readRemoteFile,
   writeRemoteFile
 } = require('./sftp-file')
+const log = require("../common/log")
 const { commonExtends } = require('./session-common.js')
 const { TerminalBase } = require('./session-base.js')
 const {
@@ -232,7 +233,7 @@ class Sftp extends TerminalBase {
         return r
       })
       .catch(err => {
-        console.error('rm -rf dir error', err)
+        log.error('rm -rf dir error', err)
         return this.removeDirectoryRecursively(remotePath)
       })
   }
@@ -247,7 +248,7 @@ class Sftp extends TerminalBase {
     //     if (err) {
     //       return reject(err)
     //     } else {
-    //       console.log('rm -rf done', stream)
+    //       log.info('rm -rf done', stream)
     //       resolve(1)
     //     }
     //   })

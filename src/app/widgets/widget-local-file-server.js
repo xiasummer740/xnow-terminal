@@ -1,3 +1,4 @@
+const log = require("../common/log")
 const os = require('os')
 // const path = require('path')
 const express = require('express')
@@ -140,7 +141,7 @@ function widgetRun (instanceConfig) {
 
       server = app.listen(port, host, (err) => {
         if (err) {
-          console.error(`Failed to start ${widgetInfo.name}:`, err)
+          log.error(`Failed to start ${widgetInfo.name}:`, err)
           reject(err)
         } else {
           const serverInfo = {
@@ -148,14 +149,14 @@ function widgetRun (instanceConfig) {
             path: directory
           }
           const msg = `${widgetInfo.name} is running at ${serverInfo.url}`
-          console.log(msg)
-          console.log(`Serving files from: ${serverInfo.path}`)
+          log.info(msg)
+          log.info(`Serving files from: ${serverInfo.path}`)
           resolve({ serverInfo, msg, success: true })
         }
       })
 
       server.on('error', (err) => {
-        console.error(`${widgetInfo.name} encountered an error:`, err)
+        log.error(`${widgetInfo.name} encountered an error:`, err)
         reject(err)
       })
     })
@@ -166,16 +167,16 @@ function widgetRun (instanceConfig) {
       if (server) {
         server.close((err) => {
           if (err) {
-            console.error('Error stopping the server:', err)
+            log.error('Error stopping the server:', err)
             reject(err)
           } else {
-            console.log(`${widgetInfo.name} has been stopped`)
+            log.info(`${widgetInfo.name} has been stopped`)
             server = null
             resolve()
           }
         })
       } else {
-        console.log(`${widgetInfo.name} is not running`)
+        log.info(`${widgetInfo.name} is not running`)
         resolve()
       }
     })

@@ -7,7 +7,7 @@ module.exports = (host) => {
   const v4 = new Promise((resolve, reject) => {
     dns.resolve4(host, function (err, result) {
       if (err) {
-        console.log(`v4 dns lookup error: ${err.message}`)
+        log.info(`v4 dns lookup error: ${err.message}`)
         return resolve([])
       }
       resolve(result)
@@ -16,7 +16,7 @@ module.exports = (host) => {
   const v6 = new Promise((resolve, reject) => {
     dns.resolve6(host, function (err, result) {
       if (err) {
-        console.log(`v6 dns lookup error: ${err.message}`)
+        log.info(`v6 dns lookup error: ${err.message}`)
         return resolve([])
       }
       resolve(result)

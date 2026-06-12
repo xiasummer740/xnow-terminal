@@ -14,7 +14,7 @@ async function fixBookmarks () {
   let i = 0
   log.info('bookmarks count:', len)
   for (const b of arr) {
-    console.log(i + 1, b._id, b.sshTunnel ? 'has sshTunnel' : 'no sshTunnel')
+    log.info(i + 1, b._id, b.sshTunnel ? 'has sshTunnel' : 'no sshTunnel')
     if (b.sshTunnel) {
       const sshTunnels = buildSshTunnels(b)
       delete b.sshTunnel

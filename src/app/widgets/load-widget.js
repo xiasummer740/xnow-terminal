@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-// const log = require('../common/log')
+const log = require('../common/log')
 
 // Store running widget instances
 const runningInstances = new Map()
@@ -34,7 +34,7 @@ function listWidgetsFromFolder (widgetDirectory = __dirname) {
         info: widgetModule.widgetInfo
       })
     } catch (error) {
-      console.error(`Error loading widget from file ${file}:`, error)
+      log.error(`Error loading widget from file ${file}:`, error)
       continue
     }
   }
@@ -114,7 +114,7 @@ function runWidget (widgetId, config) {
 function stopWidget (instanceId) {
   const instance = runningInstances.get(instanceId)
   if (!instance) {
-    console.error(`No running instance found for instanceId: ${instanceId}`)
+    log.error(`No running instance found for instanceId: ${instanceId}`)
     return
   }
 
@@ -139,7 +139,7 @@ async function runWidgetFunc (instanceId, funcName, ...args) {
     const result = await instance[funcName](...args)
     return result
   } catch (error) {
-    console.error(`Error executing ${funcName} on widget instance ${instanceId}:`, error)
+    log.error(`Error executing ${funcName} on widget instance ${instanceId}:`, error)
     throw error
   }
 }
@@ -152,34 +152,34 @@ async function cleanup () {
   const stopPromises = []
 
   for (const [instanceId, instance] of runningInstances) {
-    console.log(`Stopping widget instance: ${instanceId}`)
+    log.info(`Stopping widget instance: ${instanceId}`)
     try {
       const stopPromise = instance.stop()
         .then(() => {
-          console.log(`Successfully stopped widget instance: ${instanceId}`)
+          log.info(`Successfully stopped widget instance: ${instanceId}`)
         })
         .catch(err => {
-          console.error(`Error stopping widget instance ${instanceId}:`, err)
+          log.error(`Error stopping widget instance ${instanceId}:`, err)
         })
       stopPromises.push(stopPromise)
     } catch (err) {
-      console.error(`Error initiating stop for widget instance ${instanceId}:`, err)
+      log.error(`Error initiating stop for widget instance ${instanceId}:`, err)
     }
   }
 
   try {
     await Promise.allSettled(stopPromises)
     runningInstances.clear()
-    console.log('All widget instances have been stopped')
+    log.info('All widget instances have been stopped')
   } catch (err) {
-    console.error('Error during cleanup:', err)
+    log.error('Error during cleanup:', err)
   }
 }
 
 // Register cleanup handlers only for process exit signals
 function registerCleanupHandlers () {
   process.on('SIGTERM', async () => {
-    console.log('Received SIGTERM, cleaning up widgets...')
+    log.info('Received SIGTERM, cleaning up widgets...')
     await cleanup()
   })
 }

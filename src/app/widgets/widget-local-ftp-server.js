@@ -1,3 +1,4 @@
+const log = require("../common/log")
 const os = require('os')
 const uid = require('../common/uid')
 const { customRequire } = require('../lib/custom-require')
@@ -94,7 +95,7 @@ function widgetRun (instanceConfig) {
     }
 
     server.on('client-error', ({ connection, context, error }) => {
-      console.log('FTP client error:', error)
+      log.info('FTP client error:', error)
     })
 
     return new Promise((resolve, reject) => {
@@ -108,12 +109,12 @@ function widgetRun (instanceConfig) {
             path: config.directory
           }
           const msg = `${widgetInfo.name} is running at ${serverInfo.url}`
-          console.log(msg)
-          console.log(`Serving files from: ${serverInfo.path}`)
+          log.info(msg)
+          log.info(`Serving files from: ${serverInfo.path}`)
           if (!config.anonymous) {
-            console.log(`Login credentials: ${config.username} / ${config.password}`)
+            log.info(`Login credentials: ${config.username} / ${config.password}`)
           } else {
-            console.log('Anonymous access enabled')
+            log.info('Anonymous access enabled')
           }
           resolve({ serverInfo, msg, success: true })
         })
@@ -126,16 +127,16 @@ function widgetRun (instanceConfig) {
       if (server) {
         server.close()
           .then(() => {
-            console.log(`${widgetInfo.name} has been stopped`)
+            log.info(`${widgetInfo.name} has been stopped`)
             server = null
             resolve()
           })
           .catch((err) => {
-            console.error('Error stopping the FTP server:', err)
+            log.error('Error stopping the FTP server:', err)
             reject(err)
           })
       } else {
-        console.log(`${widgetInfo.name} is not running`)
+        log.info(`${widgetInfo.name} is not running`)
         resolve()
       }
     })

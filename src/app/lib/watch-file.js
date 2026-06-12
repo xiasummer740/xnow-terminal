@@ -1,3 +1,4 @@
+const log = require("../common/log")
 const fs = require('original-fs')
 const globalState = require('./glob-state')
 const _ = require('./lodash.js')
@@ -10,11 +11,11 @@ const onWatch = _.debounce(
         const text = fs.readFileSync(filePath, 'utf8')
         globalState.get('win').webContents.send('file-change', text)
       } else {
-        console.log('Watched file no longer exists')
+        log.info('Watched file no longer exists')
         globalState.get('win').webContents.send('file-deleted')
       }
     } catch (e) {
-      console.error('Error reading file:', e)
+      log.error('Error reading file:', e)
       globalState.get('win').webContents.send('file-read-error', e.message)
     }
   },
