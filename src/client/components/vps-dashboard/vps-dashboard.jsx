@@ -107,7 +107,7 @@ export default function VpsDashboard ({ visible, onClose }) {
   const vpsList = (() => {
     const k = keyword.toLowerCase()
     return all
-      .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl)
+      .filter(b => b.vpsExpiry || b.vpsPrice || b.vpsTraffic || b.vpsUrl || b.vpsXrayPanel)
       .filter(b => !k || (b.title || '').toLowerCase().includes(k) || (b.host || '').toLowerCase().includes(k))
       .map(b => {
         const expiryDate = b.vpsExpiry ? new Date(b.vpsExpiry) : null
@@ -229,6 +229,7 @@ export default function VpsDashboard ({ visible, onClose }) {
                   <th style={{ width: 90 }}>价格</th>
                   <th style={{ width: 90 }}>流量</th>
                   <th style={{ width: 90 }}>续费</th>
+                  <th style={{ width: 50 }}>XXUI</th>
                   <th style={{ width: 50 }} />
                 </tr>
               </thead>
