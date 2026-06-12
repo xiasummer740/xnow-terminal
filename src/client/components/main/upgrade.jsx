@@ -178,7 +178,7 @@ export default class Upgrade extends PureComponent {
     if (releaseVer?.upToDate) {
       if (isManual) {
         this.changeProps({
-          noUpdateMessage: e('noNeed'),
+          noUpdateMessage: '当前已是最新版本 v' + window.et.version.split('-')[0],
           noUpdateMessageExpires: Date.now() + 3000,
         })
       }
@@ -194,7 +194,7 @@ export default class Upgrade extends PureComponent {
     if (!shouldUpgrade) {
       if (isManual) {
         this.changeProps({
-          noUpdateMessage: e('noNeed'),
+          noUpdateMessage: '当前已是最新版本 v' + window.et.version.split('-')[0],
           noUpdateMessageExpires: Date.now() + 3000,
         })
       }
