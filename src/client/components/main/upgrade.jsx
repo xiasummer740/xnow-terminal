@@ -73,6 +73,7 @@ export default class Upgrade extends PureComponent {
     this.changeProps({
       showUpgradeModal: false,
       shouldUpgrade: false,
+      error: '',
     })
   }
 
@@ -173,10 +174,15 @@ export default class Upgrade extends PureComponent {
         error: releaseVer.error,
       })
     }
-    if (!releaseVer) {
-      return this.changeProps({
-        error: '无法获取版本信息，请检查网络连接',
-      })
+    // 已是最新版本
+    if (releaseVer?.upToDate) {
+      if (isManual) {
+        this.changeProps({
+          noUpdateMessage: e('noNeed'),
+          noUpdateMessageExpires: Date.now() + 3000,
+        })
+      }
+      return
     }
     const { skipVersion = 'v0.0.0' } = this.props
     const currentVer = 'v' + window.et.version.split('-')[0]

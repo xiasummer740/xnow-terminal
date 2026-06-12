@@ -40,13 +40,18 @@ export async function getLatestReleaseVersion() {
     if (res?.tag_name) {
       const ver = res.tag_name.replace(/^v/, '')
       const currentVer = packInfo.version
-      const result = ver !== currentVer ? { tag_name: ver, html_url: res.html_url } : null
+      if (ver === currentVer) {
+        // 已是最新版本，缓存但不触发升级提示
+        cache = { data: { upToDate: true }, time: Date.now() }
+        return cache.data
+      }
+      const result = { tag_name: ver, html_url: res.html_url }
       cache = { data: result, time: Date.now() }
       return result
     }
-    return null
+    return { error: '无法获取版本信息' }
   } catch {
-    return null
+    return { error: '网络请求失败' }
   }
 }
 
@@ -64,6 +69,14 @@ export async function getLatestReleaseInfo() {
   } catch {
     return null
   }
+}
+
+/** 获取缓存的版本信息，用于面板显示（不触发网络请求） */
+export function getCachedVersionInfo() {
+  if (cache.data && Date.now() - cache.time < CACHE_TTL) {
+    return cache.data
+  }
+  return null
 }
 
 /** 清空缓存（手动检查时调用） */
