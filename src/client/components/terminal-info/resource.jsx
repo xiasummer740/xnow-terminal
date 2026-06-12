@@ -270,7 +270,7 @@ export default function TerminalInfoResource (props) {
   const [, forceUpdate] = useState(0)
   const cpuRef = useRef('')
 
-  // Poll CPU every 2 s for realtime feedback (PureComponent parent may skip
+  // Poll CPU every 1 s for realtime feedback (PureComponent parent may skip
   // re-render when value stays constant, so we use our own interval)
   cpuRef.current = cpu
 
@@ -287,7 +287,7 @@ export default function TerminalInfoResource (props) {
       arr.push({ value: cp, time: Date.now() })
       if (arr.length > 60) arr.shift()
       forceUpdate(n => n + 1)
-    }, 2000)
+    }, 1000)
     return () => clearInterval(id)
   }, [terminalInfos])
 
