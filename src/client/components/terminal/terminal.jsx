@@ -1152,7 +1152,9 @@ class Term extends Component {
     const scripts = runScripts ? [...runScripts] : []
     const startFolder = startDirectory || window.initFolder
     if (startFolder) {
-      scripts.unshift({ script: `cd "${startFolder}"`, delay: 0 })
+      // Windows cmd.exe 跨驱动器（C: → F:）需要用 cd /d
+      const cdCmd = isWin && this.isLocal() ? 'cd /d' : 'cd'
+      scripts.unshift({ script: `${cdCmd} "${startFolder}"`, delay: 0 })
     }
 
     // Create unified execution queue
