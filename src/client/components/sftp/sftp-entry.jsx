@@ -903,6 +903,7 @@ export default class Sftp extends Component {
     try {
       const noPathInit = localPathReal || this.state.localPath
       const localPath = noPathInit ||
+        this.props.tab.startDirectory ||
         this.getCwdLocal() ||
         this.getLocalHome()
       let locals
