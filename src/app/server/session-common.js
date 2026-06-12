@@ -33,7 +33,7 @@ exports.commonExtends = function (Cls) {
     return new Promise((resolve, reject) => {
       const client = conn || this.conn || this.client
       client.exec(cmd, this.getExecOpts(), (err, stream) => {
-        if (err) reject(err)
+        if (err) return reject(err)
         if (stream) {
           let r = ''
           stream
