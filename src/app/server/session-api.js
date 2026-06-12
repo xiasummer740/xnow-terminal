@@ -81,6 +81,7 @@ async function tcpPing (body) {
   const { pid } = body
   const term = terminals(pid)
   const { host, port = 22, readyTimeout = 3000 } = term?.initOptions || {}
+  log.debug(`[tcpPing] host=${host}, port=${port}, pid=${pid}`)
   if (!host) return -1
   // 新建TCP连接测三次握手耗时（类似FinalShell原理），比SSH协议ping更准
   return new Promise((resolve) => {
