@@ -80,9 +80,25 @@ async function startTerminalLogFile (body) {
 async function tcpPing (body) {
   const { pid } = body
   const term = terminals(pid)
-  const { host, port = 22, readyTimeout = 3000 } = term?.initOptions || {}
+  const opts = term?.initOptions || {}
+  const { host, port = 22, proxy, readyTimeout = 3000 } = opts
   if (!host) return -1
-  // 新建TCP连接测三次握手耗时（类似FinalShell原理），比SSH协议ping更准
+
+  // 有代理（SOCKS5/HTTP）时通过代理建连，走真正的网络链路
+  if (proxy) {
+    try {
+      const proxySock = require('./socks')
+      const start = Date.now()
+      const result = await proxySock({ readyTimeout, host, port, proxy })
+      const elapsed = Date.now() - start
+      result.socket.destroy()
+      return elapsed
+    } catch {
+      return -1
+    }
+  }
+
+  // 直连TCP ping
   return new Promise((resolve) => {
     const start = Date.now()
     const sock = net.createConnection({ host, port }, () => {
