@@ -295,7 +295,7 @@ export default (Store) => {
     const now = Date.now()
     const status = {
       lastSyncTime: now,
-      electermVersion: packVer,
+      xnowVersion: packVer,
       deviceName: window.pre.osInfo().find(r => r.k === 'hostname')?.v || 'unknown'
     }
 
