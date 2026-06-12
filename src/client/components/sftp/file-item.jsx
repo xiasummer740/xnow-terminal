@@ -92,12 +92,6 @@ export default class FileSection extends React.Component {
     return refsStatic.get('text-editor')
   }
 
-  // handleDropdownOpenChange = (open) => {
-  //   if (open) {
-  //     this.forceUpdate()
-  //   }
-  // }
-
   applyStyle = () => {
     if (!this.domRef) {
       return
@@ -244,10 +238,6 @@ export default class FileSection extends React.Component {
     e.dataTransfer.setData('fromFile', JSON.stringify(filesWithMeta))
   }
 
-  getDropFileList = data => {
-    return getDropFileList(data)
-  }
-
   onDrop = async e => {
     e.preventDefault()
     const fromFileManager = !!e?.dataTransfer?.files?.length
@@ -255,7 +245,7 @@ export default class FileSection extends React.Component {
     if (!target) {
       return
     }
-    const fromFiles = this.getDropFileList(e.dataTransfer)
+    const fromFiles = getDropFileList(e.dataTransfer)
     if (!fromFiles) {
       return
     }
@@ -1079,13 +1069,6 @@ export default class FileSection extends React.Component {
         icon: iconType,
         text: transferText
       })
-      // if (isDirectory && !this.props.isFtp) {
-      //   res.push({
-      //     func: 'zipAndTransfer',
-      //     icon: 'FileZipOutlined',
-      //     text: e('compressAndTransfer')
-      //   })
-      // }
     }
     if (!isDirectory && isRealFile && isLocal) {
       res.push({
@@ -1105,7 +1088,7 @@ export default class FileSection extends React.Component {
       res.push({
         func: 'downloadFromBrowser',
         icon: 'DownloadOutlined',
-        text: 'Download from browser'
+        text: e('downloadFromBrowser')
       })
     }
     if (showEdit) {
@@ -1246,9 +1229,6 @@ export default class FileSection extends React.Component {
       value = this.props[`${type}GidTree`]['' + value] || value
     }
     if (id === 'name') {
-      // const Icon = isDirectory
-      //   ? FolderOutlined
-      //   : FileOutlined
       typeIcon = <ExtIcon file={file} className='mg1r' />
       symbolicLinkText = isSymbolicLink
         ? <sup className='color-blue symbolic-link-icon'>*</sup>

@@ -28,9 +28,13 @@ initWs(app)
 
 const runServer = function () {
   const { electermPort, electermHost } = process.env
-  app.listen(electermPort, electermHost, () => {
+  const server = app.listen(electermPort, electermHost, () => {
     log.info('server', 'runs on', electermHost, electermPort)
     process.send({ serverInited: true })
+  })
+  server.on('error', (err) => {
+    log.error('server', 'failed to start', err.message)
+    process.exit(1)
   })
 }
 
@@ -45,5 +49,6 @@ process.on('unhandledRejection', (err) => {
 })
 
 process.on('SIGTERM', () => {
+  log.info('server', 'received SIGTERM, shutting down')
   process.exit(0)
 })

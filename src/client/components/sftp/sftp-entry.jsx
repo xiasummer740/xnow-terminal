@@ -771,6 +771,7 @@ export default class Sftp extends Component {
           })
         } else {
           this.sftp = sftp
+          this.retryCount = 0
         }
       }
 

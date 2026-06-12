@@ -1,8 +1,10 @@
 /**
- * sftp read/write file
+ * sftp read/write file with timeout
  */
 
 const { Readable, Writable } = require('stream')
+
+const STREAM_TIMEOUT = 30000 // 30s
 
 function createReadStreamFromString (str) {
   const s = new Readable()
@@ -10,6 +12,14 @@ function createReadStreamFromString (str) {
   s.push(str)
   s.push(null)
   return s
+}
+
+function timedPromise (promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`SFTP stream timed out after ${ms}ms`)), ms)
+  })
+  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout])
 }
 
 class FakeWrite extends Writable {
@@ -25,7 +35,7 @@ class FakeWrite extends Writable {
 }
 
 function writeRemoteFile (sftp, path, str, mode) {
-  return new Promise((resolve, reject) => {
+  return timedPromise(new Promise((resolve, reject) => {
     const writeStream = sftp.createWriteStream(path, {
       highWaterMark: 64 * 1024 * 4 * 4,
       mode
@@ -37,17 +47,15 @@ function writeRemoteFile (sftp, path, str, mode) {
       reject(e)
     })
     createReadStreamFromString(str).pipe(writeStream)
-  })
+  }), STREAM_TIMEOUT)
 }
 
 function readRemoteFile (sftp, path) {
-  return new Promise((resolve, reject) => {
+  return timedPromise(new Promise((resolve, reject) => {
     let final = Buffer.alloc(0)
     const writeStream = new FakeWrite({
       onData: data => {
-        final = Buffer.concat(
-          [final, data]
-        )
+        final = Buffer.concat([final, data])
       }
     })
     writeStream.on('finish', () => {
@@ -59,7 +67,7 @@ function readRemoteFile (sftp, path) {
     sftp.createReadStream(path, {
       highWaterMark: 64 * 1024 * 4 * 4
     }).pipe(writeStream)
-  })
+  }), STREAM_TIMEOUT)
 }
 
 module.exports = {
