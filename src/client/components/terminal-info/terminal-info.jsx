@@ -50,12 +50,12 @@ export default class TerminalInfoContent extends PureComponent {
         <TerminalInfoResource
           {...props} {...state}
         />
+        <TerminalInfoNetwork {...props} {...state} />
         <TerminalInfoActivities
           {...props}
           {...state}
           killProcess={this.killProcess}
         />
-        <TerminalInfoNetwork {...props} {...state} />
         <TerminalInfoDisk {...props} {...state} />
         <RunCmd {...props} setState={this.setStateRef} />
       </>
