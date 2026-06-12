@@ -672,6 +672,8 @@ export default (Store) => {
       'roleAI',
       'languageAI',
       'proxyAI',
+      'apiKeyAI',
+      'apiPathAI',
       'disableDeveloperTool',
       'terminalBackgroundText',
       'terminalBackgroundTextSize',

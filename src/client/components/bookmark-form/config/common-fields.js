@@ -281,6 +281,13 @@ export const commonFields = {
     name: 'vpsRecharge',
     label: () => '续费/充值',
     props: { placeholder: '如 每月1号 或 支付宝自动续费' }
+  },
+
+  vpsXrayPanel: {
+    type: 'input',
+    name: 'vpsXrayPanel',
+    label: () => 'XXUI面板地址',
+    props: { placeholder: 'https:// xxui 管理面板' }
   }
 }
 
@@ -327,7 +334,8 @@ const vpsFields = [
   commonFields.vpsExpiry,
   commonFields.vpsPrice,
   commonFields.vpsTraffic,
-  commonFields.vpsRecharge
+  commonFields.vpsRecharge,
+  commonFields.vpsXrayPanel
 ]
 
 export const basicAuthFields = [

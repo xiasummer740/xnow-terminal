@@ -2,17 +2,12 @@
  * VPS 监控看板 — 专业表格视图
  */
 import { useState } from 'react'
-import { Modal, Tag, Empty, Tooltip, Progress, Input, Button, Space, message } from 'antd'
+import { Modal, Tag, Empty, Tooltip, Progress, Input, Button, message } from 'antd'
 import { copy as clipboardCopy } from '../../common/clipboard'
 import {
   ThunderboltOutlined,
   LinkOutlined,
   SearchOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  WarningOutlined,
-  DollarOutlined,
-  CloudOutlined,
   CopyOutlined,
   DownloadOutlined,
   UploadOutlined
@@ -24,9 +19,16 @@ function StatusDot ({ expired, expiring }) {
   const pulse = expired ? { animation: 'none' } : {}
   return (
     <span style={{
-      display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-      background: color, marginRight: 6, boxShadow: `0 0 6px ${color}`, ...pulse
-    }} />
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: color,
+      marginRight: 6,
+      boxShadow: `0 0 6px ${color}`,
+      ...pulse
+    }}
+    />
   )
 }
 
@@ -48,7 +50,7 @@ export default function VpsDashboard ({ visible, onClose }) {
 
       // 2. 选择保存位置
       const now = new Date()
-      const defaultName = `xnow_backup_${now.getFullYear()}_${now.getMonth()+1}_${now.getDate()}.json`
+      const defaultName = `xnow_backup_${now.getFullYear()}_${now.getMonth() + 1}_${now.getDate()}.json`
       const result = await window.api.saveDialog({
         defaultPath: defaultName,
         filters: [{ name: 'JSON备份文件', extensions: ['json'] }]
@@ -114,8 +116,15 @@ export default function VpsDashboard ({ visible, onClose }) {
           : null
         const name = b.title || `${b.username || ''}@${b.host || ''}`
         return {
-          id: b.id, name, host: b.host, vpsUrl: b.vpsUrl,
-          days, vpsPrice: b.vpsPrice, vpsTraffic: b.vpsTraffic, vpsRecharge: b.vpsRecharge,
+          id: b.id,
+          name,
+          host: b.host,
+          vpsUrl: b.vpsUrl,
+          days,
+          vpsPrice: b.vpsPrice,
+          vpsTraffic: b.vpsTraffic,
+          vpsRecharge: b.vpsRecharge,
+          vpsXrayPanel: b.vpsXrayPanel,
           expired: days !== null && days <= 0,
           expiring: days !== null && days > 0 && days <= 30
         }
@@ -204,91 +213,106 @@ export default function VpsDashboard ({ visible, onClose }) {
         </Tooltip>
       </div>
 
-      {vpsList.length === 0 ? (
-        <Empty style={{ padding: 40 }} description='暂无 VPS 数据，请在书签编辑中填写 VPS 字段' />
-      ) : (
-        <div className='vps-table-wrap'>
-          <table className='vps-table'>
-            <thead>
-              <tr>
-                <th style={{ width: 30 }}></th>
-                <th style={{ width: 160 }}>名称</th>
-                <th style={{ width: 130 }}>主机</th>
-                <th style={{ width: 130 }}>到期时间</th>
-                <th style={{ width: 90 }}>价格</th>
-                <th style={{ width: 90 }}>流量</th>
-                <th style={{ width: 90 }}>续费</th>
-                <th style={{ width: 50 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {vpsList.map(vps => (
-                <tr key={vps.id} className={vps.expired ? 'row-expired' : vps.expiring ? 'row-warning' : ''}>
-                  <td><StatusDot expired={vps.expired} expiring={vps.expiring} /></td>
-                  <td>
-                    <span className='vps-name'>{vps.name}</span>
-                  </td>
-                  <td>
-                    <span className='vps-host'>{vps.host || '--'}</span>
-                  </td>
-                  <td>
-                    {vps.days !== null ? (
-                      <div className='vps-expiry-cell'>
-                        <Progress
-                          percent={Math.min(100, Math.round((1 - vps.days / maxDays) * 100))}
-                          size='small'
-                          strokeColor={vps.expired ? '#ff4d4f' : vps.expiring ? '#faad14' : '#52c41a'}
-                          trailColor='#1f1f1f'
-                          showInfo={false}
-                          style={{ width: 50, marginRight: 8 }}
-                        />
-                        {vps.expired
-                          ? <Tag color='red'>过期{vps.days === 0 ? '今天' : Math.abs(vps.days) + '天'}</Tag>
-                          : vps.expiring
-                            ? <Tag color='orange'>{vps.days}天</Tag>
-                            : <span style={{ color: '#52c41a', fontSize: 12 }}>{vps.days}天</span>
-                        }
-                      </div>
-                    ) : <span style={{ color: '#555' }}>--</span>}
-                  </td>
-                  <td>{vps.vpsPrice || '--'}</td>
-                  <td>{vps.vpsTraffic || '--'}</td>
-                  <td>{vps.vpsRecharge || '--'}</td>
-                  <td>
-                    <span style={{ display: 'inline-flex', gap: 8 }}>
-                      {vps.vpsUrl && (
-                        <Tooltip title='打开管理面板'>
-                          <LinkOutlined
-                            style={{ color: '#555', cursor: 'pointer', fontSize: 14 }}
-                            onClick={() => window.openLink(vps.vpsUrl, '_blank')}
-                          />
-                        </Tooltip>
-                      )}
-                      <Tooltip title='复制登录信息给 Claude'>
-                        <CopyOutlined
-                          style={{ color: '#888', cursor: 'pointer', fontSize: 14 }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const bm = all.find(b => b.id === vps.id) || {}
-                            const txt = [
+      {vpsList.length === 0
+        ? (
+          <Empty style={{ padding: 40 }} description='暂无 VPS 数据，请在书签编辑中填写 VPS 字段' />
+          )
+        : (
+          <div className='vps-table-wrap'>
+            <table className='vps-table'>
+              <thead>
+                <tr>
+                  <th style={{ width: 30 }} />
+                  <th style={{ width: 160 }}>名称</th>
+                  <th style={{ width: 130 }}>主机</th>
+                  <th style={{ width: 130 }}>到期时间</th>
+                  <th style={{ width: 90 }}>价格</th>
+                  <th style={{ width: 90 }}>流量</th>
+                  <th style={{ width: 90 }}>续费</th>
+                  <th style={{ width: 50 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {vpsList.map(vps => (
+                  <tr key={vps.id} className={vps.expired ? 'row-expired' : vps.expiring ? 'row-warning' : ''}>
+                    <td><StatusDot expired={vps.expired} expiring={vps.expiring} /></td>
+                    <td>
+                      <span className='vps-name'>{vps.name}</span>
+                    </td>
+                    <td>
+                      <span className='vps-host'>{vps.host || '--'}</span>
+                    </td>
+                    <td>
+                      {vps.days !== null
+                        ? (
+                          <div className='vps-expiry-cell'>
+                            <Progress
+                              percent={Math.min(100, Math.round((1 - vps.days / maxDays) * 100))}
+                              size='small'
+                              strokeColor={vps.expired ? '#ff4d4f' : vps.expiring ? '#faad14' : '#52c41a'}
+                              trailColor='#1f1f1f'
+                              showInfo={false}
+                              style={{ width: 50, marginRight: 8 }}
+                            />
+                            {vps.expired
+                              ? <Tag color='red'>过期{vps.days === 0 ? '今天' : Math.abs(vps.days) + '天'}</Tag>
+                              : vps.expiring
+                                ? <Tag color='orange'>{vps.days}天</Tag>
+                                : <span style={{ color: '#52c41a', fontSize: 12 }}>{vps.days}天</span>}
+                          </div>
+                          )
+                        : <span style={{ color: '#555' }}>--</span>}
+                    </td>
+                    <td>{vps.vpsPrice || '--'}</td>
+                    <td>{vps.vpsTraffic || '--'}</td>
+                    <td>{vps.vpsRecharge || '--'}</td>
+                    <td>
+                      {vps.vpsXrayPanel
+                        ? (
+                          <Tooltip title='打开 XXUI 面板'>
+                            <LinkOutlined
+                              style={{ color: '#555', cursor: 'pointer', fontSize: 14 }}
+                              onClick={() => window.openLink(vps.vpsXrayPanel, '_blank')}
+                            />
+                          </Tooltip>
+                          )
+                        : <span style={{ color: '#333' }}>--</span>}
+                    </td>
+                    <td>
+                      <span style={{ display: 'inline-flex', gap: 8 }}>
+                        {vps.vpsUrl && (
+                          <Tooltip title='打开管理面板'>
+                            <LinkOutlined
+                              style={{ color: '#555', cursor: 'pointer', fontSize: 14 }}
+                              onClick={() => window.openLink(vps.vpsUrl, '_blank')}
+                            />
+                          </Tooltip>
+                        )}
+                        <Tooltip title='复制登录信息给 Claude'>
+                          <CopyOutlined
+                            style={{ color: '#888', cursor: 'pointer', fontSize: 14 }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const bm = all.find(b => b.id === vps.id) || {}
+                              const txt = [
                               `主机: ${bm.host || ''}`,
                               `端口: ${bm.port || 22}`,
                               `用户名: ${bm.username || 'root'}`,
                               `密码: ${bm.password || ''}`,
                               `认证方式: ${bm.authType || 'password'}`
-                            ].join('\n')
-                            clipboardCopy(txt)
-                          }}
-                        />
-                      </Tooltip>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                              ].join('\n')
+                              clipboardCopy(txt)
+                            }}
+                          />
+                        </Tooltip>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          )}
     </Modal>
   )
 }

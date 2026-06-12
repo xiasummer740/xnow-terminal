@@ -338,7 +338,7 @@ export default function FormRenderer ({ config, props }) {
               />
             </Tooltip>
           </span>
-        )
+          )
         : tab.label,
       forceRender: true,
       children: (
@@ -347,7 +347,7 @@ export default function FormRenderer ({ config, props }) {
         </div>
       )
     }))
-    content = <Tabs items={items} />
+    content = <Tabs defaultActiveKey='vpsInfo' items={items} />
   }
   const handleFinishFailed = (errInfo) => {
     console.warn('Form validation failed:', errInfo.errorFields?.map(f => f.errors).flat().join('; ') || errInfo)
