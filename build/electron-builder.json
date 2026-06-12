@@ -43,8 +43,8 @@
       "schemes": ["spice"]
     },
     {
-      "name": "Electerm Protocol",
-      "schemes": ["electerm"]
+      "name": "XNOW Terminal Protocol",
+      "schemes": ["xnow-terminal"]
     }
   ],
   "appx": {

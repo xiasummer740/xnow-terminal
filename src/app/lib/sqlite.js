@@ -19,7 +19,7 @@ const DATA_ENC_ID = 'userConfig'
 const ENC_PREFIX = 'enc:'
 
 function createDb (appPath, defaultUserName, { enc, dec } = {}) {
-  const appDataPath = process.env.DATA_PATH || resolve(appPath, 'electerm')
+  const appDataPath = process.env.DATA_PATH || resolve(appPath, 'xnow-terminal')
 
   if (!fs.existsSync(appDataPath)) {
     fs.mkdirSync(appDataPath, { recursive: true })
@@ -27,8 +27,8 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
 
   // Define database folder and paths for two database files
   const dbFolder = resolve(appDataPath, 'users', defaultUserName)
-  const mainDbPath = resolve(dbFolder, 'electerm.db')
-  const dataDbPath = resolve(dbFolder, 'electerm_data.db')
+  const mainDbPath = resolve(dbFolder, 'xnow.db')
+  const dataDbPath = resolve(dbFolder, 'xnow_data.db')
 
   // Ensure parent directory exists
   if (!fs.existsSync(dbFolder)) {

@@ -22,7 +22,7 @@ const GPU_ERROR_SUGGESTION = `
 ⚠️  GPU Process Error Detected
 ================================================================================
 If you encounter GPU process crashes (exit_code=-2147483645 or similar),
-try running electerm with one of these flags:
+try running xnow-terminal with one of these flags:
 
   1. --no-sandbox          (Recommended - run without sandbox)
   2. --disable-gpu        (Disable GPU rendering)
@@ -33,9 +33,9 @@ Or set environment variable:
   set DISABLE_GPU=1
 
 Example:
-  electerm.exe --no-sandbox
+  xnow-terminal.exe --no-sandbox
   or
-  set DISABLE_GPU=1 && electerm.exe
+  set DISABLE_GPU=1 && xnow-terminal.exe
 ================================================================================
 `
 
@@ -112,7 +112,7 @@ exports.createApp = async function () {
   // --clear-config: 清除所有旧数据，全新启动
   if (opts?.clearConfig) {
     const { resolve } = require('path')
-    const dataPath = resolve(app.getPath('appData'), 'electerm')
+    const dataPath = resolve(app.getPath('appData'), 'xnow-terminal')
     const fs = require('fs')
     if (fs.existsSync(dataPath)) {
       fs.rmSync(dataPath, { recursive: true, force: true })
@@ -124,7 +124,7 @@ exports.createApp = async function () {
   if (app.isPackaged) {
     const fs = require('fs')
     const path = require('path')
-    const dataPath = path.resolve(app.getPath('appData'), 'electerm')
+    const dataPath = path.resolve(app.getPath('appData'), 'xnow-terminal')
     const versionFile = path.resolve(dataPath, '.xnow-version')
     const currentVersion = packInfo.version
 

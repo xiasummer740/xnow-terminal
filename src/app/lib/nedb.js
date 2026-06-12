@@ -19,14 +19,14 @@ const ENC_PREFIX = 'enc:'
 function createDb (appPath, defaultUserName, { enc, dec } = {}) {
   const db = {}
 
-  const appDataPath = process.env.DATA_PATH || resolve(appPath, 'electerm')
+  const appDataPath = process.env.DATA_PATH || resolve(appPath, 'xnow-terminal')
 
   if (!fs.existsSync(appDataPath)) {
     fs.mkdirSync(appDataPath, { recursive: true })
   }
 
   const reso = (name) => {
-    return resolve(appDataPath, 'users', defaultUserName, `electerm.${name}.nedb`)
+    return resolve(appDataPath, 'users', defaultUserName, `xnow.${name}.nedb`)
   }
   const tables = [
     'bookmarks',

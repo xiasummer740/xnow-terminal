@@ -17,32 +17,32 @@ const os = isMac ? 'mac' : isWin ? 'windows' : 'linux'
 const isVersion2OrAbove = compare(version, '2.0.0') >= 0
 
 const userDataPath = {
-  mac: '~/Library/Application\\ Support/electerm/users/default_user',
-  linux: '~/.config/electerm/users/default_user',
-  windows: 'C:\\Users\\your-user-name\\AppData\\Roaming\\electerm\\users\\default_user'
+  mac: '~/Library/Application\\ Support/xnow-terminal/users/default_user',
+  linux: '~/.config/xnow-terminal/users/default_user',
+  windows: 'C:\\Users\\your-user-name\\AppData\\Roaming\\xnow-terminal\\users\\default_user'
 }
 
 const troubleshootContent = {
   runInCommandLine: {
-    mac: '/Applications/electerm.app/Contents/MacOS/electerm',
-    linux: 'path/to/electerm',
-    windows: 'path\\to\\electerm.exe'
+    mac: '/Applications/xnow-terminal.app/Contents/MacOS/xnow-terminal',
+    linux: 'path/to/xnow-terminal',
+    windows: 'path\\to\\xnow-terminal.exe'
   },
   clearConfig: {
     mac: isVersion2OrAbove
-      ? `rm -rf ${userDataPath.mac}/electerm_data.db`
-      : `rm -rf ${userDataPath.mac}/electerm.data.nedb`,
+      ? `rm -rf ${userDataPath.mac}/xnow_data.db`
+      : `rm -rf ${userDataPath.mac}/xnow.data.nedb`,
     linux: isVersion2OrAbove
-      ? `rm -rf ${userDataPath.linux}/electerm_data.db`
-      : `rm -rf ${userDataPath.linux}/electerm.data.nedb`,
+      ? `rm -rf ${userDataPath.linux}/xnow_data.db`
+      : `rm -rf ${userDataPath.linux}/xnow.data.nedb`,
     windows: isVersion2OrAbove
-      ? `Delete ${userDataPath.windows}\\electerm_data.db`
-      : `Delete ${userDataPath.windows}\\electerm.data.nedb`
+      ? `Delete ${userDataPath.windows}\\xnow_data.db`
+      : `Delete ${userDataPath.windows}\\xnow.data.nedb`
   },
   backupData: {
-    mac: `cp -r ${userDataPath.mac} ~/Desktop/electerm_backup_${Date.now()}`,
-    linux: `cp -r ${userDataPath.linux} ~/Desktop/electerm_backup_${Date.now()}`,
-    windows: `xcopy "${userDataPath.windows}\\*" "%USERPROFILE%\\Desktop\\electerm_backup_${Date.now()}" /E /I`
+    mac: `cp -r ${userDataPath.mac} ~/Desktop/xnow_backup_${Date.now()}`,
+    linux: `cp -r ${userDataPath.linux} ~/Desktop/xnow_backup_${Date.now()}`,
+    windows: `xcopy "${userDataPath.windows}\\*" "%USERPROFILE%\\Desktop\\xnow_backup_${Date.now()}" /E /I`
   }
 }
 
@@ -114,7 +114,7 @@ export default class ErrorBoundary extends React.PureComponent {
           <Link to={bugUrl}>{e('bugReport')}</Link>
         </div>
         <div className='pd1b'>
-          <span>XNOW Terminal - 基于 electerm</span>
+          <span>XNOW Terminal</span>
         </div>
       </>
     )

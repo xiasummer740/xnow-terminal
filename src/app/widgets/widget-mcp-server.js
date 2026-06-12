@@ -1,6 +1,6 @@
 /**
  * MCP Server Widget
- * Exposes electerm store APIs via Model Context Protocol
+ * Exposes XNOW Terminal store APIs via Model Context Protocol
  * Runs in main process and uses IPC to communicate with frontend
  * Uses a simple local MCP implementation
  */
@@ -22,7 +22,7 @@ const {
 
 const widgetInfo = {
   name: 'MCP Server',
-  description: 'Expose electerm APIs via Model Context Protocol (MCP) for AI assistants and external tools.',
+  description: 'Expose XNOW Terminal APIs via Model Context Protocol (MCP) for AI assistants and external tools.',
   version: '1.0.0',
   author: 'ZHAO Xudong',
   type: 'instance',
