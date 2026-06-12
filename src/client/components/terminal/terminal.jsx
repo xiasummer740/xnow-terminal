@@ -1431,8 +1431,12 @@ class Term extends Component {
     this.port = r.port
     this.setStatus(statusMap.success)
     // SSH 连接成功后自动打开右侧信息面板（显示延迟等）
-    if (tab.host && !window.store.rightPanelVisible) {
-      window.store.openInfoPanel()
+    if (tab.host) {
+      try {
+        window.store.openInfoPanel()
+      } catch (e) {
+        console.warn('openInfoPanel error:', e)
+      }
     }
     refs.get('sftp-' + id)?.initData(id, r.port)
     term.pid = id
