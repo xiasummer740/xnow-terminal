@@ -61,8 +61,8 @@ class TerminalRdp extends TerminalBase {
   }
 
   resize () {
-    // IronRDP handles resize via the WASM session.resize() method
-    // which sends resize PDUs through the existing relay
+    // IronRDP WASM 在浏览器端处理分辨率变化，通过已有中继发送 resize PDU
+    log.debug(`[RDP:${this.pid}] resize(cols/rows) ignored — IronRDP WASM handles resolution in-browser`)
   }
 
   test = async () => {

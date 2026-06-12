@@ -73,7 +73,8 @@ class TerminalVnc extends TerminalBase {
   }
 
   resize () {
-
+    // noVNC 在浏览器端处理分辨率变化，服务端 TCP 中继无需操作
+    log.debug(`[VNC:${this.pid}] resize(cols/rows) ignored — noVNC handles resolution in-browser`)
   }
 
   onError = (err) => {

@@ -50,6 +50,8 @@ class TerminalSpice extends TerminalBase {
   }
 
   resize = () => {
+    // spice-client 在浏览器端处理分辨率变化，服务端 TCP 中继无需操作
+    log.debug(`[SPICE:${this.pid}] resize(cols/rows) ignored — spice-client handles resolution in-browser`)
   }
 
   test = async () => {
