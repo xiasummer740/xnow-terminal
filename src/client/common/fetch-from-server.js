@@ -35,8 +35,9 @@ const wsFetch = async (data) => {
   return new NewPromise((resolve, reject) => {
     window.et.commonWs.once((arg) => {
       if (arg.error) {
-        console.error('fetch error', arg.error)
-        return reject(new Error(arg.error.message))
+        const msg = typeof arg.error === 'string' ? arg.error : arg.error.message
+        console.error('fetch error', msg)
+        return reject(new Error(msg))
       }
       resolve(arg.data)
     }, id)

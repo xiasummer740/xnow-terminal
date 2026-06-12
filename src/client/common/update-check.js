@@ -24,7 +24,7 @@ async function fetchData(url) {
     },
     proxy: window.store.getProxySetting(),
   }
-  return fetch(data).catch(() => null)
+  return fetch(data).catch(err => err?.message || err || '请求失败')
 }
 
 export async function getLatestReleaseVersion() {
