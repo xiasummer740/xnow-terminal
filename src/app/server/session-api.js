@@ -81,10 +81,23 @@ async function tcpPing (body) {
   const { pid } = body
   const term = terminals(pid)
   const opts = term?.initOptions || {}
-  const { host, port = 22, proxy, readyTimeout = 3000 } = opts
+  const { proxy, readyTimeout = 3000 } = opts
+
+  // SSH 会话：通过已有 SSH 通道发送快速命令测 RTT（类似 FinalShell）
+  if (typeof term?.runCmd === 'function') {
+    const start = Date.now()
+    try {
+      await term.runCmd('echo ping')
+      return Date.now() - start
+    } catch {
+      return -1
+    }
+  }
+
+  // 非 SSH 会话（本地终端）：TCP ping
+  const { host, port = 22 } = opts
   if (!host) return -1
 
-  // 有代理（SOCKS5/HTTP）时通过代理建连，走真正的网络链路
   if (proxy) {
     try {
       const proxySock = require('./socks')
@@ -98,7 +111,6 @@ async function tcpPing (body) {
     }
   }
 
-  // 直连TCP ping
   return new Promise((resolve) => {
     const start = Date.now()
     const sock = net.createConnection({ host, port }, () => {
