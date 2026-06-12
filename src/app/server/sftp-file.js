@@ -16,7 +16,7 @@ function createReadStreamFromString (str) {
 
 function timedPromise (promise, ms) {
   let timer
-  const timeout = new Promise((_, reject) => {
+  const timeout = new Promise((_resolve, reject) => {
     timer = setTimeout(() => reject(new Error(`SFTP stream timed out after ${ms}ms`)), ms)
   })
   return Promise.race([promise.finally(() => clearTimeout(timer)), timeout])
