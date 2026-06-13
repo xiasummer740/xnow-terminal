@@ -470,6 +470,54 @@ function initIpc() {
         return JSON.stringify({ error: e.message })
       }
     },
+    // ===== 远程命令执行（用于部署哪吒） =====
+    execSshCommand: async (opts) => {
+      const { Client } = require('@electerm/ssh2')
+      const host = opts.host || opts.ipv4
+      const port = opts.port || 22
+      const username = opts.username || 'root'
+      const timeout = opts.timeout || 60000
+
+      return new Promise((resolve, reject) => {
+        const conn = new Client()
+        const timer = setTimeout(() => {
+          conn.end()
+          reject(new Error('SSH 连接超时'))
+        }, timeout)
+
+        conn.on('ready', () => {
+          clearTimeout(timer)
+          conn.exec(opts.command, (err, stream) => {
+            if (err) {
+              conn.end()
+              return reject(err)
+            }
+            let output = ''
+            stream.on('data', (data) => { output += data.toString() })
+            stream.stderr.on('data', (data) => { output += data.toString() })
+            stream.on('close', (code) => {
+              conn.end()
+              resolve(output.trim())
+            })
+          })
+        })
+
+        conn.on('error', (err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+
+        conn.connect({
+          host,
+          port,
+          username,
+          password: opts.password,
+          privateKey: opts.privateKey,
+          readyTimeout: timeout,
+          keepaliveInterval: 0
+        })
+      })
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)
