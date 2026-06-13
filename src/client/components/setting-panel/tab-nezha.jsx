@@ -3,7 +3,7 @@
  */
 import { useState } from 'react'
 import { Button, Input, message, Select, Space, Divider, Alert } from 'antd'
-import { CloudServerOutlined, ApiOutlined, LinkOutlined } from '@ant-design/icons'
+import { CloudServerOutlined, ApiOutlined, LinkOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { testConnection } from '../../common/nezha-api'
 import DeployModal, { createSteps } from '../deploy/deploy-modal'
 import { deployMaster, getMasterSteps } from '../deploy/deploy-master'
@@ -19,6 +19,7 @@ export default function TabNezha() {
   const [testResult, setTestResult] = useState(null)
   const [deployOpen, setDeployOpen] = useState(false)
   const [deploySteps, setDeploySteps] = useState(getMasterSteps())
+  const [setupGuide, setSetupGuide] = useState('')
 
   const bookmarks = (store.bookmarks || [])
     .filter((b) => b.host)
@@ -60,16 +61,16 @@ export default function TabNezha() {
     const result = await deployMaster(copy(bm), setDeploySteps)
     if (result.success) {
       setDashboardUrl(result.dashboardUrl)
-      setApiToken(result.apiToken)
-      // 部署成功后自动保存
+      setSetupGuide(result.setupGuide || '')
+      // 部署成功后只保存地址（Token 需要用户去管理后台创建）
       window.store.setConfig({
         nezha: {
           dashboardUrl: result.dashboardUrl,
-          apiToken: result.apiToken,
+          apiToken: '',
           masterBookmarkId: masterId,
         },
       })
-      message.success('✅ 主控部署成功！配置已自动保存')
+      message.success('✅ 主控部署成功！请按提示完成后续设置')
     } else {
       message.error('❌ 部署失败：' + (result.error || '未知错误'))
     }
@@ -148,6 +149,21 @@ export default function TabNezha() {
         </Button>
       </Space>
 
+      {setupGuide && (
+        <Alert
+          type="info"
+          message={setupGuide}
+          showIcon
+          icon={<InfoCircleOutlined />}
+          style={{
+            background: '#1a1a1a',
+            border: '1px solid #1890ff',
+            color: '#ccc',
+            marginBottom: 16,
+            whiteSpace: 'pre-line'
+          }}
+        />
+      )}
       {testResult && (
         <Alert
           type={testResult.success ? 'success' : 'error'}

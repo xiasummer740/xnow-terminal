@@ -108,13 +108,8 @@ export async function deployMaster (bookmark, onStepUpdate) {
     })
     update(5, 'success')
 
-    // Step 6: 生成 Token
+    // Step 6: 提示用户创建 API Token
     update(6, 'running')
-    const token = 'nzp_' + Array.from({ length: 32 }, () =>
-      'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]
-    ).join('')
-    // 通过 Dashboard API 创建 Token（需要后续通过哪吒 API 实现）
-    // 当前简化：直接返回生成的 Token，用户需要手动在管理后台确认
     update(6, 'success')
 
     // Step 7: 完成
@@ -124,7 +119,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     return {
       success: true,
       dashboardUrl,
-      apiToken: token
+      setupGuide: `部署成功！请打开浏览器访问 ${dashboardUrl}，完成管理员账号设置，然后在「系统设置 → API Tokens」中创建 Token，填到下方输入框中。`
     }
   } catch (e) {
     // 找到当前 running 的步骤，标记为 error
