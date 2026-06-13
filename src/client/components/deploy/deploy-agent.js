@@ -30,7 +30,11 @@ export function getAgentSteps (serverName) {
 export async function deployAgent (bookmark, dashboardUrl, onStepUpdate) {
   const name = bookmark.title || bookmark.host
   const steps = getAgentSteps(name)
-  const update = (i, status) => onStepUpdate(updateStep(steps, i, status))
+  let currentSteps = [...steps]
+  const update = (i, status) => {
+    currentSteps = updateStep(currentSteps, i, status)
+    onStepUpdate([...currentSteps])
+  }
 
   try {
     // Step 0: SSH 连接
@@ -75,7 +79,7 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate) {
 
     return { success: true, server: name }
   } catch (e) {
-    const runningIdx = steps.findIndex(s => s.status === 'running')
+    const runningIdx = currentSteps.findIndex(s => s.status === 'running')
     if (runningIdx >= 0) update(runningIdx, 'error')
     return { success: false, server: name, error: e.message }
   }

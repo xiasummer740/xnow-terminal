@@ -31,7 +31,11 @@ export function getMasterSteps () {
  */
 export async function deployMaster (bookmark, onStepUpdate) {
   const steps = getMasterSteps()
-  const update = (i, status) => onStepUpdate(updateStep(steps, i, status))
+  let currentSteps = [...steps]
+  const update = (i, status) => {
+    currentSteps = updateStep(currentSteps, i, status)
+    onStepUpdate([...currentSteps])
+  }
 
   try {
     // Step 0: SSH 连接测试
@@ -124,7 +128,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
   } catch (e) {
     // 找到当前 running 的步骤，标记为 error
-    const runningIdx = steps.findIndex(s => s.status === 'running')
+    const runningIdx = currentSteps.findIndex(s => s.status === 'running')
     if (runningIdx >= 0) update(runningIdx, 'error')
     return { success: false, error: e.message || '部署异常' }
   }
