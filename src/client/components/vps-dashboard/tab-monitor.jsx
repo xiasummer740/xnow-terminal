@@ -62,7 +62,7 @@ export default function TabMonitor({ onClose }) {
   if (!nezhaCfg.dashboardUrl || !nezhaCfg.apiToken) {
     return (
       <Empty style={{ padding: 60 }} description="尚未配置 XNOW 监控">
-        <Button type="primary" icon={<SettingOutlined />} onClick={() => { onClose?.(); store.openSetting() }}>
+        <Button type="primary" icon={<SettingOutlined />} onClick={() => { onClose?.(); store.openNezhaSetting() }}>
           去配置
         </Button>
       </Empty>

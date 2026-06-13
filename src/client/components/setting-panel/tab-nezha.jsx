@@ -7,6 +7,7 @@ import { CloudServerOutlined, ApiOutlined, LinkOutlined } from '@ant-design/icon
 import { testConnection } from '../../common/nezha-api'
 import DeployModal, { createSteps } from '../deploy/deploy-modal'
 import { deployMaster, getMasterSteps } from '../deploy/deploy-master'
+import copy from 'json-deep-copy'
 
 export default function TabNezha() {
   const { store } = window
@@ -56,7 +57,7 @@ export default function TabNezha() {
       setDeployOpen(false)
       return
     }
-    const result = await deployMaster(bm, setDeploySteps)
+    const result = await deployMaster(copy(bm), setDeploySteps)
     if (result.success) {
       setDashboardUrl(result.dashboardUrl)
       setApiToken(result.apiToken)
