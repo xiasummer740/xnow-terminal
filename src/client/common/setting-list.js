@@ -3,7 +3,8 @@ import {
   settingShortcutsId,
   settingTerminalId,
   settingAiId,
-  settingPasswordsId
+  settingPasswordsId,
+  settingNezhaId
 } from '../common/constants'
 
 const e = window.translate
@@ -28,5 +29,9 @@ export default () => ([
   {
     id: settingPasswordsId,
     title: e('password')
+  },
+  {
+    id: settingNezhaId,
+    title: 'XNOW 监控'
   }
 ])
