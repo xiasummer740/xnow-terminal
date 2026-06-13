@@ -1,7 +1,7 @@
 import { formItemLayout } from '../../../common/form-layout.js'
 import { terminalWebType } from '../../../common/constants.js'
 import { createBaseInitValues } from '../common/init-values.js'
-import { commonFields } from './common-fields.js'
+import { commonFields, vpsInfoTab } from './common-fields.js'
 
 const e = window.translate
 
@@ -29,17 +29,23 @@ const webConfig = {
               validator: (_, value) =>
                 /^[a-z\d.+-]+:\/\/[^\s/$.?#].[^\s]*$/i.test(value)
                   ? Promise.resolve()
-                  : Promise.reject(new Error(e('URL must start with http:// or https://')))
-            }
-          ]
+                  : Promise.reject(new Error(e('URL must start with http:// or https://'))),
+            },
+          ],
         },
         commonFields.description,
         { type: 'input', name: 'useragent', label: () => e('useragent') },
-        { type: 'switch', name: 'hideAddressBar', label: 'hideAddressBar', valuePropName: 'checked' },
-        commonFields.type
-      ]
-    }
-  ]
+        {
+          type: 'switch',
+          name: 'hideAddressBar',
+          label: 'hideAddressBar',
+          valuePropName: 'checked',
+        },
+        commonFields.type,
+      ],
+    },
+    vpsInfoTab(),
+  ],
 }
 
 export default webConfig

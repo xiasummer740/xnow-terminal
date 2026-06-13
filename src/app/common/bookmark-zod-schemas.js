@@ -2,21 +2,23 @@ const { z } = require('../lib/zod')
 
 const runScriptSchema = z.object({
   delay: z.number().optional().describe('Delay in ms before executing this command'),
-  script: z.string().describe('Command to execute')
+  script: z.string().describe('Command to execute'),
 })
 
 const quickCommandSchema = z.object({
   name: z.string().describe('Quick command name'),
-  command: z.string().describe('Command')
+  command: z.string().describe('Command'),
 })
 
 const sshTunnelSchema = z.object({
-  sshTunnel: z.enum(['forwardRemoteToLocal', 'forwardLocalToRemote', 'dynamicForward']).describe('Tunnel type'),
+  sshTunnel: z
+    .enum(['forwardRemoteToLocal', 'forwardLocalToRemote', 'dynamicForward'])
+    .describe('Tunnel type'),
   sshTunnelLocalHost: z.string().optional().describe('Local host'),
   sshTunnelLocalPort: z.number().optional().describe('Local port'),
   sshTunnelRemoteHost: z.string().optional().describe('Remote host'),
   sshTunnelRemotePort: z.number().optional().describe('Remote port'),
-  name: z.string().optional().describe('Tunnel name')
+  name: z.string().optional().describe('Tunnel name'),
 })
 
 const connectionHoppingSchema = z.object({
@@ -28,7 +30,7 @@ const connectionHoppingSchema = z.object({
   passphrase: z.string().optional().describe('Passphrase'),
   certificate: z.string().optional().describe('Certificate'),
   authType: z.string().optional().describe('Auth type'),
-  profile: z.string().optional().describe('Profile id')
+  profile: z.string().optional().describe('Profile id'),
 })
 
 const commonNetworkBookmarkProps = {
@@ -42,7 +44,13 @@ const commonNetworkBookmarkProps = {
   startDirectoryRemote: z.string().optional().describe('Remote starting directory'),
   startDirectoryLocal: z.string().optional().describe('Local starting directory'),
   profile: z.string().optional().describe('Profile id'),
-  proxy: z.string().optional().describe('Proxy address (socks5://...)')
+  proxy: z.string().optional().describe('Proxy address (socks5://...)'),
+  vpsUrl: z.string().optional().describe('VPS management panel URL'),
+  vpsExpiry: z.string().optional().describe('VPS expiry date (e.g. 2026-12-31)'),
+  vpsPrice: z.string().optional().describe('VPS purchase price'),
+  vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
+  vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
 }
 
 const sshBookmarkSchema = {
@@ -51,7 +59,10 @@ const sshBookmarkSchema = {
   port: z.number().optional().describe('SSH port (default 22)'),
   username: z.string().optional().describe('SSH username'),
   password: z.string().optional().describe('SSH password'),
-  authType: z.enum(['password', 'privateKey', 'profiles']).optional().describe('Authentication type'),
+  authType: z
+    .enum(['password', 'privateKey', 'profiles'])
+    .optional()
+    .describe('Authentication type'),
   privateKey: z.string().optional().describe('Private key content or path (for privateKey auth)'),
   passphrase: z.string().optional().describe('Passphrase for private key/certificate'),
   certificate: z.string().optional().describe('Certificate content'),
@@ -71,7 +82,10 @@ const sshBookmarkSchema = {
   color: z.string().optional().describe('Tag color, like #000000'),
   // interactiveValues: z.string().optional().describe('Strings separated by newline'),
   sshTunnels: z.array(sshTunnelSchema).optional().describe('SSH tunnel definitions'),
-  connectionHoppings: z.array(connectionHoppingSchema).optional().describe('Connection hopping definitions')
+  connectionHoppings: z
+    .array(connectionHoppingSchema)
+    .optional()
+    .describe('Connection hopping definitions'),
 }
 
 const telnetBookmarkSchema = {
@@ -81,7 +95,7 @@ const telnetBookmarkSchema = {
   username: z.string().optional().describe('Telnet username'),
   password: z.string().optional().describe('Telnet password'),
   loginPrompt: z.string().optional().describe('Login prompt regex'),
-  passwordPrompt: z.string().optional().describe('Password prompt regex')
+  passwordPrompt: z.string().optional().describe('Password prompt regex'),
 }
 
 const serialBookmarkSchema = {
@@ -90,21 +104,46 @@ const serialBookmarkSchema = {
   baudRate: z.number().optional().describe('Baud rate (default 9600)'),
   dataBits: z.number().optional().describe('Data bits (default 8)'),
   stopBits: z.number().optional().describe('Stop bits (default 1)'),
-  parity: z.enum(['none', 'even', 'odd', 'mark', 'space']).optional().describe('Parity (default none)'),
+  parity: z
+    .enum(['none', 'even', 'odd', 'mark', 'space'])
+    .optional()
+    .describe('Parity (default none)'),
   rtscts: z.boolean().optional().describe('RTS/CTS flow control'),
   xon: z.boolean().optional().describe('XON flow control'),
   xoff: z.boolean().optional().describe('XOFF flow control'),
   xany: z.boolean().optional().describe('XANY flow control'),
-  txLineEnding: z.enum(['\r', '\n', '\r\n']).optional().describe('TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)'),
-  rxLineEnding: z.enum(['none', 'lf_to_crlf', 'cr_to_crlf']).optional().describe('RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)'),
-  description: z.string().optional().describe('Bookmark description')
+  txLineEnding: z
+    .enum(['\r', '\n', '\r\n'])
+    .optional()
+    .describe(
+      'TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)',
+    ),
+  rxLineEnding: z
+    .enum(['none', 'lf_to_crlf', 'cr_to_crlf'])
+    .optional()
+    .describe(
+      'RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)',
+    ),
+  description: z.string().optional().describe('Bookmark description'),
+  vpsUrl: z.string().optional().describe('VPS management panel URL'),
+  vpsExpiry: z.string().optional().describe('VPS expiry date (e.g. 2026-12-31)'),
+  vpsPrice: z.string().optional().describe('VPS purchase price'),
+  vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
+  vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
   // runScripts: z.array(runScriptSchema).optional().describe('Run scripts after connected')
 }
 
 const localBookmarkSchema = {
   title: z.string().describe('Bookmark title'),
   description: z.string().optional().describe('Bookmark description'),
-  startDirectoryLocal: z.string().optional().describe('Local starting directory')
+  startDirectoryLocal: z.string().optional().describe('Local starting directory'),
+  vpsUrl: z.string().optional().describe('VPS management panel URL'),
+  vpsExpiry: z.string().optional().describe('VPS expiry date (e.g. 2026-12-31)'),
+  vpsPrice: z.string().optional().describe('VPS purchase price'),
+  vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
+  vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
   // runScripts: z.array(runScriptSchema).optional().describe('Run scripts after connected'),
   // execWindows: z.string().optional().describe('Windows exec path (overrides global setting)'),
   // execMac: z.string().optional().describe('Mac exec path (overrides global setting)'),
@@ -123,5 +162,5 @@ module.exports = {
   sshBookmarkSchema,
   telnetBookmarkSchema,
   serialBookmarkSchema,
-  localBookmarkSchema
+  localBookmarkSchema,
 }

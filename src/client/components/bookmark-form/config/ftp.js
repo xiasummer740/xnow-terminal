@@ -1,7 +1,7 @@
 import { formItemLayout } from '../../../common/form-layout.js'
 import { terminalFtpType } from '../../../common/constants.js'
 import { createBaseInitValues, getAuthTypeDefault } from '../common/init-values.js'
-import { commonFields , vpsInfoTab} from './common-fields.js'
+import { commonFields, vpsInfoTab } from './common-fields.js'
 import { isEmpty } from 'lodash-es'
 
 const e = window.translate
@@ -16,7 +16,7 @@ const ftpConfig = {
       password: '',
       secure: false,
       encode: 'utf-8',
-      ...getAuthTypeDefault(props)
+      ...getAuthTypeDefault(props),
     })
   },
   layout: formItemLayout,
@@ -27,20 +27,29 @@ const ftpConfig = {
       fields: [
         commonFields.category,
         commonFields.colorTitle,
-        { type: 'input', name: 'host', label: () => e('host'), rules: [{ required: true, message: e('host') + ' required' }] },
+        {
+          type: 'input',
+          name: 'host',
+          label: () => e('host'),
+          rules: [{ required: true, message: e('host') + ' required' }],
+        },
         commonFields.port,
-        { type: 'profileItem', name: '__profile__', label: '', profileFilter: d => !isEmpty(d.ftp) },
+        {
+          type: 'profileItem',
+          name: '__profile__',
+          label: '',
+          profileFilter: (d) => !isEmpty(d.ftp),
+        },
         { type: 'input', name: 'user', label: () => e('username') },
         { type: 'password', name: 'password', label: () => e('password') },
         { type: 'switch', name: 'secure', label: () => e('secure'), valuePropName: 'checked' },
         commonFields.encode,
         commonFields.proxy,
-        commonFields.type
-    
-      ]
-    }
-    
-  ]
+        commonFields.type,
+      ],
+    },
+    vpsInfoTab(),
+  ],
 }
 
 export default ftpConfig

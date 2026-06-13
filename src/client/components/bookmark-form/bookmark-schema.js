@@ -8,7 +8,8 @@ const bookmarkSchema = {
     privateKey: 'string - private key content or path for key-based auth',
     passphrase: 'string - passphrase for private key/certificate',
     certificate: 'string - certificate content',
-    authType: 'string - auth type (password|privateKey|profiles), when have profile, should be profiles',
+    authType:
+      'string - auth type (password|privateKey|profiles), when have profile, should be profiles',
     profile: 'string - profile id to reuse saved auth',
     title: 'string - bookmark title',
     description: 'string - bookmark description',
@@ -32,7 +33,13 @@ const bookmarkSchema = {
     envLang: 'string - ENV LANG, default is en_US.UTF-8',
     setEnv: 'string - environment variables, format: `KEY1=VALUE1 KEY2=VALUE2`',
     color: 'string - tag color, like #000000',
-    interactiveValues: 'strings separated by newline'
+    interactiveValues: 'strings separated by newline',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   sshTunnelsItem: {
     sshTunnel: 'string - forwardRemoteToLocal|forwardLocalToRemote|dynamicForward',
@@ -40,7 +47,7 @@ const bookmarkSchema = {
     sshTunnelLocalPort: 'number',
     sshTunnelRemoteHost: 'string',
     sshTunnelRemotePort: 'number',
-    name: 'string - optional tunnel name'
+    name: 'string - optional tunnel name',
   },
   connectionHoppingsItem: {
     host: 'string',
@@ -51,7 +58,7 @@ const bookmarkSchema = {
     passphrase: 'string - passphrase',
     certificate: 'string',
     authType: 'string',
-    profile: 'string - profile id'
+    profile: 'string - profile id',
   },
   telnet: {
     type: 'telnet',
@@ -67,7 +74,13 @@ const bookmarkSchema = {
     startDirectoryRemote: 'string - remote starting directory',
     startDirectoryLocal: 'string - local starting directory',
     profile: 'string - profile id',
-    proxy: 'string - proxy address (socks5://...)'
+    proxy: 'string - proxy address (socks5://...)',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   serial: {
     type: 'serial',
@@ -81,10 +94,18 @@ const bookmarkSchema = {
     xon: 'boolean - enable XON flow control, default is false',
     xoff: 'boolean - enable XOFF flow control, default is false',
     xany: 'boolean - enable XANY flow control, default is false',
-    txLineEnding: 'string - TX line ending on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)',
-    rxLineEnding: 'string - RX line ending conversion: "none" (default), "lf_to_crlf" (for LF-only devices), "cr_to_crlf" (for CR-only devices)',
+    txLineEnding:
+      'string - TX line ending on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)',
+    rxLineEnding:
+      'string - RX line ending conversion: "none" (default), "lf_to_crlf" (for LF-only devices), "cr_to_crlf" (for CR-only devices)',
     runScripts: 'array - run scripts after connected ({delay,script})',
-    description: 'string - bookmark description'
+    description: 'string - bookmark description',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   vnc: {
     type: 'vnc',
@@ -101,7 +122,13 @@ const bookmarkSchema = {
     proxy: 'string - proxy address (socks5://...)',
     title: 'string - bookmark title',
     description: 'string - bookmark description',
-    profile: 'string - profile id'
+    profile: 'string - profile id',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   rdp: {
     type: 'rdp',
@@ -113,7 +140,13 @@ const bookmarkSchema = {
     description: 'string - bookmark description',
     profile: 'string - profile id',
     proxy: 'string - proxy address (socks5://...)',
-    domain: 'string - login domain'
+    domain: 'string - login domain',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   ftp: {
     type: 'ftp',
@@ -125,14 +158,26 @@ const bookmarkSchema = {
     encode: 'string - charset for file names, default is utf-8',
     title: 'string - bookmark title',
     profile: 'string - profile id',
-    description: 'string - bookmark description'
+    description: 'string - bookmark description',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   web: {
     type: 'web',
     url: 'string (required) - website URL',
     title: 'string - bookmark title',
     description: 'string - bookmark description',
-    useragent: 'string - custom user agent'
+    useragent: 'string - custom user agent',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   local: {
     type: 'local',
@@ -145,7 +190,13 @@ const bookmarkSchema = {
     execLinux: 'string - Linux exec path (overrides global setting)',
     execWindowsArgs: 'array - Windows exec arguments',
     execMacArgs: 'array - Mac exec arguments',
-    execLinuxArgs: 'array - Linux exec arguments'
+    execLinuxArgs: 'array - Linux exec arguments',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
   },
   spice: {
     type: 'spice',
@@ -157,11 +208,17 @@ const bookmarkSchema = {
     scaleViewport: 'boolean - scale viewport to window, default is true',
     description: 'string - bookmark description',
     profile: 'string - profile id',
-    proxy: 'string - proxy address (socks5://...)'
-  }
+    proxy: 'string - proxy address (socks5://...)',
+    vpsUrl: 'string - VPS management panel URL',
+    vpsExpiry: 'string - VPS expiry date (e.g. 2026-12-31)',
+    vpsPrice: 'string - VPS purchase price',
+    vpsTraffic: 'string - VPS traffic/bandwidth',
+    vpsRecharge: 'string - VPS recharge/auto-renew info',
+    vpsXrayPanel: 'string - XX-UI panel URL',
+  },
 }
 
-export function buildPrompt (description) {
+export function buildPrompt(description) {
   const lang = window.store.config.languageAI || window.store.getLangName()
   const schemaDescription = Object.entries(bookmarkSchema)
     .map(([type, fields]) => {

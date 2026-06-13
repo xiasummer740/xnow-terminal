@@ -126,6 +126,8 @@ export default class Upgrade extends PureComponent {
   }
 
   onEnd = () => {
+    clearTimeout(this.downloadTimer)
+    this.update && this.update.destroy()
     this.handleClose()
   }
 

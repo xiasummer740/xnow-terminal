@@ -191,6 +191,10 @@ async function initAppServer() {
           shell.showItemInFolder(m.showFileInFolder)
         }
       }
+      if (m && m.quitAndInstall) {
+        // 延迟退出，让 WebSocket 消息先发送到客户端
+        setTimeout(() => app.quit(), 1500)
+      }
     })
     globalState.set('serverInited', true)
   }
@@ -225,9 +229,17 @@ function initIpc() {
     getDrives: () => {
       const { execSync } = require('child_process')
       try {
-        const out = execSync('powershell -c "Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root"', { encoding: 'utf8', timeout: 5000 })
-        return out.split(/\r?\n/).map(l => l.trim()).filter(l => /^[A-Z]:\\$/i.test(l))
-      } catch { return [] }
+        const out = execSync(
+          'powershell -c "Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root"',
+          { encoding: 'utf8', timeout: 5000 },
+        )
+        return out
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => /^[A-Z]:\\$/i.test(l))
+      } catch {
+        return []
+      }
     },
     confirmExit: () => {
       globalState.set('confirmExit', true)

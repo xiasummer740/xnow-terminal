@@ -1,15 +1,15 @@
 import createName from '../../common/create-title'
 
-function isTopLevelGroup (group) {
+function isTopLevelGroup(group) {
   return !group?.level || group.level < 2
 }
 
-export function buildVisibleTreeRows ({
+export function buildVisibleTreeRows({
   bookmarkGroups,
   bookmarkGroupTree,
   bookmarksMap,
   expandedKeys,
-  keyword
+  keyword,
 }) {
   const groupTree = bookmarkGroupTree || {}
   const rows = []
@@ -28,7 +28,10 @@ export function buildVisibleTreeRows ({
       item &&
       (!lowerKeyword ||
         createName(item).toLowerCase().includes(lowerKeyword) ||
-        (item.description || '').toLowerCase().includes(lowerKeyword))
+        (item.description || '').toLowerCase().includes(lowerKeyword) ||
+        (item.vpsUrl || '').toLowerCase().includes(lowerKeyword) ||
+        (item.vpsExpiry || '').toLowerCase().includes(lowerKeyword) ||
+        (item.vpsXrayPanel || '').toLowerCase().includes(lowerKeyword)),
     )
     bookmarkMatchCache.set(bookmarkId, matched)
     return matched
@@ -44,8 +47,9 @@ export function buildVisibleTreeRows ({
     if (groupMatchCache.has(group.id)) {
       return groupMatchCache.get(group.id)
     }
-    const hasMatch = (group.bookmarkIds || []).some(bookmarkMatches) ||
-      (group.bookmarkGroupIds || []).some(id => {
+    const hasMatch =
+      (group.bookmarkIds || []).some(bookmarkMatches) ||
+      (group.bookmarkGroupIds || []).some((id) => {
         return groupHasMatchedBookmarks(groupTree[id])
       })
     groupMatchCache.set(group.id, hasMatch)
@@ -62,16 +66,14 @@ export function buildVisibleTreeRows ({
       item: group,
       isGroup: true,
       parentId,
-      depth
+      depth,
     })
 
     if (!lowerKeyword && !expandedKeySet.has(group.id)) {
       return
     }
 
-    const nextParentId = parentId
-      ? `${parentId}#${group.id}`
-      : `#${group.id}`
+    const nextParentId = parentId ? `${parentId}#${group.id}` : `#${group.id}`
 
     for (const groupId of group.bookmarkGroupIds || []) {
       visitGroup(groupTree[groupId], nextParentId, depth + 1)
@@ -88,7 +90,7 @@ export function buildVisibleTreeRows ({
         item,
         isGroup: false,
         parentId: nextParentId,
-        depth
+        depth,
       })
       if (lowerKeyword) {
         matchedRowKeys.push(rowKey)
@@ -104,6 +106,6 @@ export function buildVisibleTreeRows ({
 
   return {
     rows,
-    matchedRowKeys
+    matchedRowKeys,
   }
 }
