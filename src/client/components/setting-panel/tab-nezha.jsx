@@ -61,16 +61,19 @@ export default function TabNezha() {
     const result = await deployMaster(copy(bm), setDeploySteps)
     if (result.success) {
       setDashboardUrl(result.dashboardUrl)
+      // 如果自动创建了 Token 则填入
+      if (result.apiToken) {
+        setApiToken(result.apiToken)
+      }
       setSetupGuide(result.setupGuide || '')
-      // 部署成功后只保存地址（Token 需要用户去管理后台创建）
       window.store.setConfig({
         nezha: {
           dashboardUrl: result.dashboardUrl,
-          apiToken: '',
+          apiToken: result.apiToken || '',
           masterBookmarkId: masterId,
         },
       })
-      message.success('✅ 主控部署成功！请按提示完成后续设置')
+      message.success('✅ 主控部署成功！')
     } else {
       message.error('❌ 部署失败：' + (result.error || '未知错误'))
     }

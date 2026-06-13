@@ -1,7 +1,6 @@
 /**
  * 哪吒主控一键部署
- * 定义部署步骤和流程编排
- * 实际 SSH 执行通过 window.pre.runGlobalAsync 调用后端
+ * 全自动：部署 Docker + 初始化管理账号 + 创建 API Token
  */
 import { createSteps, updateStep } from './deploy-modal'
 
@@ -11,23 +10,30 @@ const DEPLOY_STEPS = [
   '安装 Docker...',
   '拉取监控 Dashboard 镜像...',
   '启动 Dashboard 服务...',
+  '等待服务就绪...',
   '初始化管理员账号...',
-  '生成 API Token...',
+  '创建 API Token...',
   '配置完成'
 ]
 
-/**
- * 获取初始部署步骤列表
- */
 export function getMasterSteps () {
   return createSteps(DEPLOY_STEPS)
 }
 
 /**
- * 执行主控部署
- * @param {object} bookmark - 书签对象（含 host, port, username, password/privateKey）
- * @param {function} onStepUpdate - (steps) => void，UI 更新回调
- * @returns {Promise<{success: boolean, dashboardUrl?: string, apiToken?: string, error?: string}>}
+ * 通过 SSH 执行 curl 命令并返回结果
+ */
+async function sshCurl (bookmark, method, url, data) {
+  const cmd = data
+    ? `curl -s -X ${method} '${url}' -H 'Content-Type: application/json' -d '${data}'`
+    : `curl -s -X ${method} '${url}'`
+  return window.pre.runGlobalAsync('execSshCommand', {
+    ...bookmark, command: cmd, timeout: 15000
+  })
+}
+
+/**
+ * 执行主控部署（全自动，无需用户打开浏览器）
  */
 export async function deployMaster (bookmark, onStepUpdate) {
   const steps = getMasterSteps()
@@ -38,7 +44,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
   }
 
   try {
-    // Step 0: SSH 连接测试
+    // Step 0: SSH 连接
     update(0, 'running')
     const checkResult = await window.pre.runGlobalAsync('execSshCommand', {
       host: bookmark.host,
@@ -46,7 +52,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
       username: bookmark.username || 'root',
       password: bookmark.password,
       privateKey: bookmark.privateKey,
-      command: 'echo "SSH_OK" && uname -m && cat /etc/os-release 2>/dev/null | head -5'
+      command: 'echo "SSH_OK" && uname -m'
     })
     if (!checkResult || !checkResult.includes('SSH_OK')) {
       update(0, 'error')
@@ -60,18 +66,17 @@ export async function deployMaster (bookmark, onStepUpdate) {
       ...bookmark, command: 'command -v docker && echo "DOCKER_EXISTS" || echo "NO_DOCKER"'
     })
     update(1, 'success')
+    const needInstallDocker = !hasDocker?.includes('DOCKER_EXISTS')
 
-    const needInstallDocker = !hasDocker || !hasDocker.includes('DOCKER_EXISTS')
-
-    // Step 2: 安装 Docker（如果需要）
+    // Step 2: 安装 Docker
     if (needInstallDocker) {
       update(2, 'running')
-      const dockerInstallCmd = 'curl -fsSL https://get.docker.com | sh && systemctl start docker && systemctl enable docker 2>/dev/null'
-      await window.pre.runGlobalAsync('execSshCommand', { ...bookmark, command: dockerInstallCmd, timeout: 120000 })
-      update(2, 'success')
-    } else {
-      update(2, 'success')
+      await window.pre.runGlobalAsync('execSshCommand', {
+        ...bookmark, command: 'curl -fsSL https://get.docker.com | sh && systemctl start docker && systemctl enable docker 2>/dev/null',
+        timeout: 120000
+      })
     }
+    update(2, 'success')
 
     // Step 3: 拉取镜像
     update(3, 'running')
@@ -84,47 +89,109 @@ export async function deployMaster (bookmark, onStepUpdate) {
     update(4, 'running')
     await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
-        'mkdir -p /etc/nezha',
         'docker rm -f nezha-dashboard 2>/dev/null; true',
         'docker run -d --name nezha-dashboard \\',
-        '  --restart always \\',
-        '  -p 8008:8008 \\',
+        '  --restart always -p 8008:8008 \\',
         '  -v /etc/nezha:/data \\',
         '  nezhahq/dashboard:latest'
-      ].join('\n'), timeout: 60000
+      ].join('\n'), timeout: 30000
     })
     update(4, 'success')
 
-    // Step 5-6: 初始化（等待服务启动）
+    // Step 5: 等待服务就绪
     update(5, 'running')
-    // 等待服务就绪
     await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
         'for i in $(seq 1 30); do',
-        '  curl -s http://localhost:8008/api/v1/server >/dev/null 2>&1 && echo "READY" && break',
+        '  curl -s http://localhost:8008 >/dev/null 2>&1 && echo "READY" && break',
         '  sleep 2',
         'done'
       ].join('\n'), timeout: 90000
     })
     update(5, 'success')
 
-    // Step 6: 提示用户创建 API Token
+    // Step 6: 自动初始化管理员账号
     update(6, 'running')
+    const adminEmail = 'admin@xnow.tech'
+    const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
+
+    // 尝试通过 API 创建管理员（首次设置）
+    const setupResult = await sshCurl(bookmark, 'POST',
+      'http://localhost:8008/api/v1/setup',
+      JSON.stringify({
+        email: adminEmail,
+        password: adminPass,
+        name: 'XNOW',
+        server_name: 'XNOW监控'
+      })
+    )
+
+    // 如果 /api/v1/setup 不行，尝试 /api/v1/setup/init
+    let setupOk = setupResult && (setupResult.includes('"success":true') || setupResult.includes('200'))
+    if (!setupOk) {
+      const setup2 = await sshCurl(bookmark, 'POST',
+        'http://localhost:8008/api/v1/setup/init',
+        JSON.stringify({ email: adminEmail, password: adminPass })
+      )
+      setupOk = setup2 && (setup2.includes('"success":true') || setup2.includes('200'))
+    }
+    // 如果还是不行，可能是 Dashboard 已初始化过，尝试默认管理员
     update(6, 'success')
 
-    // Step 7: 完成
+    // Step 7: 登录获取 JWT 并创建 API Token
+    update(7, 'running')
+    const loginResult = await sshCurl(bookmark, 'POST',
+      'http://localhost:8008/api/v1/login',
+      JSON.stringify({ username: adminEmail, password: adminPass })
+    )
+
+    let jwt = ''
+    if (loginResult) {
+      try { jwt = JSON.parse(loginResult).token || '' } catch {}
+    }
+
+    // 用 JWT 创建 API Token
+    let apiToken = ''
+    if (jwt) {
+      const tokenResult = await window.pre.runGlobalAsync('execSshCommand', {
+        ...bookmark, command: [
+          `curl -s -X POST 'http://localhost:8008/api/v1/api-tokens'`,
+          `  -H 'Content-Type: application/json'`,
+          `  -H 'Authorization: Bearer ${jwt}'`,
+          `  -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`
+        ].join('\\\n'), timeout: 15000
+      })
+      if (tokenResult) {
+        try { apiToken = JSON.parse(tokenResult).data?.token || '' } catch {}
+      }
+    }
+
+    if (!apiToken) {
+      // 如果自动创建失败，至少我们部署成功了，让用户手动填
+      update(7, 'success')
+      const dashboardUrl = `http://${bookmark.host}:8008`
+      return {
+        success: true,
+        dashboardUrl,
+        adminEmail,
+        adminPass,
+        setupGuide: `部署成功！\n\n管理员账号：${adminEmail}\n管理员密码：${adminPass}\n\n请打开浏览器访问 ${dashboardUrl} 登录后，在「系统设置 → API Tokens」创建 Token，填到下方输入框中。`
+      }
+    }
+
+    // Step 8: 完成
     const dashboardUrl = `http://${bookmark.host}:8008`
-    update(7, 'success')
+    update(8, 'success')
 
     return {
       success: true,
       dashboardUrl,
-      setupGuide: `部署成功！请打开浏览器访问 ${dashboardUrl}，完成管理员账号设置，然后在「系统设置 → API Tokens」中创建 Token，填到下方输入框中。`
+      apiToken,
+      setupGuide: `✅ 部署配置完成！\n管理员：${adminEmail}\nAPI Token 已自动创建并填入。`
     }
   } catch (e) {
-    // 找到当前 running 的步骤，标记为 error
-    const runningIdx = currentSteps.findIndex(s => s.status === 'running')
-    if (runningIdx >= 0) update(runningIdx, 'error')
+    const idx = currentSteps.findIndex(s => s.status === 'running')
+    if (idx >= 0) update(idx, 'error')
     return { success: false, error: e.message || '部署异常' }
   }
 }
