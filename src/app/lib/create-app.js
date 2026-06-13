@@ -1,6 +1,6 @@
 const { app } = require('electron')
 const { createWindow } = require('./create-window')
-const { packInfo } = require('../common/runtime-constants')
+const { packInfo, isDev } = require('../common/runtime-constants')
 const { initCommandLine } = require('./command-line')
 const globalState = require('./glob-state')
 const { getUserConfigNoEnc, getDbConfig } = require('./get-config')
@@ -63,6 +63,12 @@ process.on('uncaughtException', (error) => {
 })
 
 exports.createApp = async function () {
+  // 开发模式使用独立数据目录，绝不碰安装版的数据
+  if (isDev) {
+    process.env.DATA_PATH = require('path').join(app.getPath('userData'), 'xnow-terminal-dev')
+    log.info('[dev] 使用独立数据目录:', process.env.DATA_PATH)
+  }
+
   app.setName(packInfo.name)
   // Handle GPU issues on Linux
   // On Linux, disable GPU for compatibility
