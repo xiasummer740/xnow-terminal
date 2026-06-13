@@ -7,7 +7,6 @@ import { createTitleTag } from '../../common/create-title'
 import classnames from 'classnames'
 import highlight from '../common/highlight'
 import uid from '../../common/uid'
-import { LinkOutlined } from '@ant-design/icons'
 
 function areEqual(prevProps, nextProps) {
   const prevSelected = prevProps.selectedItemId === prevProps.item.id
@@ -101,20 +100,6 @@ function TreeListItem(props) {
     'data-parent-id': props.parentId,
   }
   const key = item.id || uid()
-  const vpsLink =
-    !isGroup && item.vpsUrl ? (
-      <span
-        className="tree-item-vps-link"
-        title={'打开 ' + item.vpsUrl}
-        onClick={(e) => {
-          e.stopPropagation()
-          window.openLink(item.vpsUrl, '_blank')
-        }}
-        style={{ marginLeft: 6, color: '#1890ff', fontSize: 12 }}
-      >
-        <LinkOutlined />
-      </span>
-    ) : null
   const xxuiLink =
     !isGroup && item.vpsXrayPanel ? (
       <span
@@ -164,7 +149,6 @@ function TreeListItem(props) {
         {colorTag}
         {tag}
         {titleHighlight}
-        {vpsLink}
         {xxuiLink}
         {expiryWarn}
       </div>
