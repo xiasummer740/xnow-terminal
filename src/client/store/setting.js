@@ -159,4 +159,26 @@ export default Store => {
     })
     store.setSettingItem(item)
   }
+
+  Store.prototype.testNezhaConnection = async function () {
+    const { nezha } = window.store.config
+    if (!nezha?.dashboardUrl || !nezha?.apiToken) {
+      return { success: false, error: '未配置 Dashboard 地址或 API Token' }
+    }
+    const url = `${nezha.dashboardUrl.replace(/\/+$/, '')}/api/v1/server`
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${nezha.apiToken}` }
+      })
+      if (!res.ok) {
+        return { success: false, error: `HTTP ${res.status}` }
+      }
+      const json = await res.json()
+      const servers = json?.data || json || []
+      const count = Array.isArray(servers) ? servers.length : 0
+      return { success: true, count }
+    } catch (e) {
+      return { success: false, error: e.message || '连接异常' }
+    }
+  }
 }

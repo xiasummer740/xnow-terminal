@@ -89,3 +89,41 @@
 .vps-expiry-cell
   display flex
   align-items center
+
+// XNOW 监控实时监控样式
+.vps-monitor-quick-actions
+  display flex
+  gap 8px
+  align-items center
+
+.vps-monitor-card-hover
+  transition all 0.2s ease
+  &:hover
+    border-color #1890ff
+    transform translateY(-2px)
+    box-shadow 0 4px 16px rgba(24,144,255,0.12)
+
+// 监控表格暗色适配
+.vps-dashboard-modal
+  .ant-table
+    background transparent !important
+    color #ccc
+  .ant-table-thead > tr > th
+    background #141414 !important
+    border-bottom 1px solid #222
+    color #888
+    font-size 11px
+  .ant-table-tbody > tr > td
+    border-bottom 1px solid #1a1a1a
+    color #ccc
+  .ant-table-tbody > tr:hover > td
+    background rgba(255,255,255,0.02) !important
+  .ant-table-placeholder:hover > td
+    background transparent !important
+  .ant-empty-description
+    color #666
+  .ant-segmented-item
+    color #888
+  .ant-segmented-item-selected
+    background #1890ff
+    color #fff
