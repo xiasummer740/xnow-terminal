@@ -17,10 +17,12 @@ const { phin, download, extractTarGz, GITHUB_PROXY, applyProxy } = require('./ut
 
 const plat = os.platform()
 const arch = os.arch()
-const { homepage } = require('../package.json')
-
-const releaseInfoUrl = `${homepage}/data/electerm-github-release.json?_=${+new Date()}`
-const versionUrl = `${homepage}/version.html?_=${+new Date()}`
+const githubApi = 'https://api.github.com/repos/xiasummer740/xnow-terminal/releases/latest'
+const ghHeaders = {
+  Accept: 'application/vnd.github+json',
+  'User-Agent': 'XNOW-Terminal',
+  'X-GitHub-Api-Version': '2022-11-28'
+}
 
 // Directory where electerm package is installed
 const packageRoot = resolve(__dirname, '..')
@@ -57,20 +59,21 @@ function sanitizeFilename (name) {
 
 function getVer () {
   return phin({
-    url: versionUrl,
-    timeout: 15000
+    url: githubApi,
+    timeout: 15000,
+    headers: ghHeaders
   })
-    .then(res => res.body.toString())
+    .then(res => JSON.parse(res.body.toString()).tag_name.replace(/^v/, ''))
 }
 
 function getReleaseInfo (filter) {
   return phin({
-    url: releaseInfoUrl,
-    timeout: 15000
+    url: githubApi,
+    timeout: 15000,
+    headers: ghHeaders
   })
     .then((res) => {
       return JSON.parse(res.body.toString())
-        .release
         .assets
         .filter(filter)[0]
     })

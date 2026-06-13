@@ -30,23 +30,33 @@ function getUrl (url, mirror) {
   }
 }
 
-function getReleaseInfo (
-  filter, releaseInfoUrl, agent
-) {
+/**
+ * Fetch release info from GitHub API (same endpoint the version check uses).
+ */
+async function getReleaseInfo (filter, agent) {
+  const url = 'https://api.github.com/repos/xiasummer740/xnow-terminal/releases/latest'
   const conf = {
-    url: releaseInfoUrl,
-    timeout: 15000
+    url,
+    timeout: 15000,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'XNOW-Terminal',
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
   }
   if (agent) {
     conf.httpsAgent = agent
   }
-  return rp(conf)
-    .then((res) => {
-      return res.data
-        .release
-        .assets
-        .filter(filter)[0]
-    })
+  const res = await rp(conf)
+  const assets = res.data.assets.filter(filter)
+  if (!assets.length) return null
+  const asset = assets[0]
+  return {
+    name: asset.name,
+    size: asset.size,
+    browser_download_url: asset.browser_download_url,
+    html_url: res.data.html_url
+  }
 }
 
 /**
@@ -80,12 +90,11 @@ class Upgrade {
       mirror
     } = this.options
     const agent = createProxyAgent(proxy)
-    const releaseInfoUrl = `${packInfo.homepage}/data/electerm-github-release.json?_=${+new Date()}`
     const filter = r => {
       return r.name.endsWith(installSrc)
     }
-    const releaseInfo = await getReleaseInfo(filter, releaseInfoUrl, agent)
-      .catch(this.onError)
+    const releaseInfo = await getReleaseInfo(filter, agent)
+      .catch((err) => this.onError(err, id, ws))
     if (!releaseInfo) {
       return
     }
