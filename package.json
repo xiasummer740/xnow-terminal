@@ -1,6 +1,6 @@
 {
   "name": "xnow-terminal",
-  "version": "3.12.16",
+  "version": "3.12.17",
   "description": "XNOW Terminal - 终端/SSH/SFTP/Telnet/串口/RDP/VNC/Spice客户端(Windows/Mac/Linux)",
   "main": "app.js",
   "bin": "npm/electerm",
