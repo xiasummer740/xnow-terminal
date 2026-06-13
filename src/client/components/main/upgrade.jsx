@@ -1,5 +1,5 @@
 import { PureComponent } from 'react'
-import { CloseOutlined, MinusSquareOutlined } from '@ant-design/icons'
+import { CloseOutlined, DownloadOutlined, MinusSquareOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import {
   getLatestReleaseInfo,
@@ -53,7 +53,7 @@ export default class Upgrade extends PureComponent {
     this.update?.destroy()
   }
 
-  appUpdateCheck = (isManual) => {
+  handleCheckUpdate = (isManual) => {
     this.getLatestRelease(isManual)?.catch(() => {})
   }
 
@@ -94,6 +94,16 @@ export default class Upgrade extends PureComponent {
   }
 
   onError = (e) => {
+    // All mirrors exhausted — show manual download link
+    if (e.message === 'ALL_MIRRORS_FAILED') {
+      this.cancel()
+      this.changeProps({
+        error: '',
+        showManualDownload: true,
+        downloadUrl: e.downloadUrl || 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
+      })
+      return
+    }
     this.changeProps({
       error: e.message
     })
@@ -312,8 +322,45 @@ export default class Upgrade extends PureComponent {
     )
   }
 
+  renderManualDownload = () => {
+    const { downloadUrl } = this.props.upgradeInfo
+    return (
+      <div className='upgrade-panel'>
+        <div className='upgrade-panel-title fix'>
+          <span className='fleft'>下载失败</span>
+          <span className='fright'>
+            <CloseOutlined
+              className='pointer font16 close-upgrade-panel'
+              onClick={this.handleClose}
+            />
+          </span>
+        </div>
+        <div className='upgrade-panel-body'>
+          <p style={{ color: '#ff4d4f', marginBottom: 12 }}>
+            自动下载失败，请手动下载安装：
+          </p>
+          <p>
+            <Link to={downloadUrl} className='mg1x'>
+              <DownloadOutlined style={{ marginRight: 6 }} />
+              点击下载 v{this.props.upgradeInfo.remoteVersion} 安装包
+            </Link>
+          </p>
+          <p style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+            下载完成后手动安装，之后即可使用一键升级。
+          </p>
+          <Button size='small' onClick={this.handleCheckUpdate} style={{ marginTop: 8 }}>
+            检查更新
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   render () {
-    const { shouldUpgrade, checkingRemoteVersion, error } = this.props.upgradeInfo
+    const { shouldUpgrade, checkingRemoteVersion, error, showManualDownload } = this.props.upgradeInfo
+    if (showManualDownload) {
+      return this.renderManualDownload()
+    }
     if (error) {
       return this.renderError(error)
     }

@@ -1,5 +1,5 @@
 /**
- * download upgrade class
+ * download upgrade class — with multi-mirror fallback
  */
 
 const fs = require('fs')
@@ -49,6 +49,24 @@ function getReleaseInfo (
     })
 }
 
+/**
+ * Try to download from a given mirror URL.
+ * Returns the read stream on success, null on failure.
+ */
+async function tryDownload (remotePath, httpsAgent) {
+  try {
+    const res = await rp({
+      url: remotePath,
+      httpsAgent,
+      responseType: 'stream',
+      timeout: 30000
+    })
+    return res.data
+  } catch (_) {
+    return null
+  }
+}
+
 class Upgrade {
   constructor (options) {
     this.options = options
@@ -66,41 +84,39 @@ class Upgrade {
     const filter = r => {
       return r.name.endsWith(installSrc)
     }
-    // if (isWin) {
-    //   filter = r => /electerm-\d+\.\d+\.\d+-win-x64\.tar\.gz/.test(r.name)
-    // } else if (isArm) {
-    //   filter = r => {
-    //     return /arm64\.dmg$/.test(r.name)
-    //   }
-    // } else if (isMac) {
-    //   filter = r => {
-    //     return /mac\.dmg$/.test(r.name)
-    //   }
-    // }
     const releaseInfo = await getReleaseInfo(filter, releaseInfoUrl, agent)
       .catch(this.onError)
     if (!releaseInfo) {
       return
     }
     const localPath = resolve(tempDir, releaseInfo.name)
-    const remotePath = getUrl(releaseInfo.browser_download_url, mirror)
-    await rmrf(localPath).catch(log.error)
     const { size } = releaseInfo
     this.id = id
     this.localPath = localPath
-    const readSteam = await rp({
-      url: remotePath,
-      httpsAgent: agent,
-      responseType: 'stream',
-      timeout: 30000
-    })
-      .then(r => r.data)
-      .catch(err => {
-        this.onError(err, id, ws)
-      })
+    await rmrf(localPath).catch(log.error)
+
+    // ── Multi-mirror fallback ──────────────────────────────────────
+    // Order: selected mirror → GitHub direct → send fatal error
+    const mirrorUrls = [
+      getUrl(releaseInfo.browser_download_url, mirror), // user's chosen mirror (e.g. r2)
+      releaseInfo.browser_download_url // GitHub direct fallback
+    ]
+
+    let readSteam = null
+    for (const url of mirrorUrls) {
+      readSteam = await tryDownload(url, agent)
+      if (readSteam) {
+        log.info('upgrade', 'downloading from', url)
+        break
+      }
+    }
+
     if (!readSteam) {
+      // All mirrors failed — send a fatal error with download link
+      this.onFatalError(id, ws, releaseInfo.html_url)
       return
     }
+
     const writeSteam = fs.createWriteStream(localPath)
 
     let count = 0
@@ -166,6 +182,20 @@ class Upgrade {
       error: {
         message: err.message,
         stack: err.stack
+      }
+    })
+  }
+
+  /**
+   * All mirrors exhausted — send a fatal error that the UI will
+   * render as a manual download link.
+   */
+  onFatalError (id, ws, downloadUrl) {
+    ws.s({
+      wid: 'upgrade:err:' + id,
+      error: {
+        message: 'ALL_MIRRORS_FAILED',
+        downloadUrl
       }
     })
   }
