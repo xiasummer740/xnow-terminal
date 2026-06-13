@@ -1,9 +1,7 @@
 /**
  * constants
  */
-import logoPath1Ref from '../res/imgs/xnow-logo.png'
-import logoPath2Ref from '../res/imgs/xnow-logo.png'
-import logoPath3Ref from '../res/imgs/xnow-logo.png'
+import logoPathRef from '../res/imgs/xnow-logo.png'
 export const packInfo = typeof window.et.packInfo === 'undefined' ? window.pre.packInfo : window.et.packInfo
 const buildConst = (props) => {
   return props.reduce((prev, key) => {
@@ -14,9 +12,7 @@ const buildConst = (props) => {
   }, {})
 }
 
-export const logoPath1 = logoPath1Ref.replace(/^\//, '')
-export const logoPath2 = logoPath2Ref.replace(/^\//, '')
-export const logoPath3 = logoPath3Ref.replace(/^\//, '')
+export const logoPath = logoPathRef.replace(/^\//, '')
 export const maxEditFileSize = 1024 * 3000
 export const defaultBookmarkGroupId = 'default'
 export const newBookmarkIdPrefix = 'new-bookmark'
@@ -245,7 +241,7 @@ export const rendererTypes = {
   canvas: 'canvas',
   webGL: 'webGL'
 }
-export const downloadUpgradeTimeout = 20000
+export const downloadUpgradeTimeout = 120000
 export const expandedKeysLsKey = 'expanded-keys'
 export const resolutionsLsKey = 'custom-resolution-key'
 export const checkedKeysLsKey = 'checked-keys'

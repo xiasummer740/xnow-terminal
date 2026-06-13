@@ -2,7 +2,7 @@ import React from 'react'
 import { FrownOutlined, ReloadOutlined, CopyOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import {
-  logoPath1,
+  logoPath,
   packInfo,
   isMac,
   isWin
@@ -126,7 +126,7 @@ export default class ErrorBoundary extends React.PureComponent {
       return (
         <div className='pd3 error-wrapper'>
           <div className='pd2y'>
-            <img src={logoPath1} className='iblock mwm-100' />
+            <img src={logoPath} className='iblock mwm-100' />
           </div>
           <h1>
             <FrownOutlined className='mg1r iblock' />

@@ -91,7 +91,8 @@ class Upgrade {
     const readSteam = await rp({
       url: remotePath,
       httpsAgent: agent,
-      responseType: 'stream'
+      responseType: 'stream',
+      timeout: 30000
     })
       .then(r => r.data)
       .catch(err => {
