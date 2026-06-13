@@ -35,6 +35,7 @@ const {
 const {
   packInfo,
   appPath,
+  isWin,
   isMac,
   exePath,
   isPortable,
