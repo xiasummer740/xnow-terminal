@@ -7,6 +7,7 @@ import SettingAi from '../ai/ai-config'
 import SyncSetting from '../setting-sync/setting-sync'
 import Shortcuts from '../shortcuts/shortcuts'
 import SettingPasswords from './setting-passwords'
+import TabNezha from './tab-nezha'
 import List from './list'
 import {
   settingMap,
@@ -14,26 +15,21 @@ import {
   settingTerminalId,
   settingAiId,
   settingShortcutsId,
-  settingPasswordsId
+  settingPasswordsId,
+  settingNezhaId,
 } from '../../common/constants'
 import { aiConfigsArr } from '../ai/ai-config-props'
 import { pick } from 'lodash-es'
 
-export default auto(function TabSettings (props) {
-  const {
-    settingTab
-  } = props
+export default auto(function TabSettings(props) {
+  const { settingTab } = props
   if (settingTab !== settingMap.setting) {
     return null
   }
-  const {
-    settingItem,
-    listProps,
-    store
-  } = props
+  const { settingItem, listProps, store } = props
   let elem = null
 
-  function getInitialValues () {
+  function getInitialValues() {
     const res = pick(props.store.config, aiConfigsArr)
     if (!res.languageAI) {
       res.languageAI = window.store.getLangName()
@@ -41,7 +37,7 @@ export default auto(function TabSettings (props) {
     return res
   }
 
-  function handleConfigSubmit (values) {
+  function handleConfigSubmit(values) {
     window.store.updateConfig(values)
     message.success('Saved')
   }
@@ -49,7 +45,7 @@ export default auto(function TabSettings (props) {
   const aiConfProps = {
     initialValues: getInitialValues(),
     onSubmit: handleConfigSubmit,
-    showAIConfig: true
+    showAIConfig: true,
   }
 
   const sid = settingItem.id
@@ -60,7 +56,7 @@ export default auto(function TabSettings (props) {
       'isSyncDownload',
       'isSyncUpload',
       'syncType',
-      'syncServerStatus'
+      'syncServerStatus',
     ])
     elem = <SyncSetting {...syncProps} />
   } else if (sid === settingAiId) {
@@ -70,16 +66,18 @@ export default auto(function TabSettings (props) {
   } else if (sid === settingShortcutsId) {
     const shortcutsProps = {
       quickCommands: store.quickCommands,
-      config: store.config
+      config: store.config,
     }
     elem = <Shortcuts {...shortcutsProps} />
   } else if (sid === settingPasswordsId) {
     const passwordsProps = {
       bookmarks: store.bookmarks,
       editItem: store.editItem,
-      copyToClipboard: window.copyToClipboard
+      copyToClipboard: window.copyToClipboard,
     }
     elem = <SettingPasswords {...passwordsProps} />
+  } else if (sid === settingNezhaId) {
+    elem = <TabNezha />
   } else {
     elem = (
       <SettingCommon
@@ -92,13 +90,9 @@ export default auto(function TabSettings (props) {
   }
 
   return (
-    <div
-      className='setting-tabs-setting'
-    >
+    <div className="setting-tabs-setting">
       <SettingCol>
-        <List
-          {...listProps}
-        />
+        <List {...listProps} />
         {elem}
       </SettingCol>
     </div>
