@@ -94,6 +94,7 @@ export default class Upgrade extends PureComponent {
   }
 
   onError = (e) => {
+    clearTimeout(this.downloadTimer)
     // All mirrors exhausted — show manual download link
     if (e.message === 'ALL_MIRRORS_FAILED') {
       this.cancel()
@@ -104,12 +105,14 @@ export default class Upgrade extends PureComponent {
       })
       return
     }
+    this.cancel()
     this.changeProps({
       error: e.message
     })
   }
 
   cancel = () => {
+    clearTimeout(this.downloadTimer)
     this.update && this.update.destroy()
     this.changeProps({
       upgrading: false,
