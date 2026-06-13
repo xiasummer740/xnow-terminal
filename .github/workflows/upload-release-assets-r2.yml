@@ -2,18 +2,28 @@ name: upload-release-assets-to-r2
 on:
   release:
     types: [published]
-  push:
-    branches: [ r2 ]
+
 jobs:
   upload-to-r2:
     runs-on: ubuntu-latest
     environment: build
     steps:
-      - name: Download all release assets
+      - name: Wait for release assets to be ready
         run: |
-          TAG_NAME="${{ github.event.release.tag_name || github.event.inputs.tag_name }}"
-          mkdir -p ./release-assets
-          gh release download "$TAG_NAME" --repo "${{ github.repository }}" -D ./release-assets
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          echo "Waiting for assets in release $TAG_NAME..."
+          for i in $(seq 1 30); do
+            ASSETS=$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json assets --jq '.assets | length')
+            if [ "$ASSETS" -gt 0 ]; then
+              echo "Found $ASSETS assets, proceeding..."
+              gh release download "$TAG_NAME" --repo "${{ github.repository }}" -D ./release-assets
+              exit 0
+            fi
+            echo "Attempt $i: no assets yet, waiting 30s..."
+            sleep 30
+          done
+          echo "Timeout waiting for release assets"
+          exit 1
         env:
           GH_TOKEN: ${{ github.token }}
 
