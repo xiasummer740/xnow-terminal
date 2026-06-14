@@ -121,10 +121,8 @@ function CpuHistoryChart ({ history = [] }) {
 
   if (history.length < 2) {
     return (
-      <div style={{ marginTop: 6 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-dark, #999)', marginBottom: 4 }}>
-          <LineChartOutlined style={{ marginRight: 4 }} />CPU 历史
-        </div>
+      <div className='cpu-chart-wrap'>
+        <div className='section-title'><LineChartOutlined style={{ marginRight: 4 }} />CPU 历史</div>
         <svg width='100%' height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
           <text
             x={width / 2}
@@ -287,7 +285,7 @@ export default function TerminalInfoResource (props) {
       arr.push({ value: cp, time: Date.now() })
       if (arr.length > 60) arr.shift()
       forceUpdate(n => n + 1)
-    }, 1000)
+    }, 500)
     return () => clearInterval(id)
   }, [terminalInfos])
 
@@ -383,8 +381,8 @@ export default function TerminalInfoResource (props) {
 
   return (
     <div className='terminal-info-section terminal-info-resource'>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', padding: '2px 0', justifyItems: 'center' }}>
-        {gauges}
+      <div className='gauge-grid'>
+        {gauges.map((g, i) => <div key={i} className='gauge-card'>{g}</div>)}
       </div>
       {showCpu && <CpuHistoryChart history={historyRef.current} />}
     </div>
