@@ -558,13 +558,22 @@ function initIpc() {
     },
     // ===== HTTP 请求（主进程发请求，绕过渲染进程 CORS 限制） =====
     httpFetch: async (url, options = {}) => {
-      const resp = await fetch(url, {
-        method: options.method || 'GET',
-        headers: options.headers || {},
-        body: options.body || undefined
-      })
-      const text = await resp.text()
-      return JSON.stringify({ status: resp.status, body: text })
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 8000)
+      try {
+        const resp = await fetch(url, {
+          method: options.method || 'GET',
+          headers: options.headers || {},
+          body: options.body || undefined,
+          signal: controller.signal
+        })
+        const text = await resp.text()
+        return JSON.stringify({ status: resp.status, body: text })
+      } catch (e) {
+        return JSON.stringify({ status: 0, error: e.message || '请求失败' })
+      } finally {
+        clearTimeout(timer)
+      }
     },
   }
   ipcMain.handle('async', (event, { name, args }) => {
