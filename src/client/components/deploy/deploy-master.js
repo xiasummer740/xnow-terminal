@@ -99,58 +99,18 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(4, 'success')
 
-    // Step 5: 直接通过数据库创建管理员用户
+    // Step 5: 清理旧用户，让用户通过网页注册
     update(5, 'running')
     let apiToken = ''
-
-    // 停止 Dashboard，修改数据库创建管理员
+    // 停止 Dashboard，删除数据库中的用户记录
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath && dbPath.trim()) {
-      const path = dbPath.trim()
-      // 先清理旧用户数据，再创建新用户（role 是数字 1）
-      const hashCmd = `python3 -c "
-import bcrypt, sqlite3
-pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
-db = sqlite3.connect('${path}')
-db.executescript('DELETE FROM users; VACUUM;')
-db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
-db.commit()
-print('OK:' + pw[:20])
-" 2>&1 || echo 'PYFAIL'`
-      const hashResult = await ssh(bookmark, hashCmd, 15000)
-      if (hashResult?.includes('PYFAIL') || !hashResult?.includes('OK:')) {
-        // python3 bcrypt模块不可用，尝试 openssl
-        const hashCmd2 = `python3 -c "
-import hashlib, sqlite3
-h = hashlib.sha256(b'${adminPass}').hexdigest()
-db = sqlite3.connect('${path}')
-db.executescript('DELETE FROM users; VACUUM;')
-db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', h, 1))
-db.commit()
-print('OK')
-" 2>&1 || echo 'FAIL'`
-        await ssh(bookmark, hashCmd2, 15000)
-      }
+      // 直接删除数据库文件（让 Dashboard 重建）
+      await ssh(bookmark, `rm -f "${dbPath.trim()}" && rm -f "${dbPath.trim()}-wal" "${dbPath.trim()}-shm" 2>/dev/null; true`, 5000)
     }
-    // 重启 Dashboard
+    // 重启 Dashboard（自动重建数据库）
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 3', 15000)
-
-    // 用刚创建的账号登录并获取 API Token
-    for (const pw of [adminPass, 'admin']) {
-      const loginR = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${pw}"}'`, 10000)
-      if (loginR) {
-        try {
-          const p = JSON.parse(loginR)
-          const jwt = p?.data?.token || p?.token || ''
-          if (jwt) {
-            const tr = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
-            if (tr) try { apiToken = JSON.parse(tr)?.data?.token || '' } catch {}
-          }
-        } catch {}
-      }
-      if (apiToken) break
-    }
     update(5, 'success')
 
     // Step 6: 完成
