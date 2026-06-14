@@ -65,20 +65,21 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const listOut = await ssh(bookmark, 'ls /opt/nezha/dashboard/*-linux-* /opt/nezha/dashboard/nezha* /opt/nezha/dashboard/dashboard 2>/dev/null | head -1', 5000)
     const binName = (listOut || 'dashboard').trim().split('/').pop() || 'dashboard'
 
-    // Step 2: 创建配置文件
+    // Step 2: 创建配置文件（用 printf 避免 heredoc 兼容问题）
     update(2, 'running')
-    const configYaml = [
+    const configLines = [
       'debug: false',
       'listen_port: 8008',
       'site:',
-      `  brand: XNOW监控`,
-      `  theme: default`,
-      `  language: zh-CN`,
-      `  timezone: Asia/Shanghai`
-    ].join('\n')
-    const configCmd = `cat > /opt/nezha/dashboard/data/config.yaml << 'EOF'\n${configYaml}\nEOF && echo 'CONFIG_DONE'`
-    const r2 = await ssh(bookmark, `mkdir -p /opt/nezha/dashboard/data && ${configCmd}`, 10000)
+      '  brand: XNOW监控',
+      '  theme: default',
+      '  language: zh-CN',
+      '  timezone: Asia/Shanghai'
+    ]
+    const configCmd = 'mkdir -p /opt/nezha/dashboard/data && ' + configLines.map(l => `printf '%s\\n' '${l}' >> /opt/nezha/dashboard/data/config.yaml`).join(' && ') + ' && echo "CONFIG_DONE"'
+    const r2 = await ssh(bookmark, configCmd, 10000)
     if (!r2?.includes('CONFIG_DONE')) {
+      console.error('[deploy] 配置文件写入失败:', r2)
       update(2, 'error')
       return { success: false, error: '配置文件写入失败，请检查服务器磁盘和权限' }
     }
