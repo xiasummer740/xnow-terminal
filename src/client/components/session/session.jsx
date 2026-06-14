@@ -50,7 +50,7 @@ export default class SessionWrapper extends Component {
       cwd: '',
       sftpPathFollowSsh: !!props.config.sftpPathFollowSsh,
       key: Math.random(),
-      splitSize: [50, 50],
+      splitSize: [70, 30],
       sessionOptions: null,
       delKeyPressed: false,
       broadcastInput: false,
@@ -110,14 +110,7 @@ export default class SessionWrapper extends Component {
     if (!sshSftpSplitView || !this.canSplitView()) {
       return 'tabed'
     }
-    const {
-      width,
-      height
-    } = this.props
-    const ratio = width / height
-    const baseRatio = this.minWithForSplit / this.minHeightForSplit
-    const wider = ratio > baseRatio
-    return wider ? 'leftRight' : 'topDown'
+    return 'topDown'
   }
 
   handleClick = () => {
