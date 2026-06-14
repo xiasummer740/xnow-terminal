@@ -67,19 +67,25 @@ export default function TabMonitor({ onClose }) {
     if (!selected.length) { message.warning('请至少选择一台服务器'); return }
     setSelectOpen(false)
 
-    // 先读 Dashboard 的 agent_secret_key（通过主控机 SSH）
+    // 先读 Dashboard 的 agent_secret_key（Agent 认证必需）
     const masterBm = (store.bookmarks || []).find(b => b.id === nezhaCfg.masterBookmarkId)
     let agentSecretKey = ''
-    if (masterBm) {
-      const keyResp = await window.pre.runGlobalAsync('execSshCommand', {
-        host: masterBm.host, port: masterBm.port || 22,
-        username: masterBm.username || 'root',
-        password: masterBm.password, privateKey: masterBm.privateKey,
-        command: `grep 'agent_secret_key:' /opt/nezha/dashboard/data/config.yaml | cut -d' ' -f2`,
-        timeout: 10000
-      })
-      if (keyResp && keyResp.length > 10) agentSecretKey = keyResp.trim()
+    if (!masterBm) {
+      message.error('未设置主控服务器，请先在设置中选择主控书签')
+      return
     }
+    const keyResp = await window.pre.runGlobalAsync('execSshCommand', {
+      host: masterBm.host, port: masterBm.port || 22,
+      username: masterBm.username || 'root',
+      password: masterBm.password, privateKey: masterBm.privateKey,
+      command: `grep 'agent_secret_key:' /opt/nezha/dashboard/data/config.yaml | cut -d' ' -f2`,
+      timeout: 10000
+    })
+    if (!keyResp || keyResp.length < 10) {
+      message.error('无法读取 Dashboard 的 agent_secret_key，请检查主控服务器')
+      return
+    }
+    agentSecretKey = keyResp.trim()
 
     // 逐台部署
     let successCount = 0
