@@ -6,7 +6,7 @@
  * - 等宽发光绿字，实时日志滚动
  * - 完成后 3s 倒计时自动关闭
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal, Progress } from 'antd'
 
 const ICONS = {
@@ -25,6 +25,8 @@ export default function DeployModal({
   closable = true,
 }) {
   const logRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (logRef.current) {
@@ -41,10 +43,10 @@ export default function DeployModal({
   useEffect(() => {
     if (!allDone || !allSuccess) return
     const timer = setTimeout(() => {
-      onClose?.()
+      onCloseRef.current?.()
     }, 3000)
     return () => clearTimeout(timer)
-  }, [allDone, allSuccess, onClose])
+  }, [allDone, allSuccess])
 
   return (
     <Modal
