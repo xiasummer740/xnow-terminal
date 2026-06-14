@@ -138,7 +138,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath?.trim()) {
       // 手动指定 id=1，确保与 JWT 中的 id 匹配
-      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role) VALUES (1,'admin@xnow.tech','jwt_bypass',1);" 2>&1`, 10000)
+      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'admin@xnow.tech','jwt_bypass',1,0);" 2>&1`, 10000)
     }
     // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)

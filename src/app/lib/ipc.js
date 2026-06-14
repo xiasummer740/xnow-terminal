@@ -471,7 +471,9 @@ function initIpc() {
       }
     },
     // ===== 远程命令执行（用于部署哪吒） =====
-    execSshCommand: async (opts) => {
+    execSshCommand: (() => {
+      const knownHostKeys = {}
+      return async (opts) => {
       const { Client } = require('@electerm/ssh2')
       const host = opts.host || opts.ipv4
       const port = opts.port || 22
@@ -538,15 +540,16 @@ function initIpc() {
           }
         })
       })
-    },
+    }})(),
     // ===== 签发哪吒 JWT（用 Dashboard 的 jwt_secret_key） =====
     signNezhaJwt: (secret) => {
       const jwt = require('jsonwebtoken')
       return jwt.sign({
-        id: 1,
+        user_id: 1,
+        token_version: 0,
         username: 'admin@xnow.tech',
         role: 1
-      }, secret, { expiresIn: '1h' })
+      }, secret, { expiresIn: '1h', algorithm: 'HS256' })
     },
   }
   ipcMain.handle('async', (event, { name, args }) => {
