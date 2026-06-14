@@ -2,7 +2,7 @@
  * 实时监控页签 — 三种视图切换 + 批量部署 Agent
  */
 import { useState, useCallback } from 'react'
-import { Segmented, Empty, Button, Modal, Checkbox, message, Space, Tag } from 'antd'
+import { Segmented, Empty, Button, Modal, Checkbox, message, Space, Tag, Alert } from 'antd'
 import { TableOutlined, AppstoreOutlined, SettingOutlined, CloudUploadOutlined, ReloadOutlined } from '@ant-design/icons'
 import MonitorTable from './monitor-table'
 import MonitorCards from './monitor-cards'
@@ -29,6 +29,7 @@ export default function TabMonitor({ onClose }) {
   const [deployOpen, setDeployOpen] = useState(false)
   const [deploySteps, setDeploySteps] = useState([])
   const [deployTitle, setDeployTitle] = useState('')
+  const [deployResult, setDeployResult] = useState(null)
 
   const handleSshConnect = useCallback(
     (server) => {
@@ -109,12 +110,9 @@ export default function TabMonitor({ onClose }) {
     }
 
     setDeployOpen(false)
+    setDeployResult({ successCount, failCount, details: errors })
     const msg = `部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`
-    message.success(msg, 5)
-    if (errors.length) {
-      console.error('[deploy-agent] 失败详情:', errors.join('\n'))
-      message.error(`失败详情:\n${errors.join('\n')}`, 8)
-    }
+    message.success(msg, 3)
     setRefreshKey(k => k + 1)
   }
 
@@ -155,6 +153,23 @@ export default function TabMonitor({ onClose }) {
         <Segmented value={view} onChange={(v) => setView(v)} options={viewOptions} style={{ background: '#1a1a1a' }} />
       </div>
 
+      {deployResult && (
+        <Alert
+          type={deployResult.failCount > 0 ? 'warning' : 'success'}
+          message={
+            <div>
+              <div>{deployResult.successCount} 台成功{deployResult.failCount > 0 ? `，${deployResult.failCount} 台失败` : ''}</div>
+              {deployResult.details.map((d, i) => (
+                <div key={i} style={{ fontSize: 12, marginTop: 2, color: deployResult.failCount > 0 ? '#ff4d4f' : '#52c41a', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{d}</div>
+              ))}
+            </div>
+          }
+          showIcon
+          closable
+          onClose={() => setDeployResult(null)}
+          style={{ marginBottom: 12, background: '#1a1a1a', border: `1px solid ${deployResult.failCount > 0 ? '#ff4d4f' : '#52c41a'}` }}
+        />
+      )}
       {view === 'table' ? (
         <MonitorTable key={`t-${refreshKey}`} onSshConnect={handleSshConnect} />
       ) : (
