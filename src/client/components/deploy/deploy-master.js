@@ -145,9 +145,8 @@ export async function deployMaster (bookmark, onStepUpdate) {
       `curl -s --max-time 5 -c /tmp/nezha-cookie -D /tmp/nezha-headers -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}' > /dev/null`,
       `echo '===COOKIES===' && cat /tmp/nezha-cookie`,
       `echo '===HEADERS===' && cat /tmp/nezha-headers`,
-      `CSRF=$(grep -o 'csrf_token=[^;]*' /tmp/nezha-cookie 2>/dev/null | cut -d= -f2)`,
-      `[ -z "$CSRF" ] && CSRF=$(grep -o 'X-CSRF-Token:[ ]*[^ ]*' /tmp/nezha-headers 2>/dev/null | awk '{print $2}')`,
-      `[ -z "$CSRF" ] && CSRF=$(grep -o 'xsrf-token=[^;]*' /tmp/nezha-cookie 2>/dev/null | cut -d= -f2)`,
+      `CSRF=$(grep -o 'nz-csrf=[^;]*' /tmp/nezha-headers 2>/dev/null | head -1 | cut -d= -f2)`,
+      `[ -z "$CSRF" ] && CSRF=$(awk 'NF>=7 && $6=="nz-csrf"{print $NF}' /tmp/nezha-cookie 2>/dev/null)`,
       `echo '===CSRF:'$CSRF'==='`,
       `curl -s --max-time 5 -b /tmp/nezha-cookie -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
       `rm -f /tmp/nezha-cookie /tmp/nezha-headers`
