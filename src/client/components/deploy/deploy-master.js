@@ -122,66 +122,83 @@ export async function deployMaster (bookmark, onStepUpdate) {
     })
     update(5, 'success')
 
-    // Step 6: 自动初始化管理员账号
+    // Step 6-7: 初始化管理员 + 创建 API Token（自动检测是否已初始化）
     update(6, 'running')
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
-    // 尝试通过 API 创建管理员（首次设置）
-    let setupOk = false
-    for (const setupPath of ['/api/v1/setup', '/api/v1/install', '/api/v1/setup/init']) {
-      const resp = await sshCurl(bookmark, 'POST',
-        `http://localhost:8008${setupPath}`,
-        JSON.stringify({ email: adminEmail, password: adminPass, name: 'XNOW', server_name: 'XNOW监控' })
-      )
-      if (resp) {
-        try { setupOk = JSON.parse(resp).success === true } catch {}
-      }
-      if (setupOk) break
-    }
-    update(6, 'success')
+    // 先试登录，如果 Dashboard 已经初始化过就直接用
+    const loginFirst = await window.pre.runGlobalAsync('execSshCommand', {
+      ...bookmark, command: `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"admin@xnow.tech","password":"admin"}'`,
+      timeout: 10000
+    })
 
-    // Step 7: 登录获取 JWT 并创建 API Token
-    update(7, 'running')
-
-    // 获取 JWT
-    const loginResult = await sshCurl(bookmark, 'POST',
-      'http://localhost:8008/api/v1/login',
-      JSON.stringify({ username: adminEmail, password: adminPass })
-    )
     let jwt = ''
-    if (loginResult) {
+    let apiToken = ''
+    let usedPass = ''
+
+    if (loginFirst) {
       try {
-        const parsed = JSON.parse(loginResult)
-        jwt = parsed?.data?.token || parsed?.token || ''
+        const p = JSON.parse(loginFirst)
+        jwt = p?.data?.token || p?.token || ''
       } catch {}
     }
 
-    // 用 JWT 创建 API Token
-    let apiToken = ''
     if (jwt) {
+      // Dashboard 已有管理员，直接创建 Token
+      usedPass = 'admin'
       const tokenResp = await window.pre.runGlobalAsync('execSshCommand', {
-        ...bookmark, command: `curl -s -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
-        timeout: 15000
+        ...bookmark, command: `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
+        timeout: 10000
       })
       if (tokenResp) {
+        try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
+      }
+    } else {
+      // Dashboard 未初始化，尝试自动设置
+      for (const setupPath of ['/api/v1/setup', '/api/v1/install']) {
+        await window.pre.runGlobalAsync('execSshCommand', {
+          ...bookmark, command: `curl -s --max-time 5 -X POST 'http://localhost:8008${setupPath}' -H 'Content-Type: application/json' -d '{"email":"${adminEmail}","password":"${adminPass}","name":"XNOW"}'`,
+          timeout: 10000
+        })
+      }
+      // 用刚创建的账号登录
+      const loginResult = await window.pre.runGlobalAsync('execSshCommand', {
+        ...bookmark, command: `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}'`,
+        timeout: 10000
+      })
+      if (loginResult) {
         try {
-          const parsed = JSON.parse(tokenResp)
-          apiToken = parsed?.data?.token || parsed?.token || ''
+          const p = JSON.parse(loginResult)
+          jwt = p?.data?.token || p?.token || ''
         } catch {}
       }
+      if (jwt) {
+        usedPass = adminPass
+        const tokenResp = await window.pre.runGlobalAsync('execSshCommand', {
+          ...bookmark, command: `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
+          timeout: 10000
+        })
+        if (tokenResp) {
+          try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
+        }
+      }
     }
+    update(6, 'success')
+
+    // Step 7: 完成
+    update(7, 'running')
+    update(7, 'success')
 
     if (!apiToken) {
-      // 如果自动创建失败，至少我们部署成功了，让用户手动填
       update(7, 'success')
       const dashboardUrl = `http://${bookmark.host}:8008`
       return {
         success: true,
         dashboardUrl,
         adminEmail,
-        adminPass,
-        setupGuide: `部署成功！\n\n管理员账号：${adminEmail}\n管理员密码：${adminPass}\n\n请打开浏览器访问 ${dashboardUrl} 登录后，在「系统设置 → API Tokens」创建 Token，填到下方输入框中。`
+        adminPass: usedPass || adminPass,
+        setupGuide: `部署成功！\n管理员：${adminEmail} / ${usedPass || adminPass}\n自动创建 Token 失败，请打开浏览器访问 ${dashboardUrl} 登录后手动创建。`
       }
     }
 
@@ -193,7 +210,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
       success: true,
       dashboardUrl,
       apiToken,
-      setupGuide: `✅ 部署配置完成！\n管理员：${adminEmail}\nAPI Token 已自动创建并填入。`
+      setupGuide: `✅ 全部完成！API Token 已自动创建并填入。`
     }
   } catch (e) {
     const idx = currentSteps.findIndex(s => s.status === 'running')
