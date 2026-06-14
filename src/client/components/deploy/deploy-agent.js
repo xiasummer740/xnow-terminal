@@ -52,10 +52,12 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
     // Step 2: 下载并编译 Agent
     update(2, 'running')
     // 用 v1.0.3 tag，Agent 代码还存在于仓库中
-    const buildCmd = `export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone --depth 1 --branch v1.0.3 https://github.com/nezhahq/nezha.git . 2>&1 && echo 'CMD_LIST:' && ls cmd/ 2>&1 && echo 'GO_VERSION:' && go version 2>&1 && cd cmd/agent && go build -o /opt/nezha/agent/agent . 2>&1 && chmod +x /opt/nezha/agent/agent && echo 'BUILD_OK'`
+    const buildCmd = `export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone -q --depth 1 --branch v1.0.3 https://github.com/nezhahq/nezha.git . 2>&1 && echo 'CMD:' && ls cmd/ && echo 'GO:' && go version && cd cmd/agent && go build -o /opt/nezha/agent/agent . 2>&1 && echo 'BUILD_OK'`
     const r2 = await ssh(bookmark, buildCmd, 300000)
     if (!r2?.includes('BUILD_OK')) {
-      return { success: false, server: name, error: `编译失败:\n${(r2 || '').substring(0, 500)}` }
+      const err = (r2 || '').substring(0, 800)
+      console.error('[build-agent] 编译失败:', err)
+      return { success: false, server: name, error: `编译失败:\n${err}` }
     }
     update(2, 'success')
 
