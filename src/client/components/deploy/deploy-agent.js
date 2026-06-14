@@ -52,7 +52,22 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
     // Step 2: 下载并编译 Agent
     update(2, 'running')
     // 用 v1.0.3 tag，Agent 代码还存在于仓库中
-    const buildCmd = `export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone -q --depth 1 --branch v0.20.5 https://github.com/naiba/nezha.git . 2>&1 && echo 'CMD:' && ls cmd/ && echo 'GO:' && go version && cd cmd/agent && go build -o /opt/nezha/agent/agent . 2>&1 && echo 'BUILD_OK'`
+    const buildCmd = `export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone -q --depth 1 --branch v0.20.5 https://github.com/naiba/nezha.git . 2>&1 && echo 'ROOT:' && ls -d */ && echo 'GO:' && go version && find . -name '*.go' -path '*/main*' | head -10 && echo 'BUILD_DONE'`
+    const r2 = await ssh(bookmark, buildCmd, 300000)
+    // 查找到 agent 的 main.go
+    const findAgent = await ssh(bookmark, `find /opt/nezha/agent-src -name 'main.go' 2>/dev/null | head -5`, 10000)
+    console.log('[deploy-agent] 找到的 main.go:', findAgent)
+    // 尝试编译
+    const agentDir = findAgent?.split('\n')[0]?.replace('/main.go', '') || ''
+    if (!agentDir) {
+      update(2, 'error')
+      return { success: false, server: name, error: `找不到 agent 源码:\n${(r2 || '').substring(0, 800)}` }
+    }
+    const build2Cmd = `export PATH=/usr/local/go/bin:$PATH && cd ${agentDir} && go build -o /opt/nezha/agent/agent . 2>&1 && chmod +x /opt/nezha/agent/agent && echo 'BUILD_OK'`
+    const r3 = await ssh(bookmark, build2Cmd, 300000)
+    if (!r3?.includes('BUILD_OK')) {
+      return { success: false, server: name, error: `编译失败:\n${(r3 || '').substring(0, 500)}` }
+    }
     const r2 = await ssh(bookmark, buildCmd, 300000)
     if (!r2?.includes('BUILD_OK')) {
       const err = (r2 || '').substring(0, 800)
