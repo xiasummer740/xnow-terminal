@@ -93,55 +93,60 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const waitCmd = 'for i in $(seq 1 30); do curl -s http://localhost:8008/api/v1/server >/dev/null 2>&1 && echo "READY" && break; sleep 2; done'
     const r4 = await ssh(bookmark, waitCmd, 90000)
     if (!r4?.includes('READY')) {
-      update(4, 'error')
       const logs = await ssh(bookmark, 'journalctl -u nezha-dashboard --no-pager -n 20 2>/dev/null || echo "日志不可用"', 10000)
-      return { success: false, error: `Dashboard 启动失败，服务日志:\n${logs || ''}` }
+      update(4, 'error')
+      return { success: false, error: `Dashboard 启动失败:\n${logs || ''}` }
     }
     update(4, 'success')
 
-    // Step 5: 初始化管理员账号（通过 API）
+    // Step 5-6: 尝试自动创建管理员 + API Token
     update(5, 'running')
-    // 先尝试用默认密码登录（可能是已初始化的）
-    let jwt = ''
-    let usedPass = ''
-    const loginTry = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"admin@xnow.tech","password":"admin"}'`, 10000)
-    if (loginTry) {
-      try { jwt = JSON.parse(loginTry)?.data?.token || JSON.parse(loginTry)?.token || '' } catch {}
-    }
-    if (jwt) {
-      usedPass = 'admin'
-    } else {
-      // 未初始化，创建管理员
-      await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/setup' -H 'Content-Type: application/json' -d '{"email":"${adminEmail}","password":"${adminPass}","name":"XNOW"}'`, 10000)
-      // 登录获取 JWT
-      const loginResp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}'`, 10000)
-      if (loginResp) {
-        try { jwt = JSON.parse(loginResp)?.data?.token || JSON.parse(loginResp)?.token || '' } catch {}
+    let apiToken = ''
+    const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
+
+    // 逐一尝试已知的初始化端点
+    for (const ep of ['/api/v1/setup', '/api/v1/init', '/api/v1/install', '/api/v1/user/init']) {
+      const resp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008${ep}' -H 'Content-Type: application/json' -d '{"email":"${adminEmail}","password":"${adminPass}","name":"XNOW"}'`, 10000)
+      if (resp?.includes('"success":true') || resp?.includes('"token"')) {
+        // 尝试从响应中提取 token
+        try {
+          const p = JSON.parse(resp)
+          apiToken = p?.data?.token || p?.token || ''
+        } catch {}
+        break
       }
-      usedPass = adminPass
+    }
+
+    // 如果上面没拿到 token，尝试用默认密码登录
+    if (!apiToken) {
+      for (const pw of ['admin', adminPass]) {
+        const r = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${pw}"}'`, 10000)
+        if (r) {
+          try {
+            const p = JSON.parse(r)
+            const jwt = p?.data?.token || p?.token || ''
+            if (jwt) {
+              // 有 JWT，创建 API Token
+              const tr = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
+              if (tr) {
+                try { apiToken = JSON.parse(tr)?.data?.token || '' } catch {}
+              }
+            }
+          } catch {}
+        }
+        if (apiToken) break
+      }
     }
     update(5, 'success')
 
-    // Step 6: 创建 API Token
-    update(6, 'running')
-    let apiToken = ''
-    if (jwt) {
-      const tokenResp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
-      if (tokenResp) {
-        try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
-      }
-    }
-    update(6, 'success')
-
-    // Step 7: 完成
+    // Step 6: 完成
     const dashboardUrl = `http://${hostIP}:8008`
-    update(7, 'success')
+    update(6, 'success')
 
     if (!apiToken) {
       return {
-        success: true, dashboardUrl, adminEmail,
-        adminPass: usedPass,
-        setupGuide: `部署成功！\n管理员：${adminEmail} / ${usedPass}\n自动创建 Token 失败，请访问 ${dashboardUrl} 登录后手动创建。`
+        success: true, dashboardUrl, adminEmail, adminPass,
+        setupGuide: `XNOW 监控已部署成功！\n\n首次使用请打开浏览器访问 ${dashboardUrl}\n点击「开始使用」创建管理员账号\n创建后在「系统设置 → API Tokens」生成 Token\n填到下方输入框中即可使用。`
       }
     }
 
