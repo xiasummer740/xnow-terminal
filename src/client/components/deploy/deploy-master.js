@@ -50,14 +50,16 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
-    // Step 1: 下载并安装 Dashboard
+    // Step 1: 下载并安装 Dashboard（用 latest 重定向，无需硬编码版本）
     update(1, 'running')
-    const zipUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64.zip'
+    const zipUrl = 'https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip'
     const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "${zipUrl}" -o /tmp/nezha-dash.zip && mkdir -p /opt/nezha/dashboard/data && unzip -jo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/* && rm -f /tmp/nezha-dash.zip && echo "DONE" || echo "FAILED"`
     const r1 = await ssh(bookmark, installCmd, 120000)
     if (!r1?.includes('DONE')) {
+      const detail = (r1 || '无响应').substring(0, 200)
+      console.error('[deploy] 下载安装失败:', r1)
       update(1, 'error')
-      return { success: false, error: `下载安装失败:\n${r1 || '无响应'}` }
+      return { success: false, error: `下载安装失败，请检查服务器网络和磁盘空间` }
     }
     // 自动检测实际二进制文件名
     const listOut = await ssh(bookmark, 'ls /opt/nezha/dashboard/*-linux-* /opt/nezha/dashboard/nezha* /opt/nezha/dashboard/dashboard 2>/dev/null | head -1', 5000)
@@ -89,8 +91,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'SERVICEEOF'\n${svc}\nSERVICEEOF && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo 'SVC_DONE'`
     const r3 = await ssh(bookmark, svcCmd, 15000)
     if (!r3?.includes('SVC_DONE')) {
+      console.error('[deploy] 服务启动失败:', r3)
       update(3, 'error')
-      return { success: false, error: `服务启动失败:\n${r3 || '无响应'}` }
+      return { success: false, error: '服务启动失败，请检查 systemd 日志' }
     }
     // 开防火墙
     await ssh(bookmark, 'which ufw >/dev/null 2>&1 && ufw allow 8008/tcp 2>/dev/null; true', 5000)
@@ -102,8 +105,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const r4 = await ssh(bookmark, waitCmd, 90000)
     if (!r4?.includes('READY')) {
       const logs = await ssh(bookmark, 'journalctl -u nezha-dashboard --no-pager -n 20 2>/dev/null || echo "日志不可用"', 10000)
+      console.error('[deploy] Dashboard 启动失败:', logs)
       update(4, 'error')
-      return { success: false, error: `Dashboard 启动失败:\n${logs || ''}` }
+      return { success: false, error: 'Dashboard 启动超时，请检查服务器资源和服务日志' }
     }
     update(4, 'success')
 
@@ -115,7 +119,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const jwtSecret = await ssh(bookmark, `grep 'jwt_secret_key:' /opt/nezha/dashboard/data/config.yaml | head -1 | awk -F': ' '{print $2}' | tr -d '\\n'`, 10000)
     if (!jwtSecret || jwtSecret.trim().length < 10) {
       update(5, 'error')
-      return { success: false, error: `无法读取 JWT 密钥 (${(jwtSecret || '空').substring(0, 30)})` }
+      return { success: false, error: '无法读取 Dashboard JWT 密钥' }
     }
 
     // 停 Dashboard → 装 sqlite3 → 插入用户
