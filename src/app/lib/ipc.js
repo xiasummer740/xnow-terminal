@@ -559,7 +559,7 @@ function initIpc() {
     // ===== HTTP 请求（主进程发请求，绕过渲染进程 CORS 限制） =====
     httpFetch: async (url, options = {}) => {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 8000)
+      const timer = setTimeout(() => controller.abort(), 3000)
       try {
         const resp = await fetch(url, {
           method: options.method || 'GET',
