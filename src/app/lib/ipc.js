@@ -551,6 +551,11 @@ function initIpc() {
         role: 1
       }, secret, { expiresIn: '1h', algorithm: 'HS256' })
     },
+    // ===== 生成 bcrypt 哈希（用于创建 Dashboard 管理员） =====
+    hashBcrypt: (password) => {
+      const bcrypt = require('bcryptjs')
+      return bcrypt.hashSync(password, 10)
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)

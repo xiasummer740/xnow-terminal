@@ -118,33 +118,39 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(4, 'success')
 
-    // Step 5: 创建用户 + JWT 签发 Token
+    // Step 5: 用 bcrypt 密码创建用户，走正常登录流程获取 Token
     update(5, 'running')
     let apiToken = ''
 
-    // 读 JWT 密钥用 cat + grep（先看配置文件内容调试）
-    const configContent = await ssh(bookmark, `cat /opt/nezha/dashboard/data/config.yaml 2>/dev/null | head -20`, 10000)
-    console.log('[deploy] config.yaml 内容:', configContent)
-    let jwtSecret = await ssh(bookmark, `grep -o 'jwt_secret_key: [^ ]*' /opt/nezha/dashboard/data/config.yaml 2>/dev/null | cut -d' ' -f2`, 10000)
-    if (!jwtSecret || jwtSecret.length < 20) {
-      console.error('[deploy] JWT密钥读取失败, 配置内容:', configContent)
+    // 在 Node.js 后端生成 bcrypt 哈希
+    const hashedPass = await window.pre.runGlobalAsync('hashBcrypt', adminPass)
+    if (!hashedPass) {
       update(5, 'error')
-      return { success: false, error: `无法读取 JWT 密钥` }
+      return { success: false, error: '密码哈希生成失败' }
     }
 
-    // 停 Dashboard → 装 sqlite3 → 插入用户
+    // 停 Dashboard → 装 sqlite3 → 插入用户（带 bcrypt 密码）
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 15000)
     await ssh(bookmark, '(apt-get install -y sqlite3 2>/dev/null || yum install -y sqlite 2>/dev/null || true)', 30000)
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath?.trim()) {
-      // 手动指定 id=1，确保与 JWT 中的 id 匹配
-      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'admin@xnow.tech','jwt_bypass',1,0);" 2>&1`, 10000)
+      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'${adminEmail}','${hashedPass}',1,0);" 2>&1`, 10000)
     }
     // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)
 
-    // 用 JWT 密钥签发 Token
-    const jwt = await window.pre.runGlobalAsync('signNezhaJwt', jwtSecret.trim())
+    // 用账号密码登录获取 JWT
+    const loginResult = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}'`, 10000)
+    let jwt = ''
+    if (loginResult) {
+      try { jwt = JSON.parse(loginResult)?.data?.token || JSON.parse(loginResult)?.token || '' } catch {}
+    }
+    if (!jwt) {
+      update(5, 'error')
+      return { success: false, error: `登录失败，无法获取 JWT:\n${loginResult || '无响应'}` }
+    }
+
+    // 用 JWT 创建 API Token
     const tokenResp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
     if (tokenResp) {
       try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
