@@ -90,6 +90,28 @@
   100%
     background-position 0% 50%
 
+.tab-traffic
+  position absolute
+  left 10px
+  top 2px
+  width 5px
+  height 5px
+  border-radius 5px
+  background-color var(--text-dark)
+.tab-status
+  position absolute
+  left 2px
+  top 2px
+  width 5px
+  height 5px
+  border-radius 5px
+  background-color var(--text-dark)
+  &.success
+    background-color var(--success)
+  &.error
+    background-color var(--error)
+  &.processing
+    background-color var(--primary)
 .tab-terminal-feed
   position absolute
   left 50%
