@@ -43,12 +43,12 @@ export default function TabMonitor({ onClose }) {
     for (const bm of selected) {
       const name = bm.title || bm.host
       try {
-        const cmd = `wget -O /tmp/netdata.sh https://my-netdata.io/kickstart.sh && bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1`
-        await window.pre.runGlobalAsync('execSshCommand', {
+        const cmd = `curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh && bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1 && (which ufw >/dev/null && ufw allow 19999/tcp 2>/dev/null; true) && sleep 5 && curl -s http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'NETDATA_OK' || echo 'NETDATA_FAIL'`
+        const r = await window.pre.runGlobalAsync('execSshCommand', {
           host: bm.host, port: bm.port || 22,
           username: bm.username || 'root',
           password: bm.password, privateKey: bm.privateKey,
-          command: cmd, timeout: 180000
+          command: cmd, timeout: 300000
         })
         ok++
       } catch (e) {
