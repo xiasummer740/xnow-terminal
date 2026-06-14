@@ -85,8 +85,17 @@ export async function deployMaster (bookmark, onStepUpdate) {
     })
     update(3, 'success')
 
-    // Step 4: 启动 Dashboard
+    // Step 4: 开放防火墙端口 + 启动 Dashboard
     update(4, 'running')
+    // 先尝试开放防火墙端口 8008
+    await window.pre.runGlobalAsync('execSshCommand', {
+      ...bookmark, command: [
+        'which ufw >/dev/null 2>&1 && ufw allow 8008/tcp 2>/dev/null; true',
+        'which firewall-cmd >/dev/null 2>&1 && firewall-cmd --add-port=8008/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null; true',
+        'which iptables >/dev/null 2>&1 && iptables -C INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null; true'
+      ].join('\n'), timeout: 10000
+    })
+    // 启动 Dashboard
     await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
         'docker rm -f nezha-dashboard 2>/dev/null; true',
@@ -98,14 +107,17 @@ export async function deployMaster (bookmark, onStepUpdate) {
     })
     update(4, 'success')
 
-    // Step 5: 等待服务就绪
+    // Step 5: 等待服务就绪并验证端口开放
     update(5, 'running')
-    await window.pre.runGlobalAsync('execSshCommand', {
+    const readyCheck = await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
         'for i in $(seq 1 30); do',
         '  curl -s http://localhost:8008 >/dev/null 2>&1 && echo "READY" && break',
         '  sleep 2',
-        'done'
+        'done',
+        'echo "---PORT_CHECK---"',
+        // 检查端口是否对外监听
+        'ss -tlnp | grep 8008 || netstat -tlnp | grep 8008 || true'
       ].join('\n'), timeout: 90000
     })
     update(5, 'success')
@@ -116,53 +128,47 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
     // 尝试通过 API 创建管理员（首次设置）
-    const setupResult = await sshCurl(bookmark, 'POST',
-      'http://localhost:8008/api/v1/setup',
-      JSON.stringify({
-        email: adminEmail,
-        password: adminPass,
-        name: 'XNOW',
-        server_name: 'XNOW监控'
-      })
-    )
-
-    // 如果 /api/v1/setup 不行，尝试 /api/v1/setup/init
-    let setupOk = setupResult && (setupResult.includes('"success":true') || setupResult.includes('200'))
-    if (!setupOk) {
-      const setup2 = await sshCurl(bookmark, 'POST',
-        'http://localhost:8008/api/v1/setup/init',
-        JSON.stringify({ email: adminEmail, password: adminPass })
+    let setupOk = false
+    for (const setupPath of ['/api/v1/setup', '/api/v1/install', '/api/v1/setup/init']) {
+      const resp = await sshCurl(bookmark, 'POST',
+        `http://localhost:8008${setupPath}`,
+        JSON.stringify({ email: adminEmail, password: adminPass, name: 'XNOW', server_name: 'XNOW监控' })
       )
-      setupOk = setup2 && (setup2.includes('"success":true') || setup2.includes('200'))
+      if (resp) {
+        try { setupOk = JSON.parse(resp).success === true } catch {}
+      }
+      if (setupOk) break
     }
-    // 如果还是不行，可能是 Dashboard 已初始化过，尝试默认管理员
     update(6, 'success')
 
     // Step 7: 登录获取 JWT 并创建 API Token
     update(7, 'running')
+
+    // 获取 JWT
     const loginResult = await sshCurl(bookmark, 'POST',
       'http://localhost:8008/api/v1/login',
       JSON.stringify({ username: adminEmail, password: adminPass })
     )
-
     let jwt = ''
     if (loginResult) {
-      try { jwt = JSON.parse(loginResult).token || '' } catch {}
+      try {
+        const parsed = JSON.parse(loginResult)
+        jwt = parsed?.data?.token || parsed?.token || ''
+      } catch {}
     }
 
     // 用 JWT 创建 API Token
     let apiToken = ''
     if (jwt) {
-      const tokenResult = await window.pre.runGlobalAsync('execSshCommand', {
-        ...bookmark, command: [
-          `curl -s -X POST 'http://localhost:8008/api/v1/api-tokens'`,
-          `  -H 'Content-Type: application/json'`,
-          `  -H 'Authorization: Bearer ${jwt}'`,
-          `  -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`
-        ].join('\\\n'), timeout: 15000
+      const tokenResp = await window.pre.runGlobalAsync('execSshCommand', {
+        ...bookmark, command: `curl -s -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
+        timeout: 15000
       })
-      if (tokenResult) {
-        try { apiToken = JSON.parse(tokenResult).data?.token || '' } catch {}
+      if (tokenResp) {
+        try {
+          const parsed = JSON.parse(tokenResp)
+          apiToken = parsed?.data?.token || parsed?.token || ''
+        } catch {}
       }
     }
 
