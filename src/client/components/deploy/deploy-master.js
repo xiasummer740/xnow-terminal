@@ -102,19 +102,19 @@ export async function deployMaster (bookmark, onStepUpdate) {
     // Step 5: 直接通过数据库创建管理员用户
     update(5, 'running')
     let apiToken = ''
-    const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
     // 停止 Dashboard，修改数据库创建管理员
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath && dbPath.trim()) {
       const path = dbPath.trim()
-      // 用 python3 创建 bcrypt 哈希的管理员
+      // 先清理旧用户数据，再创建新用户（role 是数字 1）
       const hashCmd = `python3 -c "
 import bcrypt, sqlite3
 pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
 db = sqlite3.connect('${path}')
-db.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 'admin'))
+db.executescript('DELETE FROM users; VACUUM;')
+db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
 db.commit()
 print('OK:' + pw[:20])
 " 2>&1 || echo 'PYFAIL'`
@@ -125,7 +125,8 @@ print('OK:' + pw[:20])
 import hashlib, sqlite3
 h = hashlib.sha256(b'${adminPass}').hexdigest()
 db = sqlite3.connect('${path}')
-db.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', h, 'admin'))
+db.executescript('DELETE FROM users; VACUUM;')
+db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', h, 1))
 db.commit()
 print('OK')
 " 2>&1 || echo 'FAIL'`
