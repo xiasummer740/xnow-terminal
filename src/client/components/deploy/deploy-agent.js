@@ -43,11 +43,18 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
     if (!r0?.includes('SSH_OK')) { update(0, 'error'); return { success: false, server: name, error: 'SSH 连接失败' } }
     update(0, 'success')
 
-    // Step 1: 下载 Agent 二进制
+    // Step 1: 下载 Agent 二进制（与 Dashboard 相同仓库，用 API 获取正确 URL）
     update(1, 'running')
-    const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "https://github.com/nezhahq/nezha/releases/download/v2.2.3/agent-linux-amd64.zip" -o /tmp/nezha-agent.zip 2>&1 || curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/agent-linux-amd64.zip" -o /tmp/nezha-agent.zip 2>&1 && mkdir -p /opt/nezha/agent && unzip -jo /tmp/nezha-agent.zip -d /opt/nezha/agent/ 2>&1 && chmod +x /opt/nezha/agent/* && rm -f /tmp/nezha-agent.zip && ls /opt/nezha/agent/ && echo "DONE" || echo "FAILED"`
+    // 用 GitHub API 找到 agent 下载地址
+    const findCmd = `curl -sL 'https://api.github.com/repos/nezhahq/nezha/releases/latest' 2>/dev/null | grep -o 'https://[^"]*agent-linux-amd64[^"]*' | head -1`
+    let agentUrl = await ssh(bookmark, findCmd, 15000)
+    if (!agentUrl || agentUrl.length < 20) {
+      agentUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/agent-linux-amd64.zip'
+    }
+    agentUrl = agentUrl.trim()
+    const installCmd = `curl -sL "${agentUrl}" -o /tmp/nezha-agent.zip 2>&1 && mkdir -p /opt/nezha/agent && unzip -jo /tmp/nezha-agent.zip -d /opt/nezha/agent/ 2>&1 && chmod +x /opt/nezha/agent/* 2>&1 && rm -f /tmp/nezha-agent.zip && ls /opt/nezha/agent/ 2>&1 && echo "DONE" || echo "FAILED"`
     const r1 = await ssh(bookmark, installCmd, 120000)
-    if (!r1?.includes('DONE')) { update(1, 'error'); return { success: false, server: name, error: `Agent 下载失败:\n${(r1 || '').substring(0, 200)}` } }
+    if (!r1?.includes('DONE')) { update(1, 'error'); return { success: false, server: name, error: `Agent 下载失败，URL: ${agentUrl}\n${(r1 || '').substring(0, 300)}` } }
     const binName = await ssh(bookmark, `ls /opt/nezha/agent/*-linux-* /opt/nezha/agent/nezha* 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo 'agent'`, 5000)
     update(1, 'success')
 
