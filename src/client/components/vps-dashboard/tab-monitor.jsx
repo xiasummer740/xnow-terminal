@@ -79,21 +79,21 @@ export default function TabMonitor({ onClose }) {
       <div>
         <Toolbar hosts={allHosts} loading={loading} onRefresh={loadData}
           onDeploy={() => { setCheckedIds([]); setSelectOpen(true) }} view={view} onViewChange={setView} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {servers.map(s => (
             <div key={s.id} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: '#e0e0e0', fontWeight: 600 }}>{s.title || s.host}</span>
-                <Tag color={s.online ? 'green' : 'red'}>{s.online ? '在线' : '离线'}</Tag>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ color: '#e0e0e0', fontWeight: 600, fontSize: 13 }}>{s.title || s.host}</span>
+                <Tag color={s.online ? 'green' : 'red'} style={{ margin: 0 }}>{s.online ? '在线' : '离线'}</Tag>
               </div>
-              <div style={{ fontSize: 11, color: '#666', marginBottom: 8, fontFamily: 'monospace' }}>{s.host}</div>
+              <div style={{ fontSize: 11, color: '#666', marginBottom: 10, fontFamily: 'monospace' }}>{s.host}</div>
               {s.online ? (
-                <>
-                  <div style={{ fontSize: 11, color: '#999' }}>CPU: <span style={{ color: '#e0e0e0' }}>{(s.cpu || 0).toFixed(1)}%</span></div>
-                  <div style={{ fontSize: 11, color: '#999' }}>内存: <span style={{ color: '#e0e0e0' }}>{s.memory}</span></div>
-                  <div style={{ fontSize: 11, color: '#999' }}>磁盘: <span style={{ color: '#e0e0e0' }}>{s.disk}</span></div>
-                </>
-              ) : <div style={{ color: '#666', fontSize: 12 }}>未安装 Netdata</div>}
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <MiniGauge label="CPU" value={`${s.cpu || 0}%`} pct={s.cpu || 0} color={s.cpu > 80 ? '#ff4d4f' : s.cpu > 50 ? '#faad14' : '#1890ff'} />
+                  <MiniGauge label="内存" value={`${s.memPct || 0}%`} pct={s.memPct || 0} color={s.memPct > 80 ? '#ff4d4f' : s.memPct > 50 ? '#faad14' : '#52c41a'} />
+                  <MiniGauge label="磁盘" value={`${s.diskPct || 0}%`} pct={s.diskPct || 0} color={s.diskPct > 80 ? '#ff4d4f' : s.diskPct > 50 ? '#faad14' : '#52c41a'} />
+                </div>
+              ) : <div style={{ color: '#555', fontSize: 12, textAlign: 'center', padding: 20 }}>未安装 Netdata</div>}
             </div>
           ))}
         </div>
@@ -177,5 +177,28 @@ function SelectModal ({ open, hosts, checked, onChange, onOk, onCancel }) {
         </div>
       ))}
     </Modal>
+  )
+}
+
+function MiniGauge({ label, value, pct, color }) {
+  const r = 28
+  const circumference = 2 * Math.PI * r
+  const offset = circumference * (1 - Math.min(Math.max(pct, 0), 100) / 100)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <svg width={64} height={64} viewBox='0 0 64 64'>
+        <circle cx={32} cy={32} r={r} fill='none' stroke='#2a2a2a' strokeWidth={5} />
+        <circle cx={32} cy={32} r={r} fill='none' stroke={color} strokeWidth={5} strokeLinecap='round'
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          transform='rotate(-90 32 32)' style={{ transition: 'stroke-dashoffset 0.5s' }} />
+        <text x={32} y={32} textAnchor='middle' dominantBaseline='central' fill='#e0e0e0' fontSize={13} fontFamily='monospace' fontWeight='bold'>{value}</text>
+      </svg>
+      <div style={{ flex: 1, fontSize: 12 }}>
+        <div style={{ color: '#999', marginBottom: 2 }}>{label}</div>
+        <div style={{ background: '#2a2a2a', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+          <div style={{ width: Math.min(pct, 100) + '%', height: '100%', background: color, borderRadius: 4, transition: 'width 0.5s' }} />
+        </div>
+      </div>
+    </div>
   )
 }
