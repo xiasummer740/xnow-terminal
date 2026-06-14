@@ -85,11 +85,25 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(2, 'success')
 
-    // Step 3: 创建 systemd 服务并启动
+    // Step 3: 创建 systemd 服务并启动（用 printf 避免 heredoc 兼容问题）
     update(3, 'running')
     const appPath = `/opt/nezha/dashboard/${binName}`
-    const svc = `[Unit]\nDescription=Nezha Dashboard\nAfter=network.target\n\n[Service]\nType=simple\nWorkingDirectory=/opt/nezha/dashboard\nExecStart=${appPath}\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target`
-    const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'SERVICEEOF'\n${svc}\nSERVICEEOF && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo 'SVC_DONE'`
+    const svcLines = [
+      '[Unit]',
+      'Description=Nezha Dashboard',
+      'After=network.target',
+      '',
+      '[Service]',
+      'Type=simple',
+      'WorkingDirectory=/opt/nezha/dashboard',
+      `ExecStart=${appPath}`,
+      'Restart=always',
+      'RestartSec=5',
+      '',
+      '[Install]',
+      'WantedBy=multi-user.target'
+    ]
+    const svcCmd = svcLines.map(l => `printf '%s\\n' '${l}' >> /etc/systemd/system/nezha-dashboard.service`).join(' && ') + ' && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo "SVC_DONE"'
     const r3 = await ssh(bookmark, svcCmd, 15000)
     if (!r3?.includes('SVC_DONE')) {
       console.error('[deploy] 服务启动失败:', r3)
