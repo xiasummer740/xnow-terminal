@@ -2,6 +2,7 @@
 .tabs
   position relative
   height 36px
+  overflow hidden
   background var(--main-dark)
   z-index 12
   ::-webkit-scrollbar
@@ -23,22 +24,22 @@
   z-index 2
   padding 0
   margin-top 0
-  display flex
+  display inline-block
   height 36px
+  overflow-x scroll
   overflow-y hidden
 
 .tabs-wrapper
   z-index 3
 .tab
-  display flex
-  align-items center
+  display inline-block
+  vertical-align middle
   cursor pointer
   position relative
-  padding 0 8px
-  min-width 30px
-  flex 0 1 auto
+  padding 0 14px
+  min-width 40px
+  max-width 160px
   line-height 36px
-  height 36px
   margin 0 1px 0 0
   border-radius 3px 3px 0 0
   background var(--main-dark)
@@ -68,10 +69,11 @@
     position absolute
     content ''
     left -2px
-    top 0
-    width 1px
-    border 1px dashed var(--text-dark)
-    height 36px
+    top -0.5px
+    bottom -0.5px
+    width 2px
+    background var(--border-active)
+
 @keyframes blink
   0%
     background-color #e0e0e0
@@ -89,136 +91,43 @@
     background-position 0% 50%
 
 .tab-terminal-feed
-.tab-traffic
-.tab-status
   position absolute
-  left 2px
-  top 2px
-  width 5px
-  height 5px
-  border-radius 5px
-  background-color var(--text-dark)
-  &.success
-    background-color var(--success)
-  &.error
-    background-color var(--error)
-  &.processing
-    background-color var(--primary)
-.tab-traffic
-  left 10px
-  width 5px
-  border-radius 0
-  background-color var(--success)
-  animation blink 2s infinite
-.tab-terminal-feed
-  width 12px
-  height 12px
-  border-radius 0
-  color var(--success)
-  font-size 12px
-  left 2px
-  top 24px
-  background none
-  background-color transparent !important
-  animation blink 2s infinite
-  &.password
-    color var(--warn)
+  left 50%
+  margin-left -8px
+  bottom 2px
+  animation feedPulse 2s ease infinite
+
+@keyframes feedPulse
+  0%
+    opacity 1
+  50%
+    opacity 0.5
+  100%
+    opacity 1
+
 .tab-close
   position absolute
   right 5px
   cursor pointer
   top 50%
+  margin-top -7px
   background var(--main)
-  margin-top -8px
-  border-radius 100%
-  color var(--text)
-  height 16px
-  width 16px
-  text-align center
-  line-height 16px
+  padding 0 2px
+  border-radius 50%
   font-size 10px
-  &:hover
-    background var(--error)
-
-.tabs-add-btn
-  display inline-block
-  vertical-align middle
-  margin 0 3px 0 3px
-  &.empty
-    font-size 20px
-    margin-left 20px
-    margin-top 10px
-  &:hover
-    color var(--text-light)
-.tabs-extra
-  position absolute
-  height 40px
-  top 0
-  right 0
-  line-height 40px
-  z-index 20
-
-  .tabs-dd-icon
-    font-size 12px
-  .tabs-add-btn
-    margin-top 0
-
-.window-controls
-  position absolute
-  right 0
-  top 0
-  z-index 900
-  border-radius 0 0 3px 3px
-  padding 0
-  background var(--main)
-  -webkit-app-region no-drag
-
-.window-control-box
-  display inline-block
-  padding 5px 10px
-  color var(--text)
-  &:hover
-    color var(--primary)
-    cursor pointer
-    .icon-maximize
-      border-color var(--primary)
-.icon-maximize
-  width 10px
-  height 7px
-  border 1px solid var(--text)
-  cursor pointer
-  &.is-max
-    height 6px
-    position relative
-    &:before
-      position absolute
-      content ''
-      left -3px
-      top 3px
-      width 8px
-      height 4px
-      border 1px solid text
-      border-top none
-      border-right none
-
-.control-icon:hover
-  color var(--text-light)
-.tab-scroll-icon
   color var(--text-dark)
   &:hover
-    color var(--text)
+    color var(--text-light)
 
-.window-controls
-  .window-control-minimize
-  .window-control-maximize
-    &:hover
-      background var(--main-dark)
-  .window-control-close:hover
-    background var(--error)
+.tab-status
+  display none
 
-.system-ui
-  .window-controls
-    display none
+.tab-reload
+  display inline-block
+  margin-right 5px
+  font-size 12px
+  color #d49a4 !important
+
 .tab-title-tag
   margin-right 5px
   font-size 14px
@@ -228,82 +137,48 @@
   margin-right 4px
   min-width 18px
   text-align center
-  padding 0 4px
-  height 20px
-  line-height 21px
+  font-size 10px
+  display inline-block
 
-.ssh-tunnel-list-wrapper
-  max-height 300px
-  overflow-y auto
-
-// Layout and Workspace dropdown styles
-.layout-workspace-dropdown
-  background var(--main)
-  border-radius 4px
-  box-shadow 0 2px 8px rgba(0, 0, 0, 0.15)
-  min-width 200px
-  padding 8px
-  .ant-tabs-nav
-    margin-bottom 8px
-
-.layout-menu-content
-  max-height 300px
-  overflow-y auto
-
-.layout-menu-item
-  padding 6px 12px
-  cursor pointer
-  border-radius 4px
-  display flex
-  align-items center
-  gap 8px
-  color var(--text)
-  &:hover
-    background var(--main-dark)
-  &.active
-    background var(--primary)
-    color #fff
-
-.workspace-menu-content
-  max-height 300px
-  overflow-y auto
-
-.workspace-save-btn
-  margin-bottom 8px
-
-.workspace-list
-  display flex
-  flex-direction column
-  gap 4px
-
-.workspace-item
-  padding 6px 12px
-  cursor pointer
-  border-radius 4px
-  display flex
-  align-items center
-  justify-content space-between
-  color var(--text)
-  &:hover
-    background var(--main-dark)
-  .workspace-delete-icon
-    opacity 0
-    color var(--text-dark)
-    &:hover
-      color var(--error)
-  &:hover .workspace-delete-icon
-    opacity 1
-
-.workspace-name
-  flex 1
+.tab-title
+  display inline
+  font-size 13px
   overflow hidden
-  text-overflow ellipsis
   white-space nowrap
+  text-overflow ellipsis
+  max-width 120px
 
-.not-webapp.not-win
-  .tab
-  .tabs-add-btn
-  .window-control-box
+.tab-traffic
+  display inline
+
+.tabs-extra
+  position absolute
+  right 0
+  bottom 0
+  display flex
+  align-items center
+  height 36px
+  padding 0 5px
+  background var(--main-dark)
+  box-shadow -6px 0 6px var(--main-dark)
+  z-index 3
+
+.tab-scroll-icon
+  color var(--text-dark)
+  &:hover
+    color var(--text)
+
+.tabs-dd-icon
+  color var(--text-dark)
+  &:hover
+    color var(--text)
+
+.tabs-add-btn
+  color var(--text-dark)
+  &:hover
+    color var(--text)
+
+.not-system-ui.not-mac.not-webapp
   .tab-close
   .tab-reload
   .tabs-extra
