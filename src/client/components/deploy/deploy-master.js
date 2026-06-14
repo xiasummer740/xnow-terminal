@@ -117,12 +117,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     // Step 4: 等待服务就绪
     update(4, 'running')
-    const waitCmd = [
-      'for i in $(seq 1 30); do',
-      '  curl -s http://localhost:8008/api/v1/server >/dev/null 2>&1 && echo "READY" && break',
-      '  sleep 2',
-      'done'
-    ].join('; ')
+    const waitCmd = 'for i in $(seq 1 30); do curl -s http://localhost:8008/api/v1/server >/dev/null 2>&1 && echo "READY" && break; sleep 2; done'
     const r4 = await ssh(bookmark, waitCmd, 90000)
     if (!r4?.includes('READY')) {
       update(4, 'error')
