@@ -246,7 +246,7 @@ function computePercent (used, total) {
   const u = toNumber(used)
   const t = toNumber(total)
   if (!Number.isFinite(u) || !Number.isFinite(t)) return 0
-  return Math.floor(u * 100 / (t || (u + 1)))
+  return Math.round(u * 10000 / (t || (u + 1))) / 100
 }
 
 export default function TerminalInfoResource (props) {
@@ -381,8 +381,14 @@ export default function TerminalInfoResource (props) {
 
   return (
     <div className='terminal-info-section terminal-info-resource'>
-      <div className='gauge-grid'>
-        {gauges.map((g, i) => <div key={i} className='gauge-card'>{g}</div>)}
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        {gauges.map((g, i) => (
+          <div key={i} style={{ width: '50%', boxSizing: 'border-box', padding: 4 }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 6px', textAlign: 'center' }}>
+              {g}
+            </div>
+          </div>
+        ))}
       </div>
       {showCpu && <CpuHistoryChart history={historyRef.current} />}
     </div>
