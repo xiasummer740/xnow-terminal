@@ -50,12 +50,12 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
-    // Step 1: 下载并安装 Dashboard（直接下载 zip 压平解压）
+    // Step 1: 下载并安装 Dashboard
     update(1, 'running')
     const zipUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64.zip'
-    const installCmd = `curl -sL "${zipUrl}" -o /tmp/nezha-dash.zip && mkdir -p /opt/nezha/dashboard/data && unzip -jo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/* && rm -f /tmp/nezha-dash.zip && ls -la /opt/nezha/dashboard/ && echo "DONE:$(ls /opt/nezha/dashboard/ | head -5)"`
+    const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "${zipUrl}" -o /tmp/nezha-dash.zip && mkdir -p /opt/nezha/dashboard/data && unzip -jo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/* && rm -f /tmp/nezha-dash.zip && echo "DONE" || echo "FAILED"`
     const r1 = await ssh(bookmark, installCmd, 120000)
-    if (!r1?.includes('DONE:')) {
+    if (!r1?.includes('DONE')) {
       update(1, 'error')
       return { success: false, error: `下载安装失败:\n${r1 || '无响应'}` }
     }
