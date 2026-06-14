@@ -116,7 +116,8 @@ export default function TabMonitor({ onClose }) {
             <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>CPU</th>
             <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>内存</th>
             <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>磁盘</th>
-            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>Netdata</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>上行</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>下行</th>
           </tr>
         </thead>
         <tbody>
@@ -129,13 +130,10 @@ export default function TabMonitor({ onClose }) {
               <td style={{ padding: '10px 12px', color: '#e0e0e0', fontWeight: 500 }}>{s.title || s.host}</td>
               <td style={{ padding: '10px 12px', color: '#999', fontFamily: 'monospace', fontSize: 12 }}>{s.host}</td>
               <td style={{ padding: '10px 12px' }}>{s.online ? `${(s.cpu || 0).toFixed(1)}%` : '--'}</td>
-              <td style={{ padding: '10px 12px' }}>{s.online ? s.memory : '--'}</td>
-              <td style={{ padding: '10px 12px' }}>{s.online ? s.disk : '--'}</td>
-              <td style={{ padding: '10px 12px' }}>
-                {s.online
-                  ? <Tag color="green">在线</Tag>
-                  : <Tag color="red">未安装</Tag>}
-              </td>
+              <td style={{ padding: '10px 12px' }}>{s.online ? `${s.memPct || 0}%` : '--'}</td>
+              <td style={{ padding: '10px 12px' }}>{s.online ? `${s.diskPct || 0}%` : '--'}</td>
+              <td style={{ padding: '10px 12px', fontSize: 12, color: '#999' }}>{s.online ? s.netOut || '--' : '--'}</td>
+              <td style={{ padding: '10px 12px', fontSize: 12, color: '#999' }}>{s.online ? s.netIn || '--' : '--'}</td>
             </tr>
           ))}
         </tbody>

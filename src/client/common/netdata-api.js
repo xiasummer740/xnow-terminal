@@ -1,5 +1,5 @@
 /**
- * Netdata API 封装 — 直接拉 CPU、内存等指标
+ * Netdata API 封装
  */
 async function ndFetch (host, path) {
   const r = await window.pre.runGlobalAsync('httpFetch', `http://${host}:19999${path}`)
@@ -10,45 +10,51 @@ async function ndFetch (host, path) {
 
 export async function getServerOverview (host) {
   try {
-    // CPU: user + system 的和
+    // CPU (user+system)
     const cpu = await ndFetch(host, '/api/v1/data?chart=system.cpu&format=json&points=1&after=-1')
-    const cpuData = cpu?.data?.[0]
-    const cpuLabels = cpu?.labels || []
-    const cpuPct = cpuData ? cpuLabels.reduce((sum, l, i) => {
-      if (l === 'user' || l === 'system') return sum + (cpuData[i] || 0)
-      return sum
-    }, 0) : 0
+    const d = cpu?.data?.[0]
+    const lbl = cpu?.labels || []
+    const cpuPct = d ? lbl.reduce((s, l, i) => (l === 'user' || l === 'system') ? s + (d[i]||0) : s, 0) : 0
 
-    // 内存: used / (used + free) * 100
+    // 内存 (used/total)
     const mem = await ndFetch(host, '/api/v1/data?chart=system.ram&format=json&points=1&after=-1')
-    const memData = mem?.data?.[0]
-    const memIdx = mem?.labels?.indexOf('used')
-    const freeIdx = mem?.labels?.indexOf('free')
-    const memUsed = memIdx >= 0 ? memData?.[memIdx] || 0 : 0
-    const memFree = freeIdx >= 0 ? memData?.[freeIdx] || 0 : 0
-    const memPct = (memUsed + memFree) > 0 ? (memUsed / (memUsed + memFree) * 100) : 0
+    const md = mem?.data?.[0]
+    const ml = mem?.labels || []
+    const usedIdx = ml.indexOf('used'); const freeIdx = ml.indexOf('free')
+    const used = usedIdx >= 0 ? md?.[usedIdx]||0 : 0
+    const free = freeIdx >= 0 ? md?.[freeIdx]||0 : 0
+    const memPct = (used+free) > 0 ? (used/(used+free)*100) : 0
 
-    // 磁盘: disk.util 查看
+    // 磁盘利用率
     let diskPct = 0
+    try { const disk = await ndFetch(host, '/api/v1/data?chart=disk.util&format=json&points=1&after=-1')
+      diskPct = disk?.data?.[0]?.[1] || 0 } catch {}
+
+    // 网络流量
+    let netIn = 0, netOut = 0
     try {
-      const disk = await ndFetch(host, '/api/v1/data?chart=disk.util&format=json&points=1&after=-1')
-      diskPct = disk?.data?.[0]?.[1] || 0
-    } catch { diskPct = 0 }
+      const net = await ndFetch(host, '/api/v1/data?chart=net.ens3&format=json&points=1&after=-1')
+      if (!net?.data?.[0]) { const net2 = await ndFetch(host, '/api/v1/data?chart=net.eth0&format=json&points=1&after=-1')
+        netIn = net2?.data?.[0]?.[1] || 0; netOut = net2?.data?.[0]?.[2] || 0 }
+      else { netIn = net?.data?.[0]?.[1] || 0; netOut = net?.data?.[0]?.[2] || 0 }
+    } catch {}
 
     return {
       online: true,
       cpu: parseFloat(cpuPct.toFixed(1)),
       memPct: parseFloat(memPct.toFixed(0)),
-      diskPct: parseFloat(diskPct.toFixed(0))
+      diskPct: parseFloat(diskPct.toFixed(0)),
+      netIn: (netIn / 1024 / 1024).toFixed(1) + ' MB/s',
+      netOut: (netOut / 1024 / 1024).toFixed(1) + ' MB/s'
     }
   } catch (e) {
-    return { online: false, error: String(e).substring(0, 80) }
+    return { online: false }
   }
 }
 
 export async function getAllServers (hosts) {
-  const results = await Promise.allSettled(hosts.map(h =>
+  const r = await Promise.allSettled(hosts.map(h =>
     getServerOverview(h).then(d => ({ host: h, ...d }))
   ))
-  return results.map((r, i) => r.status === 'fulfilled' ? r.value : { host: hosts[i] || '', online: false })
+  return r.map((v, i) => v.status === 'fulfilled' ? v.value : { host: hosts[i], online: false })
 }
