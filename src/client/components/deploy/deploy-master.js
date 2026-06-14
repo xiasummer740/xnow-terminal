@@ -76,7 +76,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
       '  language: zh-CN',
       '  timezone: Asia/Shanghai'
     ]
-    const configCmd = 'mkdir -p /opt/nezha/dashboard/data && ' + configLines.map(l => `printf '%s\\n' '${l}' >> /opt/nezha/dashboard/data/config.yaml`).join(' && ') + ' && echo "CONFIG_DONE"'
+    const configCmd = 'mkdir -p /opt/nezha/dashboard/data && ' + configLines.map((l, i) => `printf '%s\\n' '${l}' ${i === 0 ? '>' : '>>'} /opt/nezha/dashboard/data/config.yaml`).join(' && ') + ' && echo "CONFIG_DONE"'
     const r2 = await ssh(bookmark, configCmd, 10000)
     if (!r2?.includes('CONFIG_DONE')) {
       console.error('[deploy] 配置文件写入失败:', r2)
@@ -103,7 +103,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
       '[Install]',
       'WantedBy=multi-user.target'
     ]
-    const svcCmd = svcLines.map(l => `printf '%s\\n' '${l}' >> /etc/systemd/system/nezha-dashboard.service`).join(' && ') + ' && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo "SVC_DONE"'
+    const svcCmd = svcLines.map((l, i) => `printf '%s\\n' '${l}' ${i === 0 ? '>' : '>>'} /etc/systemd/system/nezha-dashboard.service`).join(' && ') + ' && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo "SVC_DONE"'
     const r3 = await ssh(bookmark, svcCmd, 15000)
     if (!r3?.includes('SVC_DONE')) {
       console.error('[deploy] 服务启动失败:', r3)
