@@ -101,7 +101,7 @@ function drawChart (canvas, data) {
 }
 
 export default function TerminalInfoPing (props) {
-  const { isRemote, pid } = props
+  const { isRemote, pid, host } = props
   const [ping, setPing] = useState('--')
   const [color, setColor] = useState('#999')
   const [avg, setAvg] = useState('--')
@@ -109,11 +109,6 @@ export default function TerminalInfoPing (props) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const dataRef = useRef([])
   const canvasRef = useRef(null)
-  const hostRef = useRef('')
-
-  // 从 tab 中取 host
-  const tab = window.store?.tabs?.find(t => t.pid === pid)
-  hostRef.current = tab?.host || tab?.ipv4 || ''
 
   useEffect(() => {
     if (!isRemote || !pid) return
@@ -122,16 +117,14 @@ export default function TerminalInfoPing (props) {
     const measure = async () => {
       try {
         const latency = await tcpPing(pid)
-        if (latency > 0) {
+        const valid = latency > 0
+        if (valid) {
           dataRef.current.push(latency)
           if (dataRef.current.length > MAX_POINTS) dataRef.current.shift()
           setPing(latency + 'ms')
           if (latency < 100) setColor('#52c41a')
           else if (latency < 200) setColor('#faad14')
           else setColor('#ff4d4f')
-
-          // 记录到历史
-          if (hostRef.current) addPing(hostRef.current, latency)
 
           // 统计
           const arr = dataRef.current.filter(v => v > 0)
@@ -140,7 +133,9 @@ export default function TerminalInfoPing (props) {
             setMax(Math.max(...arr) + 'ms')
           }
         }
-      } catch (e) {}
+        // 记录到历史（成功/丢包都记）
+        if (host) addPing(host, valid ? latency : -1)
+      } catch (e) { if (host) addPing(host, -1) }
       scheduleDraw(canvasRef.current, dataRef.current)
     }
 
@@ -155,14 +150,13 @@ export default function TerminalInfoPing (props) {
     <div className='terminal-info-section terminal-info-ping' style={{ padding: '8px 0', borderBottom: '1px solid #333' }}>
       {/* 当前延迟 + 统计 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <b><ApiOutlined /> 网络延迟</b>
-        <Tooltip title='历史记录'>
+        <b><ApiOutlined /> 实时延迟</b>
+        <Tooltip title='历史延迟'>
           <BarChartOutlined style={{ cursor: 'pointer', color: '#888', fontSize: 14 }} onClick={() => setHistoryOpen(true)} />
         </Tooltip>
       </div>
-      <PingHistoryModal open={historyOpen} host={hostRef.current} onClose={() => setHistoryOpen(false)} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <b><ApiOutlined /> 网络延迟</b>
+      <PingHistoryModal open={historyOpen} host={host} onClose={() => setHistoryOpen(false)} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 }}>
         <span style={{ fontSize: 11, color: '#888' }}>
           均{avg} / 最{max}
         </span>
