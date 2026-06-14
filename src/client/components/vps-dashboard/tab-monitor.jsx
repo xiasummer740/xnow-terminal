@@ -49,14 +49,14 @@ export default function TabMonitor({ onClose }) {
       logs.push(`\n>>> ${name} (${bm.host}) 开始部署...`)
       setDeployLog(logs.join('\n'))
       const stepCmd = [
-        `echo 'STEP:download'`,
-        `curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh 2>&1`,
-        `echo 'STEP:install'`,
+        `echo 'STEP 1/4: 下载安装脚本'`,
+        `(curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh || wget -q https://my-netdata.io/kickstart.sh -O /tmp/netdata.sh) 2>&1`,
+        `echo 'STEP 2/4: 执行安装'`,
         `bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1`,
-        `echo 'STEP:config'`,
+        `echo 'STEP 3/4: 配置外网访问'`,
         `sed -i 's/^.*bind.*IP.*=.*$/bind socket to IP = 0.0.0.0/' /etc/netdata/netdata.conf 2>/dev/null; true`,
         `which ufw >/dev/null && ufw allow 19999/tcp 2>/dev/null; true`,
-        `echo 'STEP:restart'`,
+        `echo 'STEP 4/4: 重启并验证'`,
         `systemctl restart netdata 2>/dev/null || service netdata restart 2>/dev/null; true`,
         `sleep 3`,
         `curl -s --max-time 5 http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'RESULT:OK' || echo 'RESULT:FAIL'`
