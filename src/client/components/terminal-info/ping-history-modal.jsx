@@ -104,33 +104,22 @@ export default function PingHistoryModal ({ open, host, onClose }) {
     })
   }, [open, host])
 
-  // 加载保存的设置
+  // 从全局配置读取平滑设置
+  const config = window.store?.config || {}
+  useEffect(() => { setSmooth(config.historySmooth !== false) }, [config.historySmooth])
+
+  // 从全局配置读取后台监控状态
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('ping_bg_settings') || '{}')
-      if (saved.bgOn) { setBgOn(true); window.pre.runGlobalAsync('startBgPing', saved.hosts || []) }
-      if (saved.smooth !== undefined) setSmooth(saved.smooth)
-    } catch {}
-  }, [])
-
-  // 保存设置
-  const saveSettings = (updates) => {
-    const current = { bgOn, smooth, hosts: (window.store.bookmarks || []).filter(b => b.host).map(b => b.host) }
-    const next = { ...current, ...updates }
-    localStorage.setItem('ping_bg_settings', JSON.stringify(next))
-  }
-
-  const toggleBg = async () => {
-    if (bgOn) {
-      await window.pre.runGlobalAsync('stopBgPing')
-      setBgOn(false); saveSettings({ bgOn: false })
-    } else {
+    if (!open) return
+    const enabled = config.bgMonitor
+    setBgOn(!!enabled)
+    if (enabled) {
       const hosts = (window.store.bookmarks || []).filter(b => b.host).map(b => b.host)
-      if (!hosts.length) { message.warning('没有可监控的服务器'); return }
-      await window.pre.runGlobalAsync('startBgPing', hosts)
-      setBgOn(true); saveSettings({ bgOn: true })
+      if (hosts.length) window.pre.runGlobalAsync('startBgPing', hosts)
+    } else {
+      window.pre.runGlobalAsync('stopBgPing')
     }
-  }
+  }, [open, config.bgMonitor])
 
   useEffect(() => {
     if (!open || !host) return
@@ -157,11 +146,8 @@ export default function PingHistoryModal ({ open, host, onClose }) {
         <Segmented value={range} onChange={v => setRange(v)} options={RANGES}
           style={{ background: '#1a1a1a' }} />
         <Space size={16}>
-          <label style={{ fontSize: 12, color: '#888', cursor: 'pointer' }} onClick={toggleBg}>
-            后台监控 <Switch size='small' checked={bgOn} style={{ marginLeft: 4 }} />
-          </label>
-          <span onClick={() => { setSmooth(!smooth); saveSettings({ smooth: !smooth }) }} style={{ cursor: 'pointer', fontSize: 12, color: smooth ? '#1890ff' : '#666' }}>
-            平滑{smooth ? ' ✓' : ''}
+          <span style={{ fontSize: 12, color: '#888' }}>
+            {bgOn ? '🟢 后台监控中' : '⚪ 后台监控未开启'}
           </span>
         </Space>
       </div>
