@@ -50,33 +50,29 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
-    // Step 1: 下载并安装 Dashboard
+    // Step 1: 下载并安装 Dashboard（用 GitHub API 找最新版本）
     update(1, 'running')
-    // 先查看 zip 结构再解压
-    const installCmd = 'mkdir -p /opt/nezha/dashboard && curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip 2>&1 && unzip -l /tmp/nezha-dash.zip 2>&1 | head -20 && unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ 2>&1 && find /opt/nezha/dashboard/ -type f -executable 2>/dev/null && chmod +x /opt/nezha/dashboard/* 2>/dev/null; true'
-    const r1 = await ssh(bookmark, installCmd, 120000)
-    // 列出所有文件排查
-    const fileList = await ssh(bookmark, 'find /opt/nezha/dashboard/ -type f 2>/dev/null', 5000)
-
-    // 找可执行文件
-    const exeCheck = await ssh(bookmark, 'find /opt/nezha/dashboard/ -type f -executable 2>/dev/null | head -5', 5000)
-    let binName = ''
-    if (exeCheck) {
-      for (const line of exeCheck.split('\n')) {
-        const name = line.trim().split('/').pop()
-        if (name) { binName = name; break }
+    // 通过 API 获取最新 release 的下载地址
+    const getUrlCmd = `curl -sL "https://api.github.com/repos/nezhahq/nezha/releases/latest" 2>/dev/null | grep -o "https://[^\"]*dashboard-linux-amd64[^\"]*" | head -1`
+    const dlUrl = await ssh(bookmark, getUrlCmd, 15000)
+    if (!dlUrl) {
+      // API 不行就硬编码版本
+      const fallbackUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64'
+      const installCmd = `mkdir -p /opt/nezha/dashboard/data && curl -sL "${fallbackUrl}" -o /opt/nezha/dashboard/dashboard 2>&1 && chmod +x /opt/nezha/dashboard/dashboard && echo "OK:$(file /opt/nezha/dashboard/dashboard)"`
+      const r1 = await ssh(bookmark, installCmd, 120000)
+      if (!r1?.includes('OK:')) {
+        update(1, 'error')
+        return { success: false, error: `下载失败:\n${r1 || '无响应'}` }
+      }
+    } else {
+      const installCmd = `mkdir -p /opt/nezha/dashboard/data && curl -sL "${dlUrl.trim()}" -o /opt/nezha/dashboard/dashboard 2>&1 && chmod +x /opt/nezha/dashboard/dashboard && echo "OK:$(file /opt/nezha/dashboard/dashboard)"`
+      const r1 = await ssh(bookmark, installCmd, 120000)
+      if (!r1?.includes('OK:')) {
+        update(1, 'error')
+        return { success: false, error: `下载失败:\n${r1 || '无响应'}` }
       }
     }
-    if (!binName && fileList) {
-      // 按优先级找可能的二进制名
-      for (const name of ['dashboard-linux-amd64', 'dashboard', 'nezha-dashboard', 'nezha', 'app']) {
-        if (fileList.includes(name)) { binName = name; break }
-      }
-    }
-    if (!binName) {
-      update(1, 'error')
-      return { success: false, error: `无法找到可执行文件，目录内容:\n${fileList || '空目录'}\n\n下载输出:\n${r1 || ''}` }
-    }
+    const binName = 'dashboard'
 
     // Step 2: 创建配置文件
     update(2, 'running')
