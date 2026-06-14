@@ -1227,11 +1227,15 @@ export default class Sftp extends Component {
     const isRemote = type === typeMap.remote
     const collapsed = isRemote ? this.state.remoteCollapsed : this.state.localCollapsed
     const toggleCollapse = () => {
-      if (isRemote) {
-        this.setState({ remoteCollapsed: !collapsed })
-      } else {
-        this.setState({ localCollapsed: !collapsed })
+      const next = !collapsed
+      const updates = isRemote ? { remoteCollapsed: next } : { localCollapsed: next }
+      // 展开时同时展开另一个面板（避免一个全屏另一个找不到）
+      if (next === false) {
+        // 正在展开
+        if (isRemote && this.state.localCollapsed) updates.localCollapsed = false
+        if (!isRemote && this.state.remoteCollapsed) updates.remoteCollapsed = false
       }
+      this.setState(updates)
     }
     const title = isRemote
       ? `${e('remote')}: ${username}@${host}`
