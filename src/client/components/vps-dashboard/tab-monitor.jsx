@@ -31,42 +31,51 @@ export default function TabMonitor({ onClose }) {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Agent 部署
   const [selectOpen, setSelectOpen] = useState(false)
   const [checkedIds, setCheckedIds] = useState([])
+  const [deployLog, setDeployLog] = useState('')
+  const [deploying, setDeploying] = useState(false)
 
   const handleDeploy = async () => {
     const selected = allHosts.filter(b => checkedIds.includes(b.id))
     if (!selected.length) return
     setSelectOpen(false)
+    setDeploying(true)
+    setDeployLog('')
     let ok = 0, fail = 0
-    const errors = []
+    const logs = []
     for (const bm of selected) {
       const name = bm.title || bm.host
-      // 安装 Netdata + 开放外网访问 + 开防火墙
-      const cmd = [
+      logs.push(`\n>>> ${name} (${bm.host}) 开始部署...`)
+      setDeployLog(logs.join('\n'))
+      const stepCmd = [
+        `echo 'STEP:download'`,
         `curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh 2>&1`,
+        `echo 'STEP:install'`,
         `bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1`,
-        // Netdata 默认只监听 127.0.0.1，改成 0.0.0.0 允许远程访问
-        `sed -i 's/^.*bind socket to IP =.*$/bind socket to IP = 0.0.0.0/' /etc/netdata/netdata.conf 2>/dev/null; true`,
+        `echo 'STEP:config'`,
+        `sed -i 's/^.*bind.*IP.*=.*$/bind socket to IP = 0.0.0.0/' /etc/netdata/netdata.conf 2>/dev/null; true`,
         `which ufw >/dev/null && ufw allow 19999/tcp 2>/dev/null; true`,
+        `echo 'STEP:restart'`,
         `systemctl restart netdata 2>/dev/null || service netdata restart 2>/dev/null; true`,
         `sleep 3`,
-        `curl -s --max-time 5 http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'OK' || echo 'FAIL'`
+        `curl -s --max-time 5 http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'RESULT:OK' || echo 'RESULT:FAIL'`
       ].join(' && ')
       try {
         const r = await window.pre.runGlobalAsync('execSshCommand', {
           host: bm.host, port: bm.port || 22,
           username: bm.username || 'root',
           password: bm.password, privateKey: bm.privateKey,
-          command: cmd, timeout: 300000
+          command: stepCmd, timeout: 300000
         })
-        if (r?.includes('OK')) { ok++ } else { fail++; errors.push(`${name}: ${(r||'无返回').substring(0,200)}`) }
-      } catch (e) { fail++; errors.push(`${name}: ${e.message}`) }
+        if (r?.includes('RESULT:OK')) { ok++; logs.push(`✅ ${name} 部署成功`) }
+        else { fail++; logs.push(`❌ ${name} 部署失败`) }
+      } catch (e) { fail++; logs.push(`❌ ${name}: ${e.message}`) }
+      setDeployLog(logs.join('\n'))
     }
-    const msg = `${ok} 台成功${fail ? `，${fail} 台失败` : ''}`
-    message.success(msg, 5)
-    if (errors.length) console.error('[netdata-deploy]', errors.join('\n'))
+    setDeploying(false)
+    logs.push(`\n📊 ${ok} 台成功${fail ? `，${fail} 台失败` : ''}`)
+    setDeployLog(logs.join('\n'))
     setTimeout(loadData, 5000)
   }
 
@@ -140,6 +149,17 @@ export default function TabMonitor({ onClose }) {
       </table>
       <SelectModal open={selectOpen} hosts={allHosts} checked={checkedIds}
         onChange={setCheckedIds} onOk={handleDeploy} onCancel={() => setSelectOpen(false)} />
+
+      {deployLog && (
+        <Alert
+          type={deploying ? 'info' : deployLog.includes('❌') ? 'warning' : 'success'}
+          message={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 12, color: '#0f0', fontFamily: "'Maple Mono', monospace", maxHeight: 300, overflow: 'auto' }}>{deployLog}</pre>}
+          showIcon={false}
+          closable={!deploying}
+          onClose={() => setDeployLog('')}
+          style={{ marginTop: 12, background: '#0a0a0a', border: '1px solid #333' }}
+        />
+      )}
     </div>
   )
 }
