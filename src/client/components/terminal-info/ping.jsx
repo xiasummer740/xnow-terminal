@@ -1,9 +1,12 @@
 /**
- * 右侧面板 - 网络延迟 + 精细柱状图（类似FinalShell）
+ * 右侧面板 - 网络延迟 + 精细柱状图 + 历史记录
  */
-import { ApiOutlined } from '@ant-design/icons'
+import { ApiOutlined, BarChartOutlined } from '@ant-design/icons'
 import { useEffect, useState, useRef } from 'react'
+import { Tooltip } from 'antd'
 import { tcpPing } from '../terminal/terminal-apis'
+import { addPing } from '../../common/ping-history'
+import PingHistoryModal from './ping-history-modal'
 
 const MAX_POINTS = 60
 const CHART_W = 280
@@ -103,8 +106,14 @@ export default function TerminalInfoPing (props) {
   const [color, setColor] = useState('#999')
   const [avg, setAvg] = useState('--')
   const [max, setMax] = useState('--')
+  const [historyOpen, setHistoryOpen] = useState(false)
   const dataRef = useRef([])
   const canvasRef = useRef(null)
+  const hostRef = useRef('')
+
+  // 从 tab 中取 host
+  const tab = window.store?.tabs?.find(t => t.pid === pid)
+  hostRef.current = tab?.host || tab?.ipv4 || ''
 
   useEffect(() => {
     if (!isRemote || !pid) return
@@ -120,6 +129,9 @@ export default function TerminalInfoPing (props) {
           if (latency < 100) setColor('#52c41a')
           else if (latency < 200) setColor('#faad14')
           else setColor('#ff4d4f')
+
+          // 记录到历史
+          if (hostRef.current) addPing(hostRef.current, latency)
 
           // 统计
           const arr = dataRef.current.filter(v => v > 0)
@@ -142,6 +154,13 @@ export default function TerminalInfoPing (props) {
   return (
     <div className='terminal-info-section terminal-info-ping' style={{ padding: '8px 0', borderBottom: '1px solid #333' }}>
       {/* 当前延迟 + 统计 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <b><ApiOutlined /> 网络延迟</b>
+        <Tooltip title='历史记录'>
+          <BarChartOutlined style={{ cursor: 'pointer', color: '#888', fontSize: 14 }} onClick={() => setHistoryOpen(true)} />
+        </Tooltip>
+      </div>
+      <PingHistoryModal open={historyOpen} host={hostRef.current} onClose={() => setHistoryOpen(false)} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <b><ApiOutlined /> 网络延迟</b>
         <span style={{ fontSize: 11, color: '#888' }}>
