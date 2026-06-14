@@ -54,8 +54,9 @@
     background var(--main)
   &.active-all
     font-weight 700
-    background linear-gradient(135deg, rgba(24,144,255,0.18) 0%, rgba(180,60,255,0.2) 100%)
-    transition background 0.3s ease
+    background linear-gradient(135deg, rgba(24,144,255,0.2) 0%, rgba(180,60,255,0.25) 50%, rgba(24,144,255,0.2) 100%)
+    background-size 200% 200%
+    animation gradientFlow 3s ease infinite
     .tab-count
       border-radius 15px
       font-weight bold
@@ -79,6 +80,14 @@
     background-color #ffffff
   100%
     background-color #e0e0e0
+
+@keyframes gradientFlow
+  0%
+    background-position 0% 50%
+  50%
+    background-position 100% 50%
+  100%
+    background-position 0% 50%
 
 .tab-terminal-feed
 .tab-traffic
