@@ -2,8 +2,8 @@
  * 实时监控页签 — 三种视图切换 + 批量部署 Agent
  */
 import { useState, useCallback } from 'react'
-import { Segmented, Empty, Button, Modal, Checkbox, message, Space } from 'antd'
-import { TableOutlined, AppstoreOutlined, SettingOutlined, CloudUploadOutlined } from '@ant-design/icons'
+import { Segmented, Empty, Button, Modal, Checkbox, message, Tag } from 'antd'
+import { TableOutlined, AppstoreOutlined, SettingOutlined, CloudUploadOutlined, ReloadOutlined } from '@ant-design/icons'
 import MonitorTable from './monitor-table'
 import MonitorCards from './monitor-cards'
 import MonitorDetail from './monitor-detail'
@@ -19,6 +19,7 @@ const viewOptions = [
 export default function TabMonitor({ onClose }) {
   const [view, setView] = useState('table')
   const [selectedServer, setSelectedServer] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const { store } = window
   const nezhaCfg = store.config?.nezha || {}
 
@@ -86,6 +87,8 @@ export default function TabMonitor({ onClose }) {
 
     setDeployOpen(false)
     message.success(`部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`)
+    // 刷新监控数据
+    setRefreshKey(k => k + 1)
   }
 
   // 未配置
@@ -114,16 +117,21 @@ export default function TabMonitor({ onClose }) {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button icon={<CloudUploadOutlined />} onClick={handleOpenSelect}>
-          部署 Agent
-        </Button>
+        <Space>
+          <Button icon={<CloudUploadOutlined />} onClick={handleOpenSelect}>
+            部署 Agent
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={() => { setRefreshKey(k => k + 1); message.info('已刷新') }} size="small">
+            刷新
+          </Button>
+        </Space>
         <Segmented value={view} onChange={(v) => setView(v)} options={viewOptions} style={{ background: '#1a1a1a' }} />
       </div>
 
       {view === 'table' ? (
-        <MonitorTable onSshConnect={handleSshConnect} />
+        <MonitorTable key={`t-${refreshKey}`} onSshConnect={handleSshConnect} />
       ) : (
-        <MonitorCards onSshConnect={handleSshConnect} onSelectDetail={handleSelectDetail} />
+        <MonitorCards key={`c-${refreshKey}`} onSshConnect={handleSshConnect} onSelectDetail={handleSelectDetail} />
       )}
 
       {/* 选择服务器弹窗 */}
@@ -133,24 +141,45 @@ export default function TabMonitor({ onClose }) {
         onOk={handleStartDeploy}
         onCancel={() => setSelectOpen(false)}
         okText="开始部署"
-        width={500}
-        styles={{ content: { background: '#1a1a1a' }, header: { background: '#1a1a1a' } }}
+        width={520}
+        styles={{ content: { background: '#1a1a1a', borderRadius: 8 }, header: { background: 'transparent', borderBottom: '1px solid #222' } }}
       >
         {deployableBookmarks.length === 0 ? (
-          <div style={{ color: '#666', padding: 20, textAlign: 'center' }}>没有可用的服务器书签，请先在书签中添加 SSH 信息</div>
+          <div style={{ color: '#666', padding: 40, textAlign: 'center' }}>没有可用的服务器书签，请先在书签中添加 SSH 信息</div>
         ) : (
-          <div style={{ maxHeight: 400, overflow: 'auto' }}>
-            <Checkbox.Group value={checkedIds} onChange={setCheckedIds} style={{ width: '100%' }}>
+          <Checkbox.Group value={checkedIds} onChange={setCheckedIds} style={{ width: '100%' }}>
+            <div style={{ display: 'grid', gap: 6 }}>
               {deployableBookmarks.map(b => (
-                <div key={b.id} style={{ padding: '8px 4px', borderBottom: '1px solid #222' }}>
-                  <Checkbox value={b.id} style={{ color: '#ccc', width: '100%' }}>
-                    <span style={{ color: '#e0e0e0' }}>{b.title || b.host}</span>
-                    <span style={{ color: '#666', marginLeft: 8, fontSize: 12 }}>{b.host}</span>
-                  </Checkbox>
+                <div
+                  key={b.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '10px 12px',
+                    background: '#1f1f1f',
+                    border: '1px solid #333',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onClick={() => {
+                    setCheckedIds(prev =>
+                      prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id]
+                    )
+                  }}
+                >
+                  <Checkbox value={b.id} checked={checkedIds.includes(b.id)} style={{ marginRight: 12 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#e0e0e0', fontWeight: 500, fontSize: 14 }}>{b.title || '未命名'}</div>
+                    <div style={{ color: '#888', fontSize: 12, fontFamily: 'monospace' }}>{b.host}</div>
+                  </div>
+                  <Tag color={b.host?.includes(':') ? 'purple' : 'blue'} style={{ marginRight: 0, fontSize: 11 }}>
+                    {b.host?.includes(':') ? 'IPv6' : b.host?.split('.').length === 4 ? 'IPv4' : '域名'}
+                  </Tag>
                 </div>
               ))}
-            </Checkbox.Group>
-          </div>
+            </div>
+          </Checkbox.Group>
         )}
       </Modal>
 
