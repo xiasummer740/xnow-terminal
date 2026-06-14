@@ -41,6 +41,12 @@ export default memo(function RightSidePanel (
     }
   }
 
+  function onResizeEnd () {
+    if (panelRef.current) {
+      window.store.setRightSidePanelWidth(parseInt(panelRef.current.style.width))
+    }
+  }
+
   function onClose () {
     window.store.rightPanelVisible = false
   }

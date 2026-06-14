@@ -23,10 +23,10 @@ export default function DragHandle (props) {
     return left ? sizes[0] : sizes[1]
   }
   function onResizeEnd (sizes) {
-    props.onDragEnd(newSize(sizes))
+    props.onDragEnd?.(newSize(sizes))
   }
   function onResize (sizes) {
-    props.onDragEnd(newSize(sizes))
+    props.onDragMove?.(newSize(sizes))
   }
 
   const l = left ? -width : -(w - width)
