@@ -50,27 +50,14 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
-    // Step 1: 下载并安装 Dashboard（用 GitHub API 找最新版本）
+    // Step 1: 下载并安装 Dashboard（直接下载 zip 压平解压）
     update(1, 'running')
-    // 通过 API 获取最新 release 的下载地址
-    const getUrlCmd = `curl -sL "https://api.github.com/repos/nezhahq/nezha/releases/latest" 2>/dev/null | grep -o "https://[^\"]*dashboard-linux-amd64[^\"]*" | head -1`
-    const dlUrl = await ssh(bookmark, getUrlCmd, 15000)
-    if (!dlUrl) {
-      // API 不行就硬编码版本
-      const fallbackUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64'
-      const installCmd = `mkdir -p /opt/nezha/dashboard/data && curl -sL "${fallbackUrl}" -o /opt/nezha/dashboard/dashboard 2>&1 && chmod +x /opt/nezha/dashboard/dashboard && echo "OK:$(file /opt/nezha/dashboard/dashboard)"`
-      const r1 = await ssh(bookmark, installCmd, 120000)
-      if (!r1?.includes('OK:')) {
-        update(1, 'error')
-        return { success: false, error: `下载失败:\n${r1 || '无响应'}` }
-      }
-    } else {
-      const installCmd = `mkdir -p /opt/nezha/dashboard/data && curl -sL "${dlUrl.trim()}" -o /opt/nezha/dashboard/dashboard 2>&1 && chmod +x /opt/nezha/dashboard/dashboard && echo "OK:$(file /opt/nezha/dashboard/dashboard)"`
-      const r1 = await ssh(bookmark, installCmd, 120000)
-      if (!r1?.includes('OK:')) {
-        update(1, 'error')
-        return { success: false, error: `下载失败:\n${r1 || '无响应'}` }
-      }
+    const zipUrl = 'https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64.zip'
+    const installCmd = `curl -sL "${zipUrl}" -o /tmp/nezha-dash.zip && mkdir -p /opt/nezha/dashboard/data && unzip -jo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/* && rm -f /tmp/nezha-dash.zip && ls -la /opt/nezha/dashboard/ && echo "DONE:$(ls /opt/nezha/dashboard/ | head -5)"`
+    const r1 = await ssh(bookmark, installCmd, 120000)
+    if (!r1?.includes('DONE:')) {
+      update(1, 'error')
+      return { success: false, error: `下载安装失败:\n${r1 || '无响应'}` }
     }
     const binName = 'dashboard'
 
