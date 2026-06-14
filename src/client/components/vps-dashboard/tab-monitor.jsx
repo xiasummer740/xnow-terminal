@@ -84,6 +84,7 @@ export default function TabMonitor({ onClose }) {
     // 逐台部署
     let successCount = 0
     let failCount = 0
+    const errors = []
     for (let i = 0; i < selected.length; i++) {
       const bm = selected[i]
       const name = bm.title || bm.host
@@ -96,11 +97,17 @@ export default function TabMonitor({ onClose }) {
         successCount++
       } else {
         failCount++
+        errors.push(`${name}: ${result.error || '未知错误'}`)
       }
     }
 
     setDeployOpen(false)
-    message.success(`部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`)
+    const msg = `部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`
+    message.success(msg, 5)
+    if (errors.length) {
+      console.error('[deploy-agent] 失败详情:', errors.join('\n'))
+      message.error(`失败详情:\n${errors.join('\n')}`, 8)
+    }
     setRefreshKey(k => k + 1)
   }
 

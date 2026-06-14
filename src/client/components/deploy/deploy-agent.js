@@ -45,10 +45,9 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
 
     // Step 1: 下载 Agent 二进制
     update(1, 'running')
-    const dlUrl = 'https://github.com/nezhahq/nezha/releases/latest/download/agent-linux-amd64.zip'
-    const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "${dlUrl}" -o /tmp/nezha-agent.zip && mkdir -p /opt/nezha/agent && unzip -jo /tmp/nezha-agent.zip -d /opt/nezha/agent/ && chmod +x /opt/nezha/agent/* && rm -f /tmp/nezha-agent.zip && echo "DONE" || echo "FAILED"`
+    const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "https://github.com/nezhahq/nezha/releases/download/v2.2.3/agent-linux-amd64.zip" -o /tmp/nezha-agent.zip 2>&1 || curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/agent-linux-amd64.zip" -o /tmp/nezha-agent.zip 2>&1 && mkdir -p /opt/nezha/agent && unzip -jo /tmp/nezha-agent.zip -d /opt/nezha/agent/ 2>&1 && chmod +x /opt/nezha/agent/* && rm -f /tmp/nezha-agent.zip && ls /opt/nezha/agent/ && echo "DONE" || echo "FAILED"`
     const r1 = await ssh(bookmark, installCmd, 120000)
-    if (!r1?.includes('DONE')) { update(1, 'error'); return { success: false, server: name, error: 'Agent 下载失败' } }
+    if (!r1?.includes('DONE')) { update(1, 'error'); return { success: false, server: name, error: `Agent 下载失败:\n${(r1 || '').substring(0, 200)}` } }
     const binName = await ssh(bookmark, `ls /opt/nezha/agent/*-linux-* /opt/nezha/agent/nezha* 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo 'agent'`, 5000)
     update(1, 'success')
 
