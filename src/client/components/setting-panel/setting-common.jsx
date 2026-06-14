@@ -407,6 +407,17 @@ export default class SettingCommon extends Component {
     )
   }
 
+  renderCustomToggle (name, label) {
+    const checked = !!this.props.config[name]
+    const { Switch } = require('antd')
+    return (
+      <div className='pd2b' key={'rt' + name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Switch checked={checked} size='small' onChange={v => this.onChangeValue(v, name)} />
+        <span style={{ fontSize: 12, color: '#ccc' }}>{label}</span>
+      </div>
+    )
+  }
+
   renderLoginPass () {
     if (window.et.isWebApp) {
       return null
@@ -604,6 +615,12 @@ export default class SettingCommon extends Component {
             'disableDeveloperTool',
             'debug'
           ].map(this.renderToggle)
+        }
+        {
+          this.renderCustomToggle('bgMonitor', '后台延迟监控（每60秒探测所有VPS）')
+        }
+        {
+          this.renderCustomToggle('historySmooth', '历史延迟曲线平滑')
         }
         {
           window.et.isWebApp ? null : <DeepLinkControl />
