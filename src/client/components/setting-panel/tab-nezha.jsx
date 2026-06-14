@@ -101,18 +101,26 @@ export default function TabNezha() {
     if (!bm) { setDiagResult('未找到服务器书签'); setDiaging(false); return }
     try {
       const cmds = [
-        `echo '=== Docker状态 ==='`,
-        `docker ps -a --filter name=nezha-dashboard --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>/dev/null || echo 'docker未运行'`,
+        `echo '=== Docker版本 ==='`,
+        `docker --version 2>&1 || echo 'docker未安装'`,
+        `echo ''`,
+        `echo '=== Docker服务状态 ==='`,
+        `systemctl is-active docker 2>/dev/null || echo 'unknown'`,
+        `echo ''`,
+        `echo '=== 已拉取的镜像 ==='`,
+        `docker images --format 'table {{.Repository}}:{{.Tag}}\\t{{.Size}}' 2>/dev/null || echo '无镜像'`,
+        `echo ''`,
+        `echo '=== Docker容器(全部) ==='`,
+        `docker ps -a --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>/dev/null || echo 'docker不可用'`,
         `echo ''`,
         `echo '=== 端口监听 ==='`,
         `ss -tlnp 2>/dev/null | grep 8008 || netstat -tlnp 2>/dev/null | grep 8008 || echo '8008端口未监听'`,
         `echo ''`,
         `echo '=== 防火墙 ==='`,
-        `(which ufw >/dev/null && ufw status | head -10) || echo 'ufw未安装'`,
-        `(which firewall-cmd >/dev/null && firewall-cmd --list-ports 2>/dev/null) || true`,
+        `(which ufw >/dev/null && ufw status | head -15) || echo 'ufw未安装'`,
         `echo ''`,
-        `echo '=== Dashboard容器日志(最近5行) ==='`,
-        `docker logs nezha-dashboard --tail 5 2>/dev/null || echo '容器日志不可用'`
+        `echo '=== /etc/nezha 目录 ==='`,
+        `ls -la /etc/nezha/ 2>/dev/null || echo '目录不存在'`
       ].join('\n')
       const result = await window.pre.runGlobalAsync('execSshCommand', {
         host: bm.host, port: bm.port || 22,
