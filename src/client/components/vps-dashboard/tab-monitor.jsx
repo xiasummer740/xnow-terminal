@@ -1,14 +1,10 @@
 /**
- * 实时监控页签 — 三种视图切换 + 批量部署 Agent
+ * 实时监控页签 — Netdata 数据源
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Segmented, Empty, Button, Modal, Checkbox, message, Space, Tag, Alert } from 'antd'
 import { TableOutlined, AppstoreOutlined, SettingOutlined, CloudUploadOutlined, ReloadOutlined } from '@ant-design/icons'
-import MonitorTable from './monitor-table'
-import MonitorCards from './monitor-cards'
-import MonitorDetail from './monitor-detail'
-import DeployModal from '../deploy/deploy-modal'
-import { deployAgent, deployAgentsBatch, getAgentSteps } from '../deploy/deploy-agent'
+import { getAllServers } from '../../common/netdata-api'
 import copy from 'json-deep-copy'
 
 const viewOptions = [
@@ -18,221 +14,157 @@ const viewOptions = [
 
 export default function TabMonitor({ onClose }) {
   const [view, setView] = useState('table')
-  const [selectedServer, setSelectedServer] = useState(null)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [servers, setServers] = useState([])
+  const [loading, setLoading] = useState(false)
   const { store } = window
-  const nezhaCfg = store.config?.nezha || {}
 
-  // Agent 部署相关
+  // 有 SSH 信息的书签作为可监控服务器
+  const allHosts = (store.bookmarks || []).filter(b => b.host && b.username)
+
+  const loadData = useCallback(async () => {
+    if (!allHosts.length) return
+    setLoading(true)
+    const results = await getAllServers(allHosts.map(b => b.host))
+    setServers(results.map((r, i) => ({ ...r, ...allHosts[i], key: allHosts[i].id })))
+    setLoading(false)
+  }, [allHosts])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  // Agent 部署
   const [selectOpen, setSelectOpen] = useState(false)
   const [checkedIds, setCheckedIds] = useState([])
-  const [deployOpen, setDeployOpen] = useState(false)
-  const [deploySteps, setDeploySteps] = useState([])
-  const [deployTitle, setDeployTitle] = useState('')
-  const [deployResult, setDeployResult] = useState(null)
 
-  const handleSshConnect = useCallback(
-    (server) => {
-      if (!server) return
-      const bm = (store.bookmarks || []).find(
-        (b) => b.host === (server.ipv4 || server.host) || b.nezhaServerId === server.id,
-      )
-      if (bm) {
-        store.onSelectBookmark(bm.id)
-      } else {
-        store.addTab({
-          host: server.ipv4 || server.host || '',
-          title: server.name || server.host || '快速连接',
-          type: 'ssh',
-        })
-      }
-      onClose?.()
-    },
-    [store, onClose],
-  )
-
-  const handleSelectDetail = useCallback((server) => {
-    setSelectedServer(server)
-  }, [])
-
-  // 可选的书签（有 SSH 信息且未关联哪吒的）
-  const deployableBookmarks = (store.bookmarks || []).filter(b => b.host && b.username)
-
-  const handleOpenSelect = () => {
-    setCheckedIds([])
-    setSelectOpen(true)
-  }
-
-  const handleStartDeploy = async () => {
-    const selected = deployableBookmarks.filter(b => checkedIds.includes(b.id))
-    if (!selected.length) { message.warning('请至少选择一台服务器'); return }
+  const handleDeploy = async () => {
+    const selected = allHosts.filter(b => checkedIds.includes(b.id))
+    if (!selected.length) return
     setSelectOpen(false)
-
-    // 先读 Dashboard 的 agent_secret_key（Agent 认证必需）
-    const masterBm = (store.bookmarks || []).find(b => b.id === nezhaCfg.masterBookmarkId)
-    let agentSecretKey = ''
-    if (!masterBm) {
-      message.error('未设置主控服务器，请先在设置中选择主控书签')
-      return
-    }
-    const keyResp = await window.pre.runGlobalAsync('execSshCommand', {
-      host: masterBm.host, port: masterBm.port || 22,
-      username: masterBm.username || 'root',
-      password: masterBm.password, privateKey: masterBm.privateKey,
-      command: `grep 'agent_secret_key:' /opt/nezha/dashboard/data/config.yaml | cut -d' ' -f2`,
-      timeout: 10000
-    })
-    if (!keyResp || keyResp.length < 10) {
-      message.error('无法读取 Dashboard 的 agent_secret_key，请检查主控服务器')
-      return
-    }
-    agentSecretKey = keyResp.trim()
-
-    // 逐台部署
-    let successCount = 0
-    let failCount = 0
-    const errors = []
-    for (let i = 0; i < selected.length; i++) {
-      const bm = selected[i]
+    let ok = 0, fail = 0
+    for (const bm of selected) {
       const name = bm.title || bm.host
-      setDeployTitle(`部署 Agent (${i + 1}/${selected.length}) — ${name}`)
-      setDeploySteps(getAgentSteps(name))
-      setDeployOpen(true)
-
-      const result = await deployAgent(copy(bm), nezhaCfg.dashboardUrl, setDeploySteps, agentSecretKey)
-      if (result.success) {
-        successCount++
-        if (result.logs) errors.push(`${name}: 已启动 (${result.logs})`)
-      } else {
-        failCount++
-        errors.push(`${name}: ${result.error || '未知错误'}`)
+      try {
+        const cmd = `wget -O /tmp/netdata.sh https://my-netdata.io/kickstart.sh && bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1`
+        await window.pre.runGlobalAsync('execSshCommand', {
+          host: bm.host, port: bm.port || 22,
+          username: bm.username || 'root',
+          password: bm.password, privateKey: bm.privateKey,
+          command: cmd, timeout: 180000
+        })
+        ok++
+      } catch (e) {
+        fail++
       }
     }
-
-    setDeployOpen(false)
-    setDeployResult({ successCount, failCount, details: errors })
-    const msg = `部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`
-    message.success(msg, 3)
-    setRefreshKey(k => k + 1)
+    message.success(`${ok} 台成功${fail ? `，${fail} 台失败` : ''}`, 5)
+    setTimeout(loadData, 5000)
   }
 
-  // 未配置
-  if (!nezhaCfg.dashboardUrl || !nezhaCfg.apiToken) {
+  if (!allHosts.length) {
+    return <Empty style={{ padding: 60 }} description="没有可监控的服务器，请先在书签中添加" />
+  }
+
+  if (view === 'card') {
     return (
-      <Empty style={{ padding: 60 }} description="尚未配置 XNOW 监控">
-        <Button type="primary" icon={<SettingOutlined />} onClick={() => { onClose?.(); store.openNezhaSetting() }}>
-          去配置
-        </Button>
-      </Empty>
+      <div>
+        <Toolbar hosts={allHosts} loading={loading} onRefresh={loadData}
+          onDeploy={() => { setCheckedIds([]); setSelectOpen(true) }} view={view} onViewChange={setView} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+          {servers.map(s => (
+            <div key={s.id} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ color: '#e0e0e0', fontWeight: 600 }}>{s.title || s.host}</span>
+                <Tag color={s.online ? 'green' : 'red'}>{s.online ? '在线' : '离线'}</Tag>
+              </div>
+              <div style={{ fontSize: 11, color: '#666', marginBottom: 8, fontFamily: 'monospace' }}>{s.host}</div>
+              {s.online ? (
+                <>
+                  <div style={{ fontSize: 11, color: '#999' }}>CPU: <span style={{ color: '#e0e0e0' }}>{(s.cpu || 0).toFixed(1)}%</span></div>
+                  <div style={{ fontSize: 11, color: '#999' }}>内存: <span style={{ color: '#e0e0e0' }}>{s.memory}</span></div>
+                  <div style={{ fontSize: 11, color: '#999' }}>磁盘: <span style={{ color: '#e0e0e0' }}>{s.disk}</span></div>
+                </>
+              ) : <div style={{ color: '#666', fontSize: 12 }}>未安装 Netdata</div>}
+            </div>
+          ))}
+        </div>
+        <SelectModal open={selectOpen} hosts={allHosts} checked={checkedIds}
+          onChange={setCheckedIds} onOk={handleDeploy} onCancel={() => setSelectOpen(false)} />
+      </div>
     )
   }
 
-  // 详情视图
-  if (selectedServer) {
-    return (
-      <MonitorDetail
-        server={selectedServer}
-        onBack={() => setSelectedServer(null)}
-        onSshConnect={handleSshConnect}
-      />
-    )
-  }
-
-  // 列表视图
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Space>
-          <Button icon={<CloudUploadOutlined />} onClick={handleOpenSelect}>
-            部署 Agent
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={() => { setRefreshKey(k => k + 1); message.info('已刷新') }} size="small">
-            刷新
-          </Button>
-        </Space>
-        <Segmented value={view} onChange={(v) => setView(v)} options={viewOptions} style={{ background: '#1a1a1a' }} />
-      </div>
-
-      {deployResult && (
-        <Alert
-          type={deployResult.failCount > 0 ? 'warning' : 'success'}
-          message={
-            <div>
-              <div>{deployResult.successCount} 台成功{deployResult.failCount > 0 ? `，${deployResult.failCount} 台失败` : ''}</div>
-              {deployResult.details.map((d, i) => (
-                <div key={i} style={{ fontSize: 12, marginTop: 2, color: deployResult.failCount > 0 ? '#ff4d4f' : '#52c41a', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{d}</div>
-              ))}
-            </div>
-          }
-          showIcon
-          closable
-          onClose={() => setDeployResult(null)}
-          style={{ marginBottom: 12, background: '#1a1a1a', border: `1px solid ${deployResult.failCount > 0 ? '#ff4d4f' : '#52c41a'}` }}
-        />
-      )}
-      {view === 'table' ? (
-        <MonitorTable key={`t-${refreshKey}`} onSshConnect={handleSshConnect} />
-      ) : (
-        <MonitorCards key={`c-${refreshKey}`} onSshConnect={handleSshConnect} onSelectDetail={handleSelectDetail} />
-      )}
-
-      {/* 选择服务器弹窗 */}
-      <Modal
-        title="选择要部署 Agent 的服务器"
-        open={selectOpen}
-        onOk={handleStartDeploy}
-        onCancel={() => setSelectOpen(false)}
-        okText="开始部署"
-        width={520}
-        styles={{ content: { background: '#1a1a1a', borderRadius: 8 }, header: { background: 'transparent', borderBottom: '1px solid #222' } }}
-      >
-        {deployableBookmarks.length === 0 ? (
-          <div style={{ color: '#666', padding: 40, textAlign: 'center' }}>没有可用的服务器书签，请先在书签中添加 SSH 信息</div>
-        ) : (
-          <Checkbox.Group value={checkedIds} onChange={setCheckedIds} style={{ width: '100%' }}>
-            <div style={{ display: 'grid', gap: 6 }}>
-              {deployableBookmarks.map(b => (
-                <div
-                  key={b.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '10px 12px',
-                    background: '#1f1f1f',
-                    border: '1px solid #333',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onClick={() => {
-                    setCheckedIds(prev =>
-                      prev.includes(b.id) ? prev.filter(id => id !== b.id) : [...prev, b.id]
-                    )
-                  }}
-                >
-                  <Checkbox value={b.id} checked={checkedIds.includes(b.id)} style={{ marginRight: 12 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#e0e0e0', fontWeight: 500, fontSize: 14 }}>{b.title || '未命名'}</div>
-                    <div style={{ color: '#888', fontSize: 12, fontFamily: 'monospace' }}>{b.host}</div>
-                  </div>
-                  <Tag color={b.host?.includes(':') ? 'purple' : 'blue'} style={{ marginRight: 0, fontSize: 11 }}>
-                    {b.host?.includes(':') ? 'IPv6' : b.host?.split('.').length === 4 ? 'IPv4' : '域名'}
-                  </Tag>
-                </div>
-              ))}
-            </div>
-          </Checkbox.Group>
-        )}
-      </Modal>
-
-      {/* 部署进度弹窗 */}
-      <DeployModal
-        open={deployOpen}
-        title={deployTitle || '🚀 部署 Agent'}
-        onClose={() => setDeployOpen(false)}
-        onCancel={() => setDeployOpen(false)}
-        steps={deploySteps}
-      />
+      <Toolbar hosts={allHosts} loading={loading} onRefresh={loadData}
+        onDeploy={() => { setCheckedIds([]); setSelectOpen(true) }} view={view} onViewChange={setView} />
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ color: '#888', fontSize: 11, textAlign: 'left' }}>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>状态</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>服务器</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>IP</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>CPU</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>内存</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>磁盘</th>
+            <th style={{ padding: '8px 12px', borderBottom: '1px solid #222' }}>Netdata</th>
+          </tr>
+        </thead>
+        <tbody>
+          {servers.map(s => (
+            <tr key={s.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+              <td style={{ padding: '10px 12px' }}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                  background: s.online ? '#52c41a' : '#ff4d4f' }} />
+              </td>
+              <td style={{ padding: '10px 12px', color: '#e0e0e0', fontWeight: 500 }}>{s.title || s.host}</td>
+              <td style={{ padding: '10px 12px', color: '#999', fontFamily: 'monospace', fontSize: 12 }}>{s.host}</td>
+              <td style={{ padding: '10px 12px' }}>{s.online ? `${(s.cpu || 0).toFixed(1)}%` : '--'}</td>
+              <td style={{ padding: '10px 12px' }}>{s.online ? s.memory : '--'}</td>
+              <td style={{ padding: '10px 12px' }}>{s.online ? s.disk : '--'}</td>
+              <td style={{ padding: '10px 12px' }}>
+                {s.online
+                  ? <Tag color="green">在线</Tag>
+                  : <Tag color="red">未安装</Tag>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <SelectModal open={selectOpen} hosts={allHosts} checked={checkedIds}
+        onChange={setCheckedIds} onOk={handleDeploy} onCancel={() => setSelectOpen(false)} />
     </div>
+  )
+}
+
+function Toolbar ({ hosts, loading, onRefresh, onDeploy, view, onViewChange }) {
+  return (
+    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Space>
+        <Button icon={<CloudUploadOutlined />} onClick={onDeploy}>部署 Netdata</Button>
+        <Button icon={<ReloadOutlined />} onClick={onRefresh} loading={loading}>刷新</Button>
+      </Space>
+      <Segmented value={view} onChange={onViewChange}
+        options={[{ label: <><TableOutlined /> 表格</>, value: 'table' }, { label: <><AppstoreOutlined /> 卡片</>, value: 'card' }]}
+        style={{ background: '#1a1a1a' }} />
+    </div>
+  )
+}
+
+function SelectModal ({ open, hosts, checked, onChange, onOk, onCancel }) {
+  return (
+    <Modal title="选择要部署 Netdata 的服务器" open={open} onOk={onOk} onCancel={onCancel}
+      okText="开始部署" width={520}
+      styles={{ content: { background: '#1a1a1a', borderRadius: 8 }, header: { background: 'transparent', borderBottom: '1px solid #222' } }}>
+      {hosts.map(b => (
+        <div key={b.id} onClick={() => onChange(checked.includes(b.id) ? checked.filter(id => id !== b.id) : [...checked, b.id])}
+          style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', margin: '4px 0',
+            background: '#1f1f1f', border: '1px solid #333', borderRadius: 6, cursor: 'pointer' }}>
+          <input type="checkbox" checked={checked.includes(b.id)} readOnly style={{ marginRight: 12 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#e0e0e0', fontWeight: 500 }}>{b.title || '未命名'}</div>
+            <div style={{ color: '#888', fontSize: 12, fontFamily: 'monospace' }}>{b.host}</div>
+          </div>
+        </div>
+      ))}
+    </Modal>
   )
 }
