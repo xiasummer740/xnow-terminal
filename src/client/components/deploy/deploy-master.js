@@ -74,16 +74,24 @@ export async function deployMaster (bookmark, onStepUpdate) {
       `  language: zh-CN`,
       `  timezone: Asia/Shanghai`
     ].join('\n')
-    const configCmd = `cat > /opt/nezha/dashboard/data/config.yaml << 'EOF'\n${configYaml}\nEOF`
-    await ssh(bookmark, `mkdir -p /opt/nezha/dashboard/data && ${configCmd}`, 10000)
+    const configCmd = `cat > /opt/nezha/dashboard/data/config.yaml << 'EOF'\n${configYaml}\nEOF && echo 'CONFIG_DONE'`
+    const r2 = await ssh(bookmark, `mkdir -p /opt/nezha/dashboard/data && ${configCmd}`, 10000)
+    if (!r2?.includes('CONFIG_DONE')) {
+      update(2, 'error')
+      return { success: false, error: '配置文件写入失败，请检查服务器磁盘和权限' }
+    }
     update(2, 'success')
 
     // Step 3: 创建 systemd 服务并启动
     update(3, 'running')
     const appPath = `/opt/nezha/dashboard/${binName}`
     const svc = `[Unit]\nDescription=Nezha Dashboard\nAfter=network.target\n\n[Service]\nType=simple\nWorkingDirectory=/opt/nezha/dashboard\nExecStart=${appPath}\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target`
-    const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'SERVICEEOF'\n${svc}\nSERVICEEOF\nsystemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard`
-    await ssh(bookmark, svcCmd, 15000)
+    const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'SERVICEEOF'\n${svc}\nSERVICEEOF && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo 'SVC_DONE'`
+    const r3 = await ssh(bookmark, svcCmd, 15000)
+    if (!r3?.includes('SVC_DONE')) {
+      update(3, 'error')
+      return { success: false, error: `服务启动失败:\n${r3 || '无响应'}` }
+    }
     // 开防火墙
     await ssh(bookmark, 'which ufw >/dev/null 2>&1 && ufw allow 8008/tcp 2>/dev/null; true', 5000)
     update(3, 'success')
@@ -99,40 +107,35 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(4, 'success')
 
-    // Step 5: 创建用户 + JWT 签发 Token（密码不用 bcrypt，用 JWT 绕开）
+    // Step 5: 创建用户 + JWT 签发 Token
     update(5, 'running')
     let apiToken = ''
 
-    // 读取 JWT 密钥
-    const jwtSecret = await ssh(bookmark, `grep 'jwt_secret_key:' /opt/nezha/dashboard/data/config.yaml | awk '{print $2}'`, 10000)
+    // 先读 JWT 密钥（Dashboard 正运行，配置里有密钥）
+    const jwtSecret = await ssh(bookmark, `grep 'jwt_secret_key:' /opt/nezha/dashboard/data/config.yaml | head -1 | awk -F': ' '{print $2}' | tr -d '\\n'`, 10000)
     if (!jwtSecret || jwtSecret.trim().length < 10) {
       update(5, 'error')
-      return { success: false, error: `无法读取 JWT 密钥` }
+      return { success: false, error: `无法读取 JWT 密钥 (${(jwtSecret || '空').substring(0, 30)})` }
     }
 
-    // 停止 Dashboard
-    await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
-    // 插入用户（密码任意填，因为用 JWT 不走密码校验）
+    // 停 Dashboard → 装 sqlite3 → 插入用户
+    await ssh(bookmark, 'systemctl stop nezha-dashboard', 15000)
+    await ssh(bookmark, '(apt-get install -y sqlite3 2>/dev/null || yum install -y sqlite 2>/dev/null || true)', 30000)
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath?.trim()) {
-      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (username, password, role) VALUES ('admin@xnow.tech', 'jwt_bypass', 1);" 2>&1 || echo 'SQLFAIL'`, 10000)
+      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (username,password,role) VALUES ('admin@xnow.tech','jwt_bypass',1);" 2>&1`, 10000)
     }
     // 重启 Dashboard
-    await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 3', 15000)
+    await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)
 
     // 用 JWT 密钥签发 Token
     const jwt = await window.pre.runGlobalAsync('signNezhaJwt', jwtSecret.trim())
-    if (!jwt) {
-      update(5, 'error')
-      return { success: false, error: 'JWT 签发失败' }
-    }
     const tokenResp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
     if (tokenResp) {
       try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
       if (!apiToken) {
-        // 如果失败，把完整响应返回
         update(5, 'error')
-        return { success: false, error: `创建 Token 失败，API 响应:\n${tokenResp}` }
+        return { success: false, error: `创建 Token 失败:\n${tokenResp}` }
       }
     }
 
