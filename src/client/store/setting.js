@@ -8,7 +8,6 @@ import {
   settingMap,
   settingCommonId,
   settingSyncId,
-  settingNezhaId,
   modals
 } from '../common/constants'
 import { buildNewTheme } from '../common/terminal-theme'
@@ -92,13 +91,6 @@ export default Store => {
     }
     store.settingTab = settingMap.setting
     store.setSettingItem(getInitItem([], settingMap.setting))
-    store.openSettingModal()
-  }
-
-  Store.prototype.openNezhaSetting = function () {
-    const { store } = window
-    store.settingTab = settingMap.setting
-    store.setSettingItem({ id: settingNezhaId, title: 'XNOW 监控' })
     store.openSettingModal()
   }
 

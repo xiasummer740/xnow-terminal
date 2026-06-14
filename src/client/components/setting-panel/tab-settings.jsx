@@ -7,7 +7,6 @@ import SettingAi from '../ai/ai-config'
 import SyncSetting from '../setting-sync/setting-sync'
 import Shortcuts from '../shortcuts/shortcuts'
 import SettingPasswords from './setting-passwords'
-import TabNezha from './tab-nezha'
 import List from './list'
 import {
   settingMap,
@@ -15,8 +14,7 @@ import {
   settingTerminalId,
   settingAiId,
   settingShortcutsId,
-  settingPasswordsId,
-  settingNezhaId
+  settingPasswordsId
 } from '../../common/constants'
 import { aiConfigsArr } from '../ai/ai-config-props'
 import { pick } from 'lodash-es'
@@ -76,8 +74,6 @@ export default auto(function TabSettings (props) {
       copyToClipboard: window.copyToClipboard
     }
     elem = <SettingPasswords {...passwordsProps} />
-  } else if (sid === settingNezhaId) {
-    elem = <TabNezha />
   } else {
     elem = (
       <SettingCommon

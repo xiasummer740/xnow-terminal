@@ -79,11 +79,6 @@ export default {
   startDirectoryLocal: '',
   allowMultiInstance: false,
   disableDeveloperTool: false,
-  dragDropBehavior: 'ask',
-  // 哪吒监控配置
-  nezha: {
-    dashboardUrl: '',
-    apiToken: '',
-    masterBookmarkId: ''
+  dragDropBehavior: 'ask'
   }
 }
