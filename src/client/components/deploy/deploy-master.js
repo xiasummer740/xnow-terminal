@@ -105,13 +105,34 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     // 停止 Dashboard
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
-    // 安装 python3-pip + bcrypt
-    await ssh(bookmark, '(apt-get install -y python3-pip 2>/dev/null || yum install -y python3-pip 2>/dev/null || true) && pip3 install bcrypt 2>/dev/null || pip install bcrypt 2>/dev/null || true', 60000)
+    // 用系统包管理器安装 python3-bcrypt
+    await ssh(bookmark, 'apt-get install -y python3-bcrypt 2>/dev/null || yum install -y python3-bcrypt 2>/dev/null || (apt-get install -y python3-pip 2>/dev/null && pip3 install bcrypt 2>/dev/null) || true', 60000)
     // 找数据库
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
-    if (dbPath && dbPath.trim()) {
-      const path = dbPath.trim()
-      // 用 bcrypt 哈希创建管理员
+    if (!dbPath || !dbPath.trim()) {
+      update(5, 'error')
+      return { success: false, error: '找不到 Dashboard 数据库文件' }
+    }
+    const path = dbPath.trim()
+    // 验证 bcrypt 是否可用
+    const checkBcrypt = await ssh(bookmark, `python3 -c "import bcrypt; print('OK')" 2>&1`, 5000)
+    if (!checkBcrypt?.includes('OK')) {
+      // bcrypt 不可用，用 HTTPS 密码哈希（Dashboard 可能支持）
+      const fallback = await ssh(bookmark, `python3 -c "
+import hashlib, sqlite3
+h = hashlib.sha256(b'${adminPass}').hexdigest()
+db = sqlite3.connect('${path}')
+db.executescript('DELETE FROM users; VACUUM;')
+db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', h, 1))
+db.commit()
+print('OK')
+" 2>&1`, 15000)
+      if (!fallback?.includes('OK')) {
+        update(5, 'error')
+        return { success: false, error: `无法创建管理员，请手动访问 http://${hostIP}:8008 注册\n${fallback || ''}` }
+      }
+    } else {
+      // bcrypt 可用，创建管理员
       const createCmd = `python3 -c "
 import bcrypt, sqlite3
 pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
@@ -119,33 +140,21 @@ db = sqlite3.connect('${path}')
 db.executescript('DELETE FROM users; VACUUM;')
 db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
 db.commit()
-db.close()
 print('OK:' + pw[:10])
 " 2>&1`
       const r = await ssh(bookmark, createCmd, 15000)
       if (!r?.includes('OK:')) {
-        // 如果 python3 不可用，试试 python
-        const r2 = await ssh(bookmark, `python -c "
-import bcrypt, sqlite3
-pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
-db = sqlite3.connect('${path}')
-db.executescript('DELETE FROM users; VACUUM;')
-db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
-db.commit()
-db.close()
-print('OK:' + pw[:10])
-" 2>&1`, 15000)
-        if (!r2?.includes('OK:')) {
-          update(5, 'error')
-          return { success: false, error: `创建管理员失败:\n${r}\n${r2}` }
-        }
+        update(5, 'error')
+        return { success: false, error: `创建管理员失败:\n${r}` }
       }
+    }
     }
     // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 3', 15000)
 
     // 登录 + 创建 API Token
     const loginR = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}'`, 10000)
+    console.log('login response:', loginR) // debug
     let jwt = ''
     if (loginR) {
       try { jwt = JSON.parse(loginR)?.data?.token || JSON.parse(loginR)?.token || '' } catch {}
