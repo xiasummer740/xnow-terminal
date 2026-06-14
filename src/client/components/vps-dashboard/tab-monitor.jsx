@@ -101,6 +101,7 @@ export default function TabMonitor({ onClose }) {
       const result = await deployAgent(copy(bm), nezhaCfg.dashboardUrl, setDeploySteps, agentSecretKey)
       if (result.success) {
         successCount++
+        if (result.logs) errors.push(`${name}: 已启动 (${result.logs})`)
       } else {
         failCount++
         errors.push(`${name}: ${result.error || '未知错误'}`)
