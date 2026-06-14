@@ -1,18 +1,13 @@
 /**
- * VPS 监控看板 — 双页签：订阅信息 | 实时监控
+ * VPS 看板 — 订阅信息
  */
-import { useState } from 'react'
-import { Modal, Tabs } from 'antd'
+import { Modal } from 'antd'
 import {
-  ThunderboltOutlined,
-  DashboardOutlined
+  ThunderboltOutlined
 } from '@ant-design/icons'
 import VpsDashboardSubscription from './vps-dashboard-subscription'
-import TabMonitor from './tab-monitor'
 
 export default function VpsDashboard ({ visible, onClose }) {
-  const [activeTab, setActiveTab] = useState('subscription')
-
   return (
     <Modal
       title={
@@ -22,24 +17,9 @@ export default function VpsDashboard ({ visible, onClose }) {
         </span>
       }
       open={visible} onCancel={onClose} footer={null}
-      width={1024} className='vps-dashboard-modal' destroyOnClose
+      width={960} className='vps-dashboard-modal' destroyOnClose
     >
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: 'subscription',
-            label: <span><ThunderboltOutlined /> 订阅信息</span>,
-            children: <VpsDashboardSubscription onClose={onClose} />
-          },
-          {
-            key: 'monitor',
-            label: <span><DashboardOutlined /> 实时监控</span>,
-            children: <TabMonitor onClose={onClose} />
-          }
-        ]}
-      />
+      <VpsDashboardSubscription onClose={onClose} />
     </Modal>
   )
 }
