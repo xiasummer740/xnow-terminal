@@ -52,30 +52,24 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     // Step 1: 下载并安装 Dashboard
     update(1, 'running')
-    const installCmd = [
-      'mkdir -p /opt/nezha/dashboard',
-      'curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip',
-      'unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/',
-      'chmod +x /opt/nezha/dashboard/app',
-      'rm -f /tmp/nezha-dash.zip'
-    ].join(' && ')
+    const installCmd = 'mkdir -p /opt/nezha/dashboard && curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip && unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && ls -la /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/dashboard* /opt/nezha/dashboard/nezha* 2>/dev/null; true'
     const r1 = await ssh(bookmark, installCmd, 120000)
-    if (!r1 || r1.includes('Error') || r1.includes('error') || r1.includes('failed')) {
-      // 可能 amd64 不对，试试 x86_64
-      const installCmd2 = [
-        'mkdir -p /opt/nezha/dashboard',
-        'curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip 2>&1 || curl -sL "https://github.com/nezhahq/nezha/releases/download/v2.2.3/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip 2>&1',
-        'unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ 2>&1',
-        'chmod +x /opt/nezha/dashboard/app',
-        'rm -f /tmp/nezha-dash.zip'
-      ].join(' && ')
-      const r2 = await ssh(bookmark, installCmd2, 120000)
-      if (!r2 || r2.includes('Error') || r2.includes(' error')) {
-        update(1, 'error')
-        return { success: false, error: `下载安装失败:\n${(r1 || '')}\n${(r2 || '')}` }
-      }
+    if (!r1 || r1.includes('Error') || r1.includes('error')) {
+      update(1, 'error')
+      return { success: false, error: `下载安装失败:\n${r1 || ''}` }
     }
     update(1, 'success')
+
+    // 找到实际的可执行文件名
+    const listCmd = 'ls /opt/nezha/dashboard/ -la 2>/dev/null'
+    const fileList = await ssh(bookmark, listCmd, 5000)
+    // 猜测可执行文件名
+    const binaryNames = ['dashboard-linux-amd64', 'nezha-dashboard', 'dashboard', 'app', 'nezha']
+    let binName = ''
+    for (const name of binaryNames) {
+      if (fileList?.includes(name)) { binName = name; break }
+    }
+    if (!binName) binName = 'dashboard-linux-amd64'
 
     // Step 2: 创建配置文件
     update(2, 'running')
@@ -94,22 +88,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     // Step 3: 创建 systemd 服务并启动
     update(3, 'running')
-    const svc = [
-      '[Unit]',
-      'Description=Nezha Dashboard',
-      'After=network.target',
-      '',
-      '[Service]',
-      'Type=simple',
-      'WorkingDirectory=/opt/nezha/dashboard',
-      'ExecStart=/opt/nezha/dashboard/app',
-      'Restart=always',
-      'RestartSec=5',
-      '',
-      '[Install]',
-      'WantedBy=multi-user.target'
-    ].join('\n')
-    const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'EOF'\n${svc}\nEOF && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard`
+    const appPath = `/opt/nezha/dashboard/${binName}`
+    const svc = `[Unit]\nDescription=Nezha Dashboard\nAfter=network.target\n\n[Service]\nType=simple\nWorkingDirectory=/opt/nezha/dashboard\nExecStart=${appPath}\nRestart=always\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target`
+    const svcCmd = `cat > /etc/systemd/system/nezha-dashboard.service << 'SERVICEEOF'\n${svc}\nSERVICEEOF\nsystemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard`
     await ssh(bookmark, svcCmd, 15000)
     // 开防火墙
     await ssh(bookmark, 'which ufw >/dev/null 2>&1 && ufw allow 8008/tcp 2>/dev/null; true', 5000)
