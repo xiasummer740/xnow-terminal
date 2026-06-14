@@ -122,19 +122,20 @@ export async function deployMaster (bookmark, onStepUpdate) {
     update(5, 'running')
     let apiToken = ''
 
-    // 在 Node.js 后端生成 bcrypt 哈希
+    // 在 Node.js 后端生成 bcrypt 哈希（需要转义 $ 防止 shell 解释）
     const hashedPass = await window.pre.runGlobalAsync('hashBcrypt', adminPass)
     if (!hashedPass) {
       update(5, 'error')
       return { success: false, error: '密码哈希生成失败' }
     }
+    const escapedHash = hashedPass.replace(/\$/g, '\\$')
 
     // 停 Dashboard → 装 sqlite3 → 插入用户（带 bcrypt 密码）
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 15000)
     await ssh(bookmark, '(apt-get install -y sqlite3 2>/dev/null || yum install -y sqlite 2>/dev/null || true)', 30000)
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath?.trim()) {
-      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'${adminEmail}','${hashedPass}',1,0);" 2>&1`, 10000)
+      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'${adminEmail}','${escapedHash}',1,0);" 2>&1`, 10000)
     }
     // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)
