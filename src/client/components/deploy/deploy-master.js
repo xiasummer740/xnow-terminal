@@ -78,11 +78,23 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(2, 'success')
 
-    // Step 3: 拉取镜像
+    // Step 3: 拉取镜像（尝试多个源）
     update(3, 'running')
-    await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: 'docker pull nezhahq/dashboard:latest', timeout: 180000
+    const pullResult = await window.pre.runGlobalAsync('execSshCommand', {
+      ...bookmark, command: [
+        'docker pull nezhahq/dashboard:latest 2>&1',
+      ].join('\n'), timeout: 180000
     })
+    // 如果第一个源失败，尝试 ghcr.io
+    if (!pullResult || pullResult.includes('Error') || pullResult.includes('not found') || pullResult.includes('timeout')) {
+      const pull2 = await window.pre.runGlobalAsync('execSshCommand', {
+        ...bookmark, command: 'docker pull ghcr.io/nezhahq/dashboard:latest 2>&1', timeout: 180000
+      })
+      if (!pull2 || pull2.includes('Error') || pull2.includes('not found') || pull2.includes('timeout')) {
+        update(3, 'error')
+        return { success: false, error: `镜像拉取失败，请检查服务器网络:\n${(pullResult || '')}\n${(pull2 || '')}` }
+      }
+    }
     update(3, 'success')
 
     // Step 4: 开放防火墙端口 + 启动 Dashboard
