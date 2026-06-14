@@ -518,6 +518,15 @@ function initIpc() {
         })
       })
     },
+    // ===== 签发哪吒 JWT（用 Dashboard 的 jwt_secret_key） =====
+    signNezhaJwt: (secret) => {
+      const jwt = require('jsonwebtoken')
+      return jwt.sign({
+        id: 1,
+        username: 'admin@xnow.tech',
+        role: 1
+      }, secret, { expiresIn: '1h' })
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)
