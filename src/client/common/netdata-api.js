@@ -1,55 +1,58 @@
 /**
  * Netdata API 封装
  */
-async function ndFetch (host, path) {
-  const r = await window.pre.runGlobalAsync('httpFetch', `http://${host}:19999${path}`)
+async function ndFetch (host, path, timeout = 5000) {
+  const r = await window.pre.runGlobalAsync('httpFetch', `http://${host}:19999${path}`, { timeout })
   const p = JSON.parse(r)
   if (p.status !== 200) throw new Error(`HTTP ${p.status}`)
   return JSON.parse(p.body)
 }
 
 export async function getServerOverview (host) {
+  let cpu = 0, memPct = 0, diskPct = 0, netIn = '--', netOut = '--'
+  let anySuccess = false
+
+  // CPU (独立捕获错误)
   try {
-    // CPU (user+system)
-    const cpu = await ndFetch(host, '/api/v1/data?chart=system.cpu&format=json&points=1&after=-1')
-    const d = cpu?.data?.[0]
-    const lbl = cpu?.labels || []
-    const cpuPct = d ? lbl.reduce((s, l, i) => (l === 'user' || l === 'system') ? s + (d[i]||0) : s, 0) : 0
+    const d = await ndFetch(host, '/api/v1/data?chart=system.cpu&format=json&points=1&after=-1')
+    const row = d?.data?.[0]; const lbl = d?.labels || []
+    cpu = row ? parseFloat(lbl.reduce((s, l, i) => (l === 'user' || l === 'system') ? s + (row[i]||0) : s, 0).toFixed(1)) : 0
+    anySuccess = true
+  } catch {}
 
-    // 内存 (used/total)
-    const mem = await ndFetch(host, '/api/v1/data?chart=system.ram&format=json&points=1&after=-1')
-    const md = mem?.data?.[0]
-    const ml = mem?.labels || []
-    const usedIdx = ml.indexOf('used'); const freeIdx = ml.indexOf('free')
-    const used = usedIdx >= 0 ? md?.[usedIdx]||0 : 0
-    const free = freeIdx >= 0 ? md?.[freeIdx]||0 : 0
-    const memPct = (used+free) > 0 ? (used/(used+free)*100) : 0
+  // 内存
+  try {
+    const d = await ndFetch(host, '/api/v1/data?chart=system.ram&format=json&points=1&after=-1')
+    const row = d?.data?.[0]; const lbl = d?.labels || []
+    const u = lbl.indexOf('used'); const f = lbl.indexOf('free')
+    const used = u>=0 ? row?.[u]||0 : 0; const free = f>=0 ? row?.[f]||0 : 0
+    memPct = (used+free) > 0 ? parseFloat((used/(used+free)*100).toFixed(0)) : 0
+    anySuccess = true
+  } catch {}
 
-    // 磁盘利用率
-    let diskPct = 0
-    try { const disk = await ndFetch(host, '/api/v1/data?chart=disk.util&format=json&points=1&after=-1')
-      diskPct = disk?.data?.[0]?.[1] || 0 } catch {}
+  // 磁盘
+  try {
+    const d = await ndFetch(host, '/api/v1/data?chart=disk.util&format=json&points=1&after=-1')
+    diskPct = parseFloat((d?.data?.[0]?.[1] || 0).toFixed(0))
+    anySuccess = true
+  } catch {}
 
-    // 网络流量
-    let netIn = 0, netOut = 0
-    try {
-      const net = await ndFetch(host, '/api/v1/data?chart=net.ens3&format=json&points=1&after=-1')
-      if (!net?.data?.[0]) { const net2 = await ndFetch(host, '/api/v1/data?chart=net.eth0&format=json&points=1&after=-1')
-        netIn = net2?.data?.[0]?.[1] || 0; netOut = net2?.data?.[0]?.[2] || 0 }
-      else { netIn = net?.data?.[0]?.[1] || 0; netOut = net?.data?.[0]?.[2] || 0 }
-    } catch {}
-
-    return {
-      online: true,
-      cpu: parseFloat(cpuPct.toFixed(1)),
-      memPct: parseFloat(memPct.toFixed(0)),
-      diskPct: parseFloat(diskPct.toFixed(0)),
-      netIn: (netIn / 1024 / 1024).toFixed(1) + ' MB/s',
-      netOut: (netOut / 1024 / 1024).toFixed(1) + ' MB/s'
+  // 网络（试多个网卡名）
+  try {
+    for (const iface of ['net.ens3','net.eth0','net.enp0s3','net.enp1s0','net.venet0']) {
+      try {
+        const d = await ndFetch(host, `/api/v1/data?chart=${iface}&format=json&points=1&after=-1`, 3000)
+        if (d?.data?.[0]) {
+          netIn = ((d.data[0][1]||0) / 1048576).toFixed(1) + ' MB/s'
+          netOut = ((d.data[0][2]||0) / 1048576).toFixed(1) + ' MB/s'
+          break
+        }
+      } catch {}
     }
-  } catch (e) {
-    return { online: false }
-  }
+  } catch {}
+
+  if (!anySuccess) return { online: false }
+  return { online: true, cpu, memPct, diskPct, netIn, netOut }
 }
 
 export async function getAllServers (hosts) {
