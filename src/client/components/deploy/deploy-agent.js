@@ -1,33 +1,33 @@
 /**
  * 哪吒 Agent 批量部署
- * 为多台服务器并行安装 Agent
+ * 直接下载二进制 + 配置 systemd 服务，不跑交互脚本
  */
 import { createSteps, updateStep } from './deploy-modal'
 
 const AGENT_STEPS = [
   'SSH 连接服务器...',
-  '检测系统版本...',
-  '下载安装 Agent 脚本...',
+  '下载并安装 Agent...',
   '配置连接主控...',
   '启动 Agent 服务...'
 ]
 
-/**
- * 获取单台 Agent 部署步骤
- * @param {string} serverName
- */
 export function getAgentSteps (serverName) {
   return createSteps(AGENT_STEPS.map(s => s.replace('服务器', serverName)))
 }
 
+async function ssh (bookmark, cmd, timeout = 30000) {
+  return window.pre.runGlobalAsync('execSshCommand', {
+    host: bookmark.host, port: bookmark.port || 22,
+    username: bookmark.username || 'root',
+    password: bookmark.password, privateKey: bookmark.privateKey,
+    command: cmd, timeout
+  })
+}
+
 /**
  * 部署 Agent 到单台服务器
- * @param {object} bookmark - 书签对象
- * @param {string} dashboardUrl - 主控 Dashboard 地址
- * @param {function} onStepUpdate - (steps) => void
- * @returns {Promise<{success: boolean, server?: string, error?: string}>}
  */
-export async function deployAgent (bookmark, dashboardUrl, onStepUpdate) {
+export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSecretKey) {
   const name = bookmark.title || bookmark.host
   const steps = getAgentSteps(name)
   let currentSteps = [...steps]
@@ -37,59 +37,54 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate) {
   }
 
   try {
-    // Step 0: SSH 连接
+    // Step 0: SSH
     update(0, 'running')
-    const checkCmd = `echo "SSH_OK" && (command -v apt && echo "APT" || command -v yum && echo "YUM" || echo "OTHER")`
-    const result = await window.pre.runGlobalAsync('execSshCommand', {
-      host: bookmark.host,
-      port: bookmark.port || 22,
-      username: bookmark.username || 'root',
-      password: bookmark.password,
-      privateKey: bookmark.privateKey,
-      command: checkCmd
-    })
-    if (!result || !result.includes('SSH_OK')) {
-      update(0, 'error')
-      return { success: false, server: name, error: 'SSH 连接失败' }
-    }
+    const r0 = await ssh(bookmark, 'echo "SSH_OK" && uname -m', 10000)
+    if (!r0?.includes('SSH_OK')) { update(0, 'error'); return { success: false, server: name, error: 'SSH 连接失败' } }
     update(0, 'success')
 
-    // Step 1: 系统检测
+    // Step 1: 下载 Agent 二进制
     update(1, 'running')
+    const dlUrl = 'https://github.com/nezhahq/nezha/releases/latest/download/agent-linux-amd64.zip'
+    const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "${dlUrl}" -o /tmp/nezha-agent.zip && mkdir -p /opt/nezha/agent && unzip -jo /tmp/nezha-agent.zip -d /opt/nezha/agent/ && chmod +x /opt/nezha/agent/* && rm -f /tmp/nezha-agent.zip && echo "DONE" || echo "FAILED"`
+    const r1 = await ssh(bookmark, installCmd, 120000)
+    if (!r1?.includes('DONE')) { update(1, 'error'); return { success: false, server: name, error: 'Agent 下载失败' } }
+    const binName = await ssh(bookmark, `ls /opt/nezha/agent/*-linux-* /opt/nezha/agent/nezha* 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo 'agent'`, 5000)
     update(1, 'success')
 
-    // Step 2: 安装 Agent — 使用哪吒官方脚本
+    // Step 2: 配置连接主控
     update(2, 'running')
     const serverAddr = dashboardUrl.replace(/^https?:\/\//, '')
-    const installCmd = [
-      'curl -sL https://raw.githubusercontent.com/nezhahq/scripts/main/install.sh -o /tmp/nezha-agent.sh',
-      'chmod +x /tmp/nezha-agent.sh',
-      `bash /tmp/nezha-agent.sh --agent-key "${serverAddr.split(':')[0]}" --server "${serverAddr}" 2>&1 || true`
-    ].join(' && ')
-
-    await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: installCmd, timeout: 180000
-    })
+    const agentKey = agentSecretKey || name
+    const svcContent = [
+      '[Unit]', 'Description=Nezha Agent', 'After=network.target', '',
+      '[Service]', 'Type=simple', 'WorkingDirectory=/opt/nezha/agent',
+      `ExecStart=/opt/nezha/agent/${binName.trim()} -s "${serverAddr}" -k "${agentKey}"`,
+      'Restart=always', 'RestartSec=5', '',
+      '[Install]', 'WantedBy=multi-user.target'
+    ].join('\n')
+    const cfgCmd = `rm -f /etc/systemd/system/nezha-agent.service && printf '%s\\n' '${svcContent}' > /etc/systemd/system/nezha-agent.service && echo "CFG_DONE" || echo "CFG_FAIL"`
+    const r2 = await ssh(bookmark, cfgCmd, 10000)
+    if (!r2?.includes('CFG_DONE')) { update(2, 'error'); return { success: false, server: name, error: '配置写入失败' } }
     update(2, 'success')
 
-    // Step 3-4: 配置并启动
+    // Step 3: 启动服务
     update(3, 'running')
+    const startCmd = `systemctl daemon-reload && systemctl enable nezha-agent && systemctl restart nezha-agent && sleep 2 && echo "SVC_DONE" || echo "SVC_FAIL"`
+    const r3 = await ssh(bookmark, startCmd, 15000)
+    if (!r3?.includes('SVC_DONE')) { update(3, 'error'); return { success: false, server: name, error: 'Agent 启动失败' } }
     update(3, 'success')
-    update(4, 'success')
 
     return { success: true, server: name }
   } catch (e) {
-    const runningIdx = currentSteps.findIndex(s => s.status === 'running')
-    if (runningIdx >= 0) update(runningIdx, 'error')
+    const idx = currentSteps.findIndex(s => s.status === 'running')
+    if (idx >= 0) update(idx, 'error')
     return { success: false, server: name, error: e.message }
   }
 }
 
 /**
  * 批量部署多台服务器
- * @param {object[]} bookmarks - 书签列表
- * @param {string} dashboardUrl
- * @param {function} onProgress - (current, total, result) => void
  */
 export async function deployAgentsBatch (bookmarks, dashboardUrl, onProgress) {
   const results = []

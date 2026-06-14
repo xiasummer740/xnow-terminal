@@ -2,7 +2,7 @@
  * 实时监控页签 — 三种视图切换 + 批量部署 Agent
  */
 import { useState, useCallback } from 'react'
-import { Segmented, Empty, Button, Modal, Checkbox, message, Tag } from 'antd'
+import { Segmented, Empty, Button, Modal, Checkbox, message, Space, Tag } from 'antd'
 import { TableOutlined, AppstoreOutlined, SettingOutlined, CloudUploadOutlined, ReloadOutlined } from '@ant-design/icons'
 import MonitorTable from './monitor-table'
 import MonitorCards from './monitor-cards'
@@ -67,6 +67,20 @@ export default function TabMonitor({ onClose }) {
     if (!selected.length) { message.warning('请至少选择一台服务器'); return }
     setSelectOpen(false)
 
+    // 先读 Dashboard 的 agent_secret_key（通过主控机 SSH）
+    const masterBm = (store.bookmarks || []).find(b => b.id === nezhaCfg.masterBookmarkId)
+    let agentSecretKey = ''
+    if (masterBm) {
+      const keyResp = await window.pre.runGlobalAsync('execSshCommand', {
+        host: masterBm.host, port: masterBm.port || 22,
+        username: masterBm.username || 'root',
+        password: masterBm.password, privateKey: masterBm.privateKey,
+        command: `grep 'agent_secret_key:' /opt/nezha/dashboard/data/config.yaml | cut -d' ' -f2`,
+        timeout: 10000
+      })
+      if (keyResp && keyResp.length > 10) agentSecretKey = keyResp.trim()
+    }
+
     // 逐台部署
     let successCount = 0
     let failCount = 0
@@ -77,7 +91,7 @@ export default function TabMonitor({ onClose }) {
       setDeploySteps(getAgentSteps(name))
       setDeployOpen(true)
 
-      const result = await deployAgent(copy(bm), nezhaCfg.dashboardUrl, setDeploySteps)
+      const result = await deployAgent(copy(bm), nezhaCfg.dashboardUrl, setDeploySteps, agentSecretKey)
       if (result.success) {
         successCount++
       } else {
@@ -87,7 +101,6 @@ export default function TabMonitor({ onClose }) {
 
     setDeployOpen(false)
     message.success(`部署完成：${successCount} 台成功${failCount ? `，${failCount} 台失败` : ''}`)
-    // 刷新监控数据
     setRefreshKey(k => k + 1)
   }
 
