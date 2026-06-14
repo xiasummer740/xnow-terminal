@@ -52,24 +52,31 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     // Step 1: 下载并安装 Dashboard
     update(1, 'running')
-    const installCmd = 'mkdir -p /opt/nezha/dashboard && curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip && unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && ls -la /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/dashboard* /opt/nezha/dashboard/nezha* 2>/dev/null; true'
+    // 先查看 zip 结构再解压
+    const installCmd = 'mkdir -p /opt/nezha/dashboard && curl -sL "https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip" -o /tmp/nezha-dash.zip 2>&1 && unzip -l /tmp/nezha-dash.zip 2>&1 | head -20 && unzip -qo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ 2>&1 && find /opt/nezha/dashboard/ -type f -executable 2>/dev/null && chmod +x /opt/nezha/dashboard/* 2>/dev/null; true'
     const r1 = await ssh(bookmark, installCmd, 120000)
-    if (!r1 || r1.includes('Error') || r1.includes('error')) {
-      update(1, 'error')
-      return { success: false, error: `下载安装失败:\n${r1 || ''}` }
-    }
-    update(1, 'success')
+    // 列出所有文件排查
+    const fileList = await ssh(bookmark, 'find /opt/nezha/dashboard/ -type f 2>/dev/null', 5000)
 
-    // 找到实际的可执行文件名
-    const listCmd = 'ls /opt/nezha/dashboard/ -la 2>/dev/null'
-    const fileList = await ssh(bookmark, listCmd, 5000)
-    // 猜测可执行文件名
-    const binaryNames = ['dashboard-linux-amd64', 'nezha-dashboard', 'dashboard', 'app', 'nezha']
+    // 找可执行文件
+    const exeCheck = await ssh(bookmark, 'find /opt/nezha/dashboard/ -type f -executable 2>/dev/null | head -5', 5000)
     let binName = ''
-    for (const name of binaryNames) {
-      if (fileList?.includes(name)) { binName = name; break }
+    if (exeCheck) {
+      for (const line of exeCheck.split('\n')) {
+        const name = line.trim().split('/').pop()
+        if (name) { binName = name; break }
+      }
     }
-    if (!binName) binName = 'dashboard-linux-amd64'
+    if (!binName && fileList) {
+      // 按优先级找可能的二进制名
+      for (const name of ['dashboard-linux-amd64', 'dashboard', 'nezha-dashboard', 'nezha', 'app']) {
+        if (fileList.includes(name)) { binName = name; break }
+      }
+    }
+    if (!binName) {
+      update(1, 'error')
+      return { success: false, error: `无法找到可执行文件，目录内容:\n${fileList || '空目录'}\n\n下载输出:\n${r1 || ''}` }
+    }
 
     // Step 2: 创建配置文件
     update(2, 'running')
