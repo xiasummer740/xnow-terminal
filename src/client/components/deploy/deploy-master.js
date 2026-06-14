@@ -99,18 +99,61 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(4, 'success')
 
-    // Step 5: 清理旧用户，让用户通过网页注册
+    // Step 5: 通过 SSH 安装 bcrypt 并创建管理员 + API Token
     update(5, 'running')
     let apiToken = ''
-    // 停止 Dashboard，删除数据库中的用户记录
+
+    // 停止 Dashboard
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
+    // 安装 python3-pip + bcrypt
+    await ssh(bookmark, '(apt-get install -y python3-pip 2>/dev/null || yum install -y python3-pip 2>/dev/null || true) && pip3 install bcrypt 2>/dev/null || pip install bcrypt 2>/dev/null || true', 60000)
+    // 找数据库
     const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
     if (dbPath && dbPath.trim()) {
-      // 直接删除数据库文件（让 Dashboard 重建）
-      await ssh(bookmark, `rm -f "${dbPath.trim()}" && rm -f "${dbPath.trim()}-wal" "${dbPath.trim()}-shm" 2>/dev/null; true`, 5000)
+      const path = dbPath.trim()
+      // 用 bcrypt 哈希创建管理员
+      const createCmd = `python3 -c "
+import bcrypt, sqlite3
+pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
+db = sqlite3.connect('${path}')
+db.executescript('DELETE FROM users; VACUUM;')
+db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
+db.commit()
+db.close()
+print('OK:' + pw[:10])
+" 2>&1`
+      const r = await ssh(bookmark, createCmd, 15000)
+      if (!r?.includes('OK:')) {
+        // 如果 python3 不可用，试试 python
+        const r2 = await ssh(bookmark, `python -c "
+import bcrypt, sqlite3
+pw = bcrypt.hashpw(b'${adminPass}', bcrypt.gensalt()).decode()
+db = sqlite3.connect('${path}')
+db.executescript('DELETE FROM users; VACUUM;')
+db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('${adminEmail}', pw, 1))
+db.commit()
+db.close()
+print('OK:' + pw[:10])
+" 2>&1`, 15000)
+        if (!r2?.includes('OK:')) {
+          update(5, 'error')
+          return { success: false, error: `创建管理员失败:\n${r}\n${r2}` }
+        }
+      }
     }
-    // 重启 Dashboard（自动重建数据库）
+    // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 3', 15000)
+
+    // 登录 + 创建 API Token
+    const loginR = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}'`, 10000)
+    let jwt = ''
+    if (loginR) {
+      try { jwt = JSON.parse(loginR)?.data?.token || JSON.parse(loginR)?.token || '' } catch {}
+    }
+    if (jwt) {
+      const tr = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
+      if (tr) try { apiToken = JSON.parse(tr)?.data?.token || '' } catch {}
+    }
     update(5, 'success')
 
     // Step 6: 完成
