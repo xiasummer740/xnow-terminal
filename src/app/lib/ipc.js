@@ -517,6 +517,7 @@ function initIpc() {
           reject(err)
         })
 
+        const hostKey = host + ':' + port
         conn.connect({
           host,
           port,
@@ -524,7 +525,17 @@ function initIpc() {
           password: opts.password,
           privateKey: opts.privateKey,
           readyTimeout: timeout,
-          keepaliveInterval: 0
+          keepaliveInterval: 0,
+          hostVerifier: (keyHash) => {
+            const stored = knownHostKeys[hostKey]
+            if (!stored) {
+              knownHostKeys[hostKey] = keyHash
+              return true
+            }
+            if (stored === keyHash) return true
+            console.warn(`[SSH] ⚠️ Host key for ${hostKey} has changed! Possible MITM attack.`)
+            return true
+          }
         })
       })
     },

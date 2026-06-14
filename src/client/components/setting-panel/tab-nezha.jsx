@@ -105,7 +105,7 @@ export default function TabNezha() {
         `ls -la /opt/nezha/dashboard/ 2>/dev/null || echo '目录不存在'`,
         `echo ''`,
         `echo '=== Dashboard 程序 ==='`,
-        `ls -la /opt/nezha/dashboard/app 2>/dev/null && /opt/nezha/dashboard/app --version 2>&1 || echo '程序不存在或不可执行'`,
+        `ls -la /opt/nezha/dashboard/dashboard-* /opt/nezha/dashboard/nezha* 2>/dev/null || echo '程序不存在或不可执行'`,
         `echo ''`,
         `echo '=== 配置文件 ==='`,
         `cat /opt/nezha/dashboard/data/config.yaml 2>/dev/null || echo '配置文件不存在'`,
@@ -159,7 +159,7 @@ export default function TabNezha() {
           一键部署主控
         </Button>
         <div style={{ color: '#666', fontSize: 11, marginTop: 6 }}>
-          将在选择的服务器上自动安装 Docker + 监控 Dashboard，完成后自动回填配置
+          将在选择的服务器上自动安装 XNOW 监控 Dashboard，完成后自动回填配置
         </div>
       </div>
 
