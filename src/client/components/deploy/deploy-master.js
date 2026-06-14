@@ -59,7 +59,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
       update(1, 'error')
       return { success: false, error: `下载安装失败:\n${r1 || '无响应'}` }
     }
-    const binName = 'dashboard'
+    // 自动检测实际二进制文件名
+    const listOut = await ssh(bookmark, 'ls /opt/nezha/dashboard/*-linux-* /opt/nezha/dashboard/nezha* /opt/nezha/dashboard/dashboard 2>/dev/null | head -1', 5000)
+    const binName = (listOut || 'dashboard').trim().split('/').pop() || 'dashboard'
 
     // Step 2: 创建配置文件
     update(2, 'running')
