@@ -99,29 +99,41 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(4, 'success')
 
-    // Step 5: 用 JWT 密钥直接签发 Token（不创建用户，绕过 bcrypt）
+    // Step 5: 创建用户 + JWT 签发 Token（密码不用 bcrypt，用 JWT 绕开）
     update(5, 'running')
     let apiToken = ''
 
-    // 从 Dashboard 配置中读取 jwt_secret_key
+    // 读取 JWT 密钥
     const jwtSecret = await ssh(bookmark, `grep 'jwt_secret_key:' /opt/nezha/dashboard/data/config.yaml | awk '{print $2}'`, 10000)
     if (!jwtSecret || jwtSecret.trim().length < 10) {
       update(5, 'error')
-      return { success: false, error: `无法读取 JWT 密钥: ${jwtSecret || '空'}` }
+      return { success: false, error: `无法读取 JWT 密钥` }
     }
-    const secret = jwtSecret.trim()
 
-    // 在 Node.js 后端签发 JWT
-    const jwt = await window.pre.runGlobalAsync('signNezhaJwt', secret)
+    // 停止 Dashboard
+    await ssh(bookmark, 'systemctl stop nezha-dashboard', 10000)
+    // 插入用户（密码任意填，因为用 JWT 不走密码校验）
+    const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
+    if (dbPath?.trim()) {
+      await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (username, password, role) VALUES ('admin@xnow.tech', 'jwt_bypass', 1);" 2>&1 || echo 'SQLFAIL'`, 10000)
+    }
+    // 重启 Dashboard
+    await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 3', 15000)
+
+    // 用 JWT 密钥签发 Token
+    const jwt = await window.pre.runGlobalAsync('signNezhaJwt', jwtSecret.trim())
     if (!jwt) {
       update(5, 'error')
       return { success: false, error: 'JWT 签发失败' }
     }
-
-    // 用 JWT 创建 API Token
     const tokenResp = await ssh(bookmark, `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Authorization: Bearer ${jwt}' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`, 10000)
     if (tokenResp) {
       try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
+      if (!apiToken) {
+        // 如果失败，把完整响应返回
+        update(5, 'error')
+        return { success: false, error: `创建 Token 失败，API 响应:\n${tokenResp}` }
+      }
     }
 
     // Step 6: 完成
