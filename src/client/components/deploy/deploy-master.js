@@ -130,15 +130,14 @@ export async function deployMaster (bookmark, onStepUpdate) {
     update(5, 'running')
     let apiToken = ''
 
-    // 读 JWT 密钥（Dashboard 已运行，密钥应已写入配置）
-    let jwtSecret = await ssh(bookmark, `sed -n 's/^jwt_secret_key: //p' /opt/nezha/dashboard/data/config.yaml | tr -d ' \\n'`, 10000)
+    // 读 JWT 密钥用 cat + grep（先看配置文件内容调试）
+    const configContent = await ssh(bookmark, `cat /opt/nezha/dashboard/data/config.yaml 2>/dev/null | head -20`, 10000)
+    console.log('[deploy] config.yaml 内容:', configContent)
+    let jwtSecret = await ssh(bookmark, `grep -o 'jwt_secret_key: [^ ]*' /opt/nezha/dashboard/data/config.yaml 2>/dev/null | cut -d' ' -f2`, 10000)
     if (!jwtSecret || jwtSecret.length < 20) {
-      jwtSecret = await ssh(bookmark, `sleep 2 && sed -n 's/^jwt_secret_key: //p' /opt/nezha/dashboard/data/config.yaml | tr -d ' \\n'`, 10000)
-      if (!jwtSecret || jwtSecret.length < 20) {
-        console.error('[deploy] JWT密钥读取失败')
-        update(5, 'error')
-        return { success: false, error: '无法读取 Dashboard JWT 密钥' }
-      }
+      console.error('[deploy] JWT密钥读取失败, 配置内容:', configContent)
+      update(5, 'error')
+      return { success: false, error: `无法读取 JWT 密钥` }
     }
 
     // 停 Dashboard → 装 sqlite3 → 插入用户
