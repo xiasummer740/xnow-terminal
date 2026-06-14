@@ -7,9 +7,7 @@ import { createSteps, updateStep } from './deploy-modal'
 const DEPLOY_STEPS = [
   'SSH 连接服务器...',
   '检测系统版本和架构...',
-  '安装 Docker...',
-  '拉取监控 Dashboard 镜像...',
-  '启动 Dashboard 服务...',
+  '安装哪吒监控主控...',
   '等待服务就绪...',
   '初始化管理员账号...',
   '创建 API Token...',
@@ -60,77 +58,46 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(0, 'success')
 
-    // Step 1: 检查系统
+    // Step 1: 安装哪吒主控（官方一键脚本）
     update(1, 'running')
-    const hasDocker = await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: 'command -v docker && echo "DOCKER_EXISTS" || echo "NO_DOCKER"'
+    const installResult = await window.pre.runGlobalAsync('execSshCommand', {
+      ...bookmark, command: 'curl -sL https://raw.githubusercontent.com/nezhahq/scripts/main/install.sh -o /tmp/nezha-install.sh && chmod +x /tmp/nezha-install.sh && bash /tmp/nezha-install.sh --dashboard 2>&1',
+      timeout: 180000
     })
+    if (!installResult || installResult.includes('error') || installResult.includes('failed')) {
+      update(1, 'error')
+      return { success: false, error: `安装脚本执行失败:\n${installResult || '无返回'}` }
+    }
     update(1, 'success')
-    const needInstallDocker = !hasDocker?.includes('DOCKER_EXISTS')
 
-    // Step 2: 安装 Docker
-    if (needInstallDocker) {
-      update(2, 'running')
-      await window.pre.runGlobalAsync('execSshCommand', {
-        ...bookmark, command: 'curl -fsSL https://get.docker.com | sh && systemctl start docker && systemctl enable docker 2>/dev/null',
-        timeout: 120000
-      })
-    }
-    update(2, 'success')
-
-    // Step 3: 拉取镜像（尝试多个源）
-    update(3, 'running')
-    const pullResult = await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: [
-        'docker pull nezhahq/dashboard:latest 2>&1',
-      ].join('\n'), timeout: 180000
-    })
-    // 如果第一个源失败，尝试 ghcr.io
-    if (!pullResult || pullResult.includes('Error') || pullResult.includes('not found') || pullResult.includes('timeout')) {
-      const pull2 = await window.pre.runGlobalAsync('execSshCommand', {
-        ...bookmark, command: 'docker pull ghcr.io/nezhahq/dashboard:latest 2>&1', timeout: 180000
-      })
-      if (!pull2 || pull2.includes('Error') || pull2.includes('not found') || pull2.includes('timeout')) {
-        update(3, 'error')
-        return { success: false, error: `镜像拉取失败，请检查服务器网络:\n${(pullResult || '')}\n${(pull2 || '')}` }
-      }
-    }
-    update(3, 'success')
-
-    // Step 4: 开放防火墙端口 + 启动 Dashboard
-    update(4, 'running')
-    // 先尝试开放防火墙端口 8008
+    // Step 2: 开放防火墙端口 8008
+    update(2, 'running')
     await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
         'which ufw >/dev/null 2>&1 && ufw allow 8008/tcp 2>/dev/null; true',
-        'which firewall-cmd >/dev/null 2>&1 && firewall-cmd --add-port=8008/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null; true',
-        'which iptables >/dev/null 2>&1 && iptables -C INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null; true'
+        'which firewall-cmd >/dev/null 2>&1 && firewall-cmd --add-port=8008/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null; true'
       ].join('\n'), timeout: 10000
     })
-    // 启动 Dashboard（注意：exec 不走 shell，必须单行）
-    await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: 'docker rm -f nezha-dashboard 2>/dev/null; true; docker run -d --name nezha-dashboard --restart always -p 8008:8008 -v /etc/nezha:/data nezhahq/dashboard:latest',
-      timeout: 30000
-    })
-    update(4, 'success')
+    update(2, 'success')
 
-    // Step 5: 等待服务就绪并验证端口开放
-    update(5, 'running')
+    // Step 3: 等待服务就绪
+    update(3, 'running')
     const readyCheck = await window.pre.runGlobalAsync('execSshCommand', {
       ...bookmark, command: [
         'for i in $(seq 1 30); do',
         '  curl -s http://localhost:8008 >/dev/null 2>&1 && echo "READY" && break',
         '  sleep 2',
-        'done',
-        'echo "---PORT_CHECK---"',
-        // 检查端口是否对外监听
-        'ss -tlnp | grep 8008 || netstat -tlnp | grep 8008 || true'
+        'done'
       ].join('\n'), timeout: 90000
     })
-    update(5, 'success')
+    if (!readyCheck || !readyCheck.includes('READY')) {
+      update(3, 'error')
+      return { success: false, error: 'Dashboard 服务启动超时，请检查系统日志' }
+    }
+    update(3, 'success')
 
-    // Step 6-7: 初始化管理员 + 创建 API Token（自动检测是否已初始化）
-    update(6, 'running')
+    // Step 4: 初始化管理员 + 创建 API Token
+    update(4, 'running')
     const adminEmail = 'admin@xnow.tech'
     const adminPass = 'Xnow' + Date.now().toString(36).toUpperCase() + '!'
 
@@ -191,14 +158,13 @@ export async function deployMaster (bookmark, onStepUpdate) {
         }
       }
     }
-    update(6, 'success')
+    update(4, 'success')
 
-    // Step 7: 完成
-    update(7, 'running')
-    update(7, 'success')
+    // Step 5: 完成
+    update(5, 'running')
+    update(5, 'success')
 
     if (!apiToken) {
-      update(7, 'success')
       const dashboardUrl = `http://${bookmark.host}:8008`
       return {
         success: true,
@@ -209,9 +175,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
       }
     }
 
-    // Step 8: 完成
+    // Step 6: 完成
     const dashboardUrl = `http://${bookmark.host}:8008`
-    update(8, 'success')
+    update(6, 'success')
 
     return {
       success: true,
