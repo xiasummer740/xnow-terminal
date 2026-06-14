@@ -141,7 +141,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)
 
     // 登录 → 提取 CSRF cookie → 创建 API Token
-    const fullCmd = `curl -s --max-time 5 -c /tmp/nz-cookie -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}' > /dev/null && CSRF=$(grep nz-csrf /tmp/nz-cookie | cut -f7) && curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}' && rm -f /tmp/nz-cookie`
+    const fullCmd = `curl -s --max-time 5 -c /tmp/nz-cookie -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}' > /dev/null && CSRF=$(grep nz-csrf /tmp/nz-cookie | cut -f7) && curl -s --max-time 5 -b /tmp/nz-cookie -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}' && rm -f /tmp/nz-cookie`
     const tokenResp = await ssh(bookmark, fullCmd, 15000)
     if (tokenResp) {
       try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
