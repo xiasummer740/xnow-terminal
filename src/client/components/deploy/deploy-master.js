@@ -85,25 +85,17 @@ export async function deployMaster (bookmark, onStepUpdate) {
     }
     update(2, 'success')
 
-    // Step 3: 创建 systemd 服务并启动（用 printf 避免 heredoc 兼容问题）
+    // Step 3: 创建 systemd 服务并启动（先删旧文件再重建）
     update(3, 'running')
     const appPath = `/opt/nezha/dashboard/${binName}`
-    const svcLines = [
-      '[Unit]',
-      'Description=Nezha Dashboard',
-      'After=network.target',
-      '',
-      '[Service]',
-      'Type=simple',
-      'WorkingDirectory=/opt/nezha/dashboard',
-      `ExecStart=${appPath}`,
-      'Restart=always',
-      'RestartSec=5',
-      '',
-      '[Install]',
-      'WantedBy=multi-user.target'
-    ]
-    const svcCmd = svcLines.map((l, i) => `printf '%s\\n' '${l}' ${i === 0 ? '>' : '>>'} /etc/systemd/system/nezha-dashboard.service`).join(' && ') + ' && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl start nezha-dashboard && echo "SVC_DONE"'
+    const svcContent = [
+      '[Unit]', 'Description=Nezha Dashboard', 'After=network.target', '',
+      '[Service]', 'Type=simple', 'WorkingDirectory=/opt/nezha/dashboard',
+      `ExecStart=${appPath}`, 'Restart=always', 'RestartSec=5', '',
+      '[Install]', 'WantedBy=multi-user.target'
+    ].join('\n')
+    // 用 rm 删旧文件 + 单次 printf 重建（避免 >> 追加导致重复）
+    const svcCmd = `rm -f /etc/systemd/system/nezha-dashboard.service && printf '%s\\n' '${svcContent}' > /etc/systemd/system/nezha-dashboard.service && systemctl daemon-reload && systemctl enable nezha-dashboard && systemctl restart nezha-dashboard && sleep 2 && echo "SVC_DONE"`
     const r3 = await ssh(bookmark, svcCmd, 15000)
     if (!r3?.includes('SVC_DONE')) {
       console.error('[deploy] 服务启动失败:', r3)
