@@ -40,22 +40,33 @@ export default function TabMonitor({ onClose }) {
     if (!selected.length) return
     setSelectOpen(false)
     let ok = 0, fail = 0
+    const errors = []
     for (const bm of selected) {
       const name = bm.title || bm.host
+      // 安装 Netdata + 开放外网访问 + 开防火墙
+      const cmd = [
+        `curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh 2>&1`,
+        `bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1`,
+        // Netdata 默认只监听 127.0.0.1，改成 0.0.0.0 允许远程访问
+        `sed -i 's/^.*bind socket to IP =.*$/bind socket to IP = 0.0.0.0/' /etc/netdata/netdata.conf 2>/dev/null; true`,
+        `which ufw >/dev/null && ufw allow 19999/tcp 2>/dev/null; true`,
+        `systemctl restart netdata 2>/dev/null || service netdata restart 2>/dev/null; true`,
+        `sleep 3`,
+        `curl -s --max-time 5 http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'OK' || echo 'FAIL'`
+      ].join(' && ')
       try {
-        const cmd = `curl -sL https://my-netdata.io/kickstart.sh -o /tmp/netdata.sh && bash /tmp/netdata.sh --stable-channel --disable-telemetry 2>&1 && (which ufw >/dev/null && ufw allow 19999/tcp 2>/dev/null; true) && sleep 5 && curl -s http://127.0.0.1:19999/api/v1/info >/dev/null 2>&1 && echo 'NETDATA_OK' || echo 'NETDATA_FAIL'`
         const r = await window.pre.runGlobalAsync('execSshCommand', {
           host: bm.host, port: bm.port || 22,
           username: bm.username || 'root',
           password: bm.password, privateKey: bm.privateKey,
           command: cmd, timeout: 300000
         })
-        ok++
-      } catch (e) {
-        fail++
-      }
+        if (r?.includes('OK')) { ok++ } else { fail++; errors.push(`${name}: ${(r||'无返回').substring(0,200)}`) }
+      } catch (e) { fail++; errors.push(`${name}: ${e.message}`) }
     }
-    message.success(`${ok} 台成功${fail ? `，${fail} 台失败` : ''}`, 5)
+    const msg = `${ok} 台成功${fail ? `，${fail} 台失败` : ''}`
+    message.success(msg, 5)
+    if (errors.length) console.error('[netdata-deploy]', errors.join('\n'))
     setTimeout(loadData, 5000)
   }
 
