@@ -76,6 +76,7 @@ export default function TabMonitor({ onClose }) {
     setDeploying(false)
     logs.push(`\n📊 ${ok} 台成功${fail ? `，${fail} 台失败` : ''}`)
     setDeployLog(logs.join('\n'))
+    console.error('[netdata-deploy]', logs.join('\n'))
     setTimeout(loadData, 5000)
   }
 
