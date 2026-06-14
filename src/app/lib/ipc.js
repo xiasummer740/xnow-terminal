@@ -556,6 +556,16 @@ function initIpc() {
       const bcrypt = require('bcryptjs')
       return bcrypt.hashSync(password, 10)
     },
+    // ===== HTTP 请求（主进程发请求，绕过渲染进程 CORS 限制） =====
+    httpFetch: async (url, options = {}) => {
+      const resp = await fetch(url, {
+        method: options.method || 'GET',
+        headers: options.headers || {},
+        body: options.body || undefined
+      })
+      const text = await resp.text()
+      return JSON.stringify({ status: resp.status, body: text })
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)

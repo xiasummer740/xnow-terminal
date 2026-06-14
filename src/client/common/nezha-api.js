@@ -23,19 +23,15 @@ function getConfig () {
 export async function testConnection (dashboardUrl, apiToken) {
   try {
     const url = `${dashboardUrl.replace(/\/+$/, '')}/api/v1/server`
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiToken}`
-      }
+    // 通过主进程发请求，绕过 Electron 渲染进程的 CORS 限制
+    const result = await window.pre.runGlobalAsync('httpFetch', url, {
+      headers: { Authorization: `Bearer ${apiToken}` }
     })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return {
-        success: false,
-        error: `请求失败 (${res.status}${text ? ': ' + text : ''})`
-      }
+    const parsed = JSON.parse(result)
+    if (parsed.status < 200 || parsed.status >= 300) {
+      return { success: false, error: `请求失败 (${parsed.status})` }
     }
-    const data = await res.json()
+    const data = JSON.parse(parsed.body)
     return { success: true, data: Array.isArray(data) ? data : [] }
   } catch (err) {
     return {
