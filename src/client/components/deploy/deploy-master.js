@@ -95,15 +95,10 @@ export async function deployMaster (bookmark, onStepUpdate) {
         'which iptables >/dev/null 2>&1 && iptables -C INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 8008 -j ACCEPT 2>/dev/null; true'
       ].join('\n'), timeout: 10000
     })
-    // 启动 Dashboard
+    // 启动 Dashboard（注意：exec 不走 shell，必须单行）
     await window.pre.runGlobalAsync('execSshCommand', {
-      ...bookmark, command: [
-        'docker rm -f nezha-dashboard 2>/dev/null; true',
-        'docker run -d --name nezha-dashboard \\',
-        '  --restart always -p 8008:8008 \\',
-        '  -v /etc/nezha:/data \\',
-        '  nezhahq/dashboard:latest'
-      ].join('\n'), timeout: 30000
+      ...bookmark, command: 'docker rm -f nezha-dashboard 2>/dev/null; true; docker run -d --name nezha-dashboard --restart always -p 8008:8008 -v /etc/nezha:/data nezhahq/dashboard:latest',
+      timeout: 30000
     })
     update(4, 'success')
 
