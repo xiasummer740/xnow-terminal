@@ -17,6 +17,7 @@ import Password from '../common/password'
 import AiHistory, { addHistoryItem } from './ai-history'
 import message from '../common/message'
 import { clearAgentMemories, getAgentMemories } from './agent'
+import { installSkill } from '../../common/skill-manager'
 
 const STORAGE_KEY_CONFIG = 'ai_config_history'
 const EVENT_NAME_CONFIG = 'ai-config-history-update'
@@ -317,6 +318,18 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
               onClick={handleTest}
             >
               {e('testConnection')}
+            </Button>
+            <Button onClick={async () => {
+              const skills = await window.pre.runGlobalAsync('readClaudeSkills')
+              if (!skills || !skills.length) { message.warning('未找到 Claude 技能文件'); return }
+              let count = 0
+              for (const s of skills) {
+                const r = installSkill(s)
+                if (r?.success) count++
+              }
+              message.success(`成功导入 ${count}/${skills.length} 个 Claude 技能`)
+            }}>
+              导入 Claude 技能
             </Button>
           </Space>
         </Form.Item>

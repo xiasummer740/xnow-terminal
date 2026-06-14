@@ -575,6 +575,36 @@ function initIpc() {
         clearTimeout(timer)
       }
     },
+    // ===== 读取 Claude 技能文件 =====
+    readClaudeSkills: async () => {
+      const fs = require('fs')
+      const path = require('path')
+      const home = process.env.HOME || process.env.USERPROFILE || 'C:/Users/Administrator'
+      const skillsDir = path.join(home, '.claude', 'skills')
+      const results = []
+      if (!fs.existsSync(skillsDir)) return results
+      for (const dir of fs.readdirSync(skillsDir)) {
+        const skillFile = path.join(skillsDir, dir, 'SKILL.md')
+        if (!fs.existsSync(skillFile)) continue
+        const content = fs.readFileSync(skillFile, 'utf-8')
+        const fm = content.match(/^---\n([\s\S]*?)\n---/)
+        if (!fm) continue
+        const meta = {}
+        for (const line of fm[1].split('\n')) {
+          const kv = line.match(/^(\w[\w-]*):\s*(.+)$/)
+          if (kv) meta[kv[1]] = kv[2].trim()
+        }
+        results.push({
+          id: 'claude-' + (meta.name || dir).replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase(),
+          name: meta.name || dir,
+          description: meta.description || '',
+          category: 'Claude 技能',
+          prompt: content,
+          source: 'imported'
+        })
+      }
+      return results
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)
