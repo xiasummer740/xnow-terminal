@@ -3,7 +3,7 @@
  */
 import { useState } from 'react'
 import { Button, Input, message, Select, Space, Divider, Alert } from 'antd'
-import { CloudServerOutlined, ApiOutlined, LinkOutlined, InfoCircleOutlined } from '@ant-design/icons'
+import { CloudServerOutlined, ApiOutlined, LinkOutlined, InfoCircleOutlined, BugOutlined } from '@ant-design/icons'
 import { testConnection } from '../../common/nezha-api'
 import DeployModal, { createSteps } from '../deploy/deploy-modal'
 import { deployMaster, getMasterSteps } from '../deploy/deploy-master'
@@ -90,6 +90,44 @@ export default function TabNezha() {
     message.success('配置已保存')
   }
 
+  const [diagResult, setDiagResult] = useState('')
+  const [diaging, setDiaging] = useState(false)
+
+  const handleDiagnose = async () => {
+    if (!masterId) { message.warning('请先选择主控服务器'); return }
+    setDiaging(true)
+    setDiagResult('正在诊断...')
+    const bm = window.store.bookmarks.find(b => b.id === masterId)
+    if (!bm) { setDiagResult('未找到服务器书签'); setDiaging(false); return }
+    try {
+      const cmds = [
+        `echo '=== Docker状态 ==='`,
+        `docker ps -a --filter name=nezha-dashboard --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>/dev/null || echo 'docker未运行'`,
+        `echo ''`,
+        `echo '=== 端口监听 ==='`,
+        `ss -tlnp 2>/dev/null | grep 8008 || netstat -tlnp 2>/dev/null | grep 8008 || echo '8008端口未监听'`,
+        `echo ''`,
+        `echo '=== 防火墙 ==='`,
+        `(which ufw >/dev/null && ufw status | head -10) || echo 'ufw未安装'`,
+        `(which firewall-cmd >/dev/null && firewall-cmd --list-ports 2>/dev/null) || true`,
+        `echo ''`,
+        `echo '=== Dashboard容器日志(最近5行) ==='`,
+        `docker logs nezha-dashboard --tail 5 2>/dev/null || echo '容器日志不可用'`
+      ].join('\n')
+      const result = await window.pre.runGlobalAsync('execSshCommand', {
+        host: bm.host, port: bm.port || 22,
+        username: bm.username || 'root',
+        password: bm.password, privateKey: bm.privateKey,
+        command: cmds, timeout: 15000
+      })
+      setDiagResult(result || '无返回数据')
+    } catch (e) {
+      setDiagResult('诊断失败: ' + e.message)
+    } finally {
+      setDiaging(false)
+    }
+  }
+
   return (
     <div className="tab-nezha" style={{ padding: '0 16px' }}>
       {/* 部署主控 */}
@@ -150,7 +188,19 @@ export default function TabNezha() {
         <Button icon={<LinkOutlined />} loading={testing} onClick={handleTest}>
           连接测试
         </Button>
+        <Button icon={<BugOutlined />} loading={diaging} onClick={handleDiagnose}>
+          诊断服务器
+        </Button>
       </Space>
+
+      {diagResult && (
+        <Alert
+          type="info"
+          message={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 11, color: '#0f0', fontFamily: "'Maple Mono', monospace" }}>{diagResult}</pre>}
+          showIcon={false}
+          style={{ background: '#0a0a0a', border: '1px solid #333', marginBottom: 16, maxHeight: 300, overflow: 'auto' }}
+        />
+      )}
 
       {setupGuide && (
         <Alert
