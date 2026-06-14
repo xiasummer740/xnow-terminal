@@ -55,16 +55,15 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
     const runCmd = `docker rm -f nezha-agent 2>/dev/null; true && docker run -d --name nezha-agent --restart always --network host ghcr.io/nezhahq/nezha:latest agent -s "${serverAddr}" -k "${agentKey}" 2>&1`
     const r2 = await ssh(bookmark, runCmd, 30000)
     if (!r2 || r2.includes('Error')) { update(2, 'error'); return { success: false, server: name, error: `Agent 启动失败:\n${(r2 || '').substring(0, 200)}` } }
-    // 等几秒让 Agent 连上 Dashboard
-    await ssh(bookmark, 'sleep 5', 10000)
-    // 检查 Agent 日志
+    // 检查容器状态
+    const status = await ssh(bookmark, `docker ps -a --filter name=nezha-agent --format '{{.Status}}' 2>/dev/null`, 10000)
     const logs = await ssh(bookmark, `docker logs nezha-agent --tail 10 2>&1`, 10000)
-    if (logs?.includes('error') || logs?.includes('Error') || logs?.includes('refused') || logs?.includes('REFUSED')) {
+    if (!status || status.includes('Exited')) {
       update(2, 'error')
-      return { success: false, server: name, error: `Agent 连接 Dashboard 失败:\n${logs.substring(0, 300)}` }
+      return { success: false, server: name, error: `Agent 容器未运行。状态: ${status || '无'}\n日志: ${(logs || '无').substring(0, 300)}` }
     }
     update(2, 'success')
-    return { success: true, server: name, logs: logs?.substring(0, 200) }
+    return { success: true, server: name, logs: `${status} | ${(logs || '').substring(0, 100)}` }
   } catch (e) {
     const idx = currentSteps.findIndex(s => s.status === 'running')
     if (idx >= 0) update(idx, 'error')
