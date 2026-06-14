@@ -605,6 +605,48 @@ function initIpc() {
       }
       return results
     },
+    // ===== 后台 Ping 服务 =====
+    _bgPingTimer: null,
+    _bgPingHosts: [],
+    _bgPingData: {},
+    startBgPing: async (hosts) => {
+      const net = require('net')
+      const fs = require('fs')
+      const path = require('path')
+      const { app } = require('electron')
+      const dataPath = path.resolve(app.getPath('userData'), 'bg-ping.json')
+      try { const raw = fs.readFileSync(dataPath, 'utf-8'); const d = JSON.parse(raw); for (const [k, v] of Object.entries(d)) { if (Array.isArray(v)) module.exports._bgPingData[k] = v } } catch {}
+      module.exports._bgPingHosts = hosts.map(h => ({ host: h, port: 22 }))
+      if (module.exports._bgPingTimer) clearInterval(module.exports._bgPingTimer)
+      module.exports._bgPingTimer = setInterval(async () => {
+        for (const { host: h, port: p } of module.exports._bgPingHosts) {
+          const start = Date.now()
+          try {
+            const sock = new net.Socket()
+            sock.setTimeout(5000)
+            await new Promise((resolve, reject) => {
+              sock.connect(p, h, () => { sock.destroy(); resolve() })
+              sock.on('error', (e) => { sock.destroy(); reject(e) })
+              sock.on('timeout', () => { sock.destroy(); reject(new Error('timeout')) })
+            })
+            const v = Date.now() - start
+            if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
+            module.exports._bgPingData[h].push({ t: Date.now(), v })
+            if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
+          } catch {
+            if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
+            module.exports._bgPingData[h].push({ t: Date.now(), v: -1 })
+            if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
+          }
+        }
+        try { fs.writeFileSync(dataPath, JSON.stringify(module.exports._bgPingData)) } catch {}
+      }, 60000)
+      return { success: true, hosts: hosts.length }
+    },
+    stopBgPing: () => {
+      if (module.exports._bgPingTimer) { clearInterval(module.exports._bgPingTimer); module.exports._bgPingTimer = null }
+      return { success: true }
+    },
   }
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)

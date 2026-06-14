@@ -44,14 +44,18 @@ export function addPing (host, latency) {
   saveAll(host, data.filter(p => p.t >= cutoff))
 }
 
-export function loadHistory (host) {
-  const all = loadAll(host)
+export async function loadHistory (host) {
+  // 合并前台记录 + 后台记录
+  const local = loadAll(host)
+  let bg = []
+  try { bg = await window.pre.runGlobalAsync('getBgPingData', host) } catch {}
+  const merged = [...local, ...(Array.isArray(bg) ? bg : [])]
   const cutoff = Date.now() - 259200000
-  return all.filter(p => p.t >= cutoff)
+  return merged.filter(p => p.t >= cutoff)
 }
 
-export function getAggregatedHistory (host, range, smooth = true) {
-  const all = loadHistory(host)
+export async function getAggregatedHistory (host, range, smooth = true) {
+  const all = await loadHistory(host)
   if (!all.length) return { points: [], lossRate: 0, total: 0, lost: 0 }
 
   const now = Date.now()

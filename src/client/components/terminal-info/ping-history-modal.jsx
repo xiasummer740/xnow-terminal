@@ -2,8 +2,8 @@
  * 网络延迟历史弹窗 — 含图表 + 丢包率 + 时间选择
  */
 import { useState, useEffect, useRef } from 'react'
-import { Modal, Segmented, Tag, Space } from 'antd'
-import { getAggregatedHistory } from '../../common/ping-history'
+import { Modal, Segmented, Tag, Space, Switch, message } from 'antd'
+import { getAggregatedHistory, addPing } from '../../common/ping-history'
 
 const RANGES = [
   { label: '1小时', value: '1h' },
@@ -92,20 +92,46 @@ function drawChart (canvas, points) {
 export default function PingHistoryModal ({ open, host, onClose }) {
   const [range, setRange] = useState('1h')
   const [smooth, setSmooth] = useState(true)
+  const [bgOn, setBgOn] = useState(false)
   const canvasRef = useRef(null)
   const [stats, setStats] = useState({ points: [], lossRate: 0, total: 0, lost: 0 })
 
+  // 启动/停止后台监控
+  useEffect(() => {
+    if (!open) return
+    window.pre.runGlobalAsync('getBgPingData', host).then(d => {
+      if (d?.length > 0) setBgOn(true)
+    })
+  }, [open, host])
+
+  const toggleBg = async () => {
+    if (bgOn) {
+      await window.pre.runGlobalAsync('stopBgPing')
+      setBgOn(false)
+    } else {
+      // 获取所有书签的 host
+      const hosts = (window.store.bookmarks || []).filter(b => b.host).map(b => b.host)
+      if (!hosts.length) { message.warning('没有可监控的服务器'); return }
+      await window.pre.runGlobalAsync('startBgPing', hosts)
+      setBgOn(true)
+    }
+  }
+
   useEffect(() => {
     if (!open || !host) return
-    const result = getAggregatedHistory(host, range, smooth)
-    setStats(result)
-    const id = setTimeout(() => drawChart(canvasRef.current, result.points), 50)
-    return () => clearTimeout(id)
+    let active = true
+    ;(async () => {
+      const result = await getAggregatedHistory(host, range, smooth)
+      if (!active) return
+      setStats(result)
+      setTimeout(() => drawChart(canvasRef.current, result.points), 50)
+    })()
+    return () => { active = false }
   }, [open, host, range, smooth])
 
   return (
     <Modal
-      title={<span style={{ fontSize: 14, fontWeight: 600 }}>📊 网络延迟历史 — {host}</span>}
+      title={<span style={{ fontSize: 14, fontWeight: 600 }}>📊 历史延迟 — {host}</span>}
       open={open} onCancel={onClose} footer={null}
       width={580}
       destroyOnClose
@@ -115,7 +141,10 @@ export default function PingHistoryModal ({ open, host, onClose }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Segmented value={range} onChange={v => setRange(v)} options={RANGES}
           style={{ background: '#1a1a1a' }} />
-        <Space>
+        <Space size={16}>
+          <label style={{ fontSize: 12, color: '#888', cursor: 'pointer' }} onClick={toggleBg}>
+            后台监控 <Switch size='small' checked={bgOn} style={{ marginLeft: 4 }} />
+          </label>
           <span onClick={() => setSmooth(!smooth)} style={{ cursor: 'pointer', fontSize: 12, color: smooth ? '#1890ff' : '#666' }}>
             平滑{smooth ? ' ✓' : ''}
           </span>
