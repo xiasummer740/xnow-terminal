@@ -54,11 +54,13 @@
     background var(--main)
   &.active-all
     font-weight 700
-    border-left 3px solid #1890ff
-    background rgba(24,144,255,0.06)
+    background linear-gradient(135deg, rgba(24,144,255,0.15) 0%, rgba(120,50,255,0.12) 100%)
+    transition background 0.3s ease
     .tab-count
       border-radius 15px
       font-weight bold
+  &:not(.active-all)
+    transition background 0.3s ease
   &:hover
     .tab-close
       visibility visible
