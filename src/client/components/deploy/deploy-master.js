@@ -140,26 +140,14 @@ export async function deployMaster (bookmark, onStepUpdate) {
     // 重启 Dashboard
     await ssh(bookmark, 'systemctl start nezha-dashboard && sleep 4', 15000)
 
-    // 登录 + 提取 CSRF cookie + 创建 API Token
-    const tokenCmd = [
-      `curl -s --max-time 5 -c /tmp/nezha-cookie -D /tmp/nezha-headers -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}' > /dev/null`,
-      `echo '===COOKIES===' && cat /tmp/nezha-cookie`,
-      `echo '===HEADERS===' && cat /tmp/nezha-headers`,
-      `CSRF=$(grep -o 'nz-csrf=[^;]*' /tmp/nezha-headers 2>/dev/null | head -1 | cut -d= -f2)`,
-      `[ -z "$CSRF" ] && CSRF=$(awk 'NF>=7 && $6=="nz-csrf"{print $NF}' /tmp/nezha-cookie 2>/dev/null)`,
-      `echo '===CSRF:'$CSRF'==='`,
-      `curl -s --max-time 5 -b /tmp/nezha-cookie -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`,
-      `rm -f /tmp/nezha-cookie /tmp/nezha-headers`
-    ].join(' && ')
-    const tokenResp = await ssh(bookmark, tokenCmd, 15000)
+    // 先登录获取 JWT，再带 Referer/Origin 创建 API Token（绕过 CSRF 同源检查）
+    const loginCmd = `curl -s --max-time 5 -X POST 'http://localhost:8008/api/v1/login' -H 'Content-Type: application/json' -d '{"username":"${adminEmail}","password":"${adminPass}"}' -c /tmp/nezha-jar`
+    await ssh(bookmark, loginCmd + ' > /dev/null', 10000)
+    const tokenCmd = `curl -s --max-time 5 -b /tmp/nezha-jar -X POST 'http://localhost:8008/api/v1/api-tokens' -H 'Content-Type: application/json' -H 'Origin: http://localhost:8008' -H 'Referer: http://localhost:8008/' -d '{"name":"xnow-terminal","scopes":["nezha:*"],"expires_in_days":3650}'`
+    const tokenResp = await ssh(bookmark, tokenCmd, 10000)
+    await ssh(bookmark, 'rm -f /tmp/nezha-jar', 5000)
     if (tokenResp) {
-      // 取最后一个 JSON（就是 api-tokens 的响应）
-      const jsonMatches = tokenResp.match(/\{[^}]*"token"[^}]*\}/g)
-      if (jsonMatches) {
-        for (const m of jsonMatches) {
-          try { apiToken = JSON.parse(m)?.data?.token || ''; if (apiToken) break } catch {}
-        }
-      }
+      try { apiToken = JSON.parse(tokenResp)?.data?.token || '' } catch {}
     }
     if (!apiToken) {
       update(5, 'error')
