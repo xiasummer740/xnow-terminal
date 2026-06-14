@@ -12,7 +12,7 @@ const RANGES = [
   { label: '3天', value: '3d' }
 ]
 
-const W = 520
+const W = 660
 const H = 200
 const PAD_L = 50
 const PAD_R = 10
@@ -137,7 +137,7 @@ export default function PingHistoryModal ({ open, host, onClose }) {
     <Modal
       title={<span style={{ fontSize: 14, fontWeight: 600 }}>📊 历史延迟 — {host}</span>}
       open={open} onCancel={onClose} footer={null}
-      width={580}
+      width={720}
       destroyOnClose
       styles={{ content: { background: '#141414' }, header: { background: '#141414', borderBottom: '1px solid #222' } }}
     >
