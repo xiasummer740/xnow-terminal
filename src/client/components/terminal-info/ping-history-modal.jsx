@@ -104,16 +104,31 @@ export default function PingHistoryModal ({ open, host, onClose }) {
     })
   }, [open, host])
 
+  // 加载保存的设置
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ping_bg_settings') || '{}')
+      if (saved.bgOn) { setBgOn(true); window.pre.runGlobalAsync('startBgPing', saved.hosts || []) }
+      if (saved.smooth !== undefined) setSmooth(saved.smooth)
+    } catch {}
+  }, [])
+
+  // 保存设置
+  const saveSettings = (updates) => {
+    const current = { bgOn, smooth, hosts: (window.store.bookmarks || []).filter(b => b.host).map(b => b.host) }
+    const next = { ...current, ...updates }
+    localStorage.setItem('ping_bg_settings', JSON.stringify(next))
+  }
+
   const toggleBg = async () => {
     if (bgOn) {
       await window.pre.runGlobalAsync('stopBgPing')
-      setBgOn(false)
+      setBgOn(false); saveSettings({ bgOn: false })
     } else {
-      // 获取所有书签的 host
       const hosts = (window.store.bookmarks || []).filter(b => b.host).map(b => b.host)
       if (!hosts.length) { message.warning('没有可监控的服务器'); return }
       await window.pre.runGlobalAsync('startBgPing', hosts)
-      setBgOn(true)
+      setBgOn(true); saveSettings({ bgOn: true })
     }
   }
 
@@ -145,7 +160,7 @@ export default function PingHistoryModal ({ open, host, onClose }) {
           <label style={{ fontSize: 12, color: '#888', cursor: 'pointer' }} onClick={toggleBg}>
             后台监控 <Switch size='small' checked={bgOn} style={{ marginLeft: 4 }} />
           </label>
-          <span onClick={() => setSmooth(!smooth)} style={{ cursor: 'pointer', fontSize: 12, color: smooth ? '#1890ff' : '#666' }}>
+          <span onClick={() => { setSmooth(!smooth); saveSettings({ smooth: !smooth }) }} style={{ cursor: 'pointer', fontSize: 12, color: smooth ? '#1890ff' : '#666' }}>
             平滑{smooth ? ' ✓' : ''}
           </span>
         </Space>
