@@ -80,5 +80,4 @@ export default {
   allowMultiInstance: false,
   disableDeveloperTool: false,
   dragDropBehavior: 'ask'
-  }
 }
