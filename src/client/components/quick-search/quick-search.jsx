@@ -92,7 +92,7 @@ export default function QuickSearch () {
       className='quick-search-modal'
       closable={false}
       maskClosable
-      destroyOnClose
+      destroyOnHidden
     >
       <Input
         ref={inputRef}

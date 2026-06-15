@@ -4,6 +4,7 @@ import { connectionMap, authTypeMap, defaultEnvLang } from '../../../common/cons
 import defaultSetting from '../../../common/default-setting.js'
 import { createBaseInitValues, getTerminalDefaults, getSshDefaults, getTerminalBackgroundDefaults, getAuthTypeDefault } from '../common/init-values.js'
 import { sshAuthFields, sshSettings, quickCommandsTab, sshTunnelTab, connectionHoppingTab, vpsInfoTab } from './common-fields.js'
+import { defaultColors } from '../../../common/rand-hex-color.js'
 
 const e = window.translate
 
@@ -12,7 +13,12 @@ const sshConfig = {
   type: connectionMap.ssh,
   initValues: (props) => {
     const { store } = props
+    const usedColors = new Set(
+      (window.store?.bookmarks || []).map(b => b.color).filter(Boolean)
+    )
+    const initColor = defaultColors.find(c => !usedColors.has(c)) || defaultColors[0]
     return createBaseInitValues(props, connectionMap.ssh, {
+      color: initColor,
       port: 22,
       authType: authTypeMap.password,
       id: '',

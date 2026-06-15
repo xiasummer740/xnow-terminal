@@ -91,6 +91,33 @@ exports.encryptAsync = async function (
   return 'gcm:' + iv.toString('hex') + ':' + salt.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted
 }
 
+/**
+ * Detect if a string was encrypted with the legacy (static IV/salt) format.
+ * @param {string} encrypted
+ * @returns {boolean}
+ */
+exports.isLegacyFormat = function (encrypted) {
+  if (!encrypted || typeof encrypted !== 'string') return false
+  return !encrypted.startsWith('gcm:') && /^[0-9a-f]+$/i.test(encrypted)
+}
+
+/**
+ * Re-encrypt legacy-format data to the current GCM format (in-place upgrade).
+ * @param {string} encrypted — legacy ciphertext (aes-192-cbc, static IV/salt)
+ * @param {string} password — the same password used for encryption
+ * @returns {string} GCM-format ciphertext, or the original if already GCM/invalid
+ */
+exports.upgradeToGcm = function (encrypted, password) {
+  if (encrypted.startsWith('gcm:')) return encrypted // already new format
+  try {
+    const plaintext = exports.decrypt(encrypted, password)
+    return exports.encrypt(plaintext, password)
+  } catch (e) {
+    console.error('[enc] legacy -> GCM upgrade failed:', e.message)
+    return encrypted
+  }
+}
+
 exports.decryptAsync = async function (
   encrypted = '',
   password,

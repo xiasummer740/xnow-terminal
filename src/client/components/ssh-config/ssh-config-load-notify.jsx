@@ -45,12 +45,19 @@ export default function SshConfigLoadNotify (props) {
   useEffect(() => {
     const ignoreSshConfig = ls.getItem(sshConfigKey)
     const sshConfigLoaded = ls.getItem(sshConfigLoadKey)
+
+    // 从未加载过的直接忽略，不再弹窗打扰
+    if (ignoreSshConfig !== 'yes' && sshConfigLoaded !== 'yes') {
+      ls.setItem(sshConfigKey, 'yes')
+      return
+    }
+
     const shouldShow =
       sshConfigs.length &&
       ignoreSshConfig !== 'yes' &&
       settingTab === 'bookmarks' &&
       showModal &&
-      sshConfigLoaded !== 'yes' &&
+      sshConfigLoaded === 'yes' &&
       window.store.hasNodePty
 
     if (shouldShow) {

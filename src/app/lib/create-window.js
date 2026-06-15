@@ -55,6 +55,25 @@ exports.createWindow = async function (userConfig) {
 
   win.webContents.session.setSpellCheckerDictionaryDownloadURL('https://00.00/')
 
+  // 内容安全策略（CSP），防御 XSS 攻击
+  // 注意：webview 加载外部页面不受此 CSP 影响（独立进程）
+  win.webContents.session.webRequest.onHeadersReceived(function (details, callback) {
+    callback({
+      responseHeaders: Object.assign({}, details.responseHeaders, {
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "connect-src 'self' ws: http://127.0.0.1:*; " +
+          "img-src 'self' data: blob:; " +
+          "font-src 'self' data:; " +
+          "frame-src 'self' http: https:; " +
+          "media-src 'self' data: blob:;"
+        ]
+      })
+    })
+  })
+
   webviewHandler.init(win)
 
   globalState.set('win', win)
@@ -66,21 +85,21 @@ exports.createWindow = async function (userConfig) {
     : await getPort()
   const opts = `http://127.0.0.1:${port}/index.html?v=${packInfo.version}`
   // If loading the URL fails (e.g. proxy/firewall interference), show error page
-  win.webContents.once('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Failed to load app URL:', errorCode, errorDescription)
+  win.webContents.once('did-fail-load', function (event, errorCode, errorDescription) {
+    console.error('加载应用页面失败:', errorCode, errorDescription)
     const htmlContent = require('./error-page')(port)
-    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent)
     win.loadURL(dataUrl)
   })
   win.loadURL(opts)
-  win.webContents.once('dom-ready', () => {
+  win.webContents.once('dom-ready', function () {
     // 已禁用开发者工具自动打开
     // if (isDev && !userConfig.disableDeveloperTool) {
     //   win.webContents.openDevTools()
     // }
-    win.on('unmaximize', () => {
-      const { width, height } = win.getBounds()
-      if (width < minWindowWidth || height < minWindowHeight) {
+    win.on('unmaximize', function () {
+      var bounds = win.getBounds()
+      if (bounds.width < minWindowWidth || bounds.height < minWindowHeight) {
         win.setBounds({
           x: 0,
           y: 0,
@@ -90,20 +109,20 @@ exports.createWindow = async function (userConfig) {
         win.center()
       }
     })
-    win.on('resize', _.debounce(() => {
+    win.on('resize', _.debounce(function () {
       if (!win.isMaximized()) {
         globalState.set('oldRectangle', win.getBounds())
       }
     }, 200))
-    win.on('move', _.debounce(() => {
-      const { x, y } = win.getBounds()
-      setWindowPos({ x, y })
+    win.on('move', _.debounce(function () {
+      var bounds = win.getBounds()
+      setWindowPos({ x: bounds.x, y: bounds.y })
     }, 100))
 
-    win.on('focus', () => {
+    win.on('focus', function () {
       win.webContents.send('focused', null)
     })
-    win.on('blur', () => {
+    win.on('blur', function () {
       win.webContents.send('blur', null)
     })
     disableShortCuts(win)

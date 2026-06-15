@@ -17,7 +17,7 @@ export default function VpsDashboard ({ visible, onClose }) {
         </span>
       }
       open={visible} onCancel={onClose} footer={null}
-      width={960} className='vps-dashboard-modal' destroyOnClose
+      width={960} className='vps-dashboard-modal' destroyOnHidden
     >
       <VpsDashboardSubscription onClose={onClose} />
     </Modal>

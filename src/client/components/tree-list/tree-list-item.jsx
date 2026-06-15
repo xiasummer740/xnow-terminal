@@ -92,9 +92,28 @@ function TreeListItem(props) {
     onDragLeave,
     onDrop,
   }
+  const onDoubleClickTitle = (e) => {
+    if (!isGroup && item.id) {
+      // 双击书签直接连接，不打开编辑弹窗
+      // 检查是否已有同名标签页，避免重复打开
+      const existing = window.store.tabs?.find(t =>
+        t.srcId === item.id || t.title === item.title
+      )
+      if (existing) {
+        // 已有该标签页，直接切换过去
+        window.store.activeTabId = existing.id
+        window.store.hideSettingModal?.()
+        return
+      }
+      window.store.onSelectBookmark(item.id)
+      window.store.hideSettingModal?.()
+    }
+  }
+
   const titleProps = {
     className: 'tree-item-title elli',
     onClick: onSelect,
+    onDoubleClick: onDoubleClickTitle,
     'data-item-id': item.id,
     'data-is-group': isGroup ? 'true' : 'false',
     'data-parent-id': props.parentId,

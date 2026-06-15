@@ -39,7 +39,7 @@ export default auto(function AIConfigModal ({ store }) {
       footer={null}
       title='AI Config'
       width='80%'
-      destroyOnClose
+      destroyOnHidden
       className='ai-config-modal'
     >
       <AIConfigForm

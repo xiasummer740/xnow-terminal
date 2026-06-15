@@ -82,6 +82,17 @@ export default auto(function Index (props) {
     store.checkForDbUpgrade()
     store.handleGetSerials()
     store.checkPendingDeepLink()
+
+    // 自动启动后台延迟监控（所有书签的 host）
+    setTimeout(() => {
+      if (store.config?.bgMonitor === false) return
+      const hosts = (store.bookmarks || [])
+        .filter(b => b.host)
+        .map(b => b.host)
+      if (hosts.length) {
+        window.pre.runGlobalAsync('startBgPing', [...new Set(hosts)])
+      }
+    }, 3000)
   }, [])
 
   const { store } = props
@@ -205,16 +216,13 @@ export default auto(function Index (props) {
   const terminalInfoProps = {
     rightPanelTab,
     ...deepCopy(store.terminalInfoProps),
-    ...pick(
-      config,
-      [
-        'host',
-        'port',
-        'saveTerminalLogToFile',
-        'terminalInfos',
-        'sessionLogPath'
-      ]
-    )
+    host: store.currentTab?.host || config.host,
+    port: store.currentTab?.port || config.port,
+    ...pick(config, [
+      'saveTerminalLogToFile',
+      'terminalInfos',
+      'sessionLogPath'
+    ])
   }
   const sshConfigProps = {
     ...pick(store, [

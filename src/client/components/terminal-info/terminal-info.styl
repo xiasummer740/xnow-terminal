@@ -121,8 +121,14 @@
 .terminal-info-act,
 .terminal-info-disk,
 .terminal-info-network
-  max-height 260px
+  max-height 200px
   overflow-y auto
+
+  &::-webkit-scrollbar
+    width 4px
+  &::-webkit-scrollbar-thumb
+    background rgba(255,255,255,0.1)
+    border-radius 2px
 
 .activity-item
   max-height 1.6em

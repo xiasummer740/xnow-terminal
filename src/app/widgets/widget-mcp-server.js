@@ -117,6 +117,40 @@ class ElectermMCPServer {
     this.ipcHandler = null
     this.pendingRequests = new Map()
     this.transports = {}
+    // 操作审计日志（内存中循环，最多 500 条）
+    this.auditLog = []
+    this.MAX_AUDIT_LOG = 500
+    // 频率限制：按工具名统计，每分钟最多 N 次
+    this.rateLimitMap = new Map()
+  }
+
+  /**
+   * 记录操作审计日志
+   */
+  audit (toolName, args) {
+    this.auditLog.push({
+      ts: Date.now(),
+      tool: toolName,
+      summary: JSON.stringify(args).substring(0, 200)
+    })
+    if (this.auditLog.length > this.MAX_AUDIT_LOG) this.auditLog.shift()
+  }
+
+  /**
+   * 频率限制检查
+   * @param {string} key - 限流键（如工具名）
+   * @param {number} maxPerMinute - 每分钟最大调用次数
+   */
+  checkRateLimit (key, maxPerMinute = 30) {
+    const now = Date.now()
+    const window = 60000
+    const record = this.rateLimitMap.get(key) || []
+    const recent = record.filter(t => now - t < window)
+    if (recent.length >= maxPerMinute) {
+      throw new Error(`请求过于频繁（${maxPerMinute}次/分钟），请稍后重试`)
+    }
+    recent.push(now)
+    this.rateLimitMap.set(key, recent)
   }
 
   // Built-in blacklist: patterns that are always blocked regardless of user config.
@@ -189,6 +223,14 @@ class ElectermMCPServer {
 
   // Send request to renderer process via IPC
   sendToRenderer (action, data, timeoutMs = 30000) {
+    // 写操作自动记录审计 + 限流
+    if (data?.toolName && !['list_tabs', 'get_active_tab', 'get_terminal_selection', 'list_bookmarks',
+      'list_bookmark_groups', 'list_sftp', 'stat_sftp', 'get_settings'].includes(data.toolName)) {
+      this.audit(data.toolName, data.args)
+      // 命令执行类工具频率限制更严格
+      const maxReq = data.toolName === 'send_terminal_command' ? 20 : 60
+      this.checkRateLimit(data.toolName, maxReq)
+    }
     return new Promise((resolve, reject) => {
       const requestId = uid()
       const win = globalState.get('win')
@@ -856,7 +898,7 @@ class ElectermMCPServer {
             jsonrpc: '2.0',
             error: {
               code: -32600,
-              message: 'Unauthorized: invalid or missing API key'
+              message: '未授权：API Key 无效或缺失'
             },
             id: null
           })
@@ -946,7 +988,7 @@ class ElectermMCPServer {
           url: `http://${host}:${port}/mcp`,
           protocol: 'mcp',
           version: '2024-11-05',
-          apiKey: self.config.apiKey
+          authRequired: !!self.config.apiKey
         }
         const msg = `MCP Server is running at ${serverInfo.url} (API key required)`
         resolve({

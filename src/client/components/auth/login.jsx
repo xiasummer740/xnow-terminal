@@ -37,7 +37,7 @@ export default function Login() {
 
   const handleSubmit = () => {
     if (!pass) {
-      return message.warning('password required')
+      return message.warning('请输入密码')
     } else if (submitting) {
       return
     }
@@ -50,7 +50,7 @@ export default function Login() {
     if (r) {
       setLogined(true)
     } else {
-      message.error('Login failed')
+      message.error('密码错误')
     }
     setSubmitting(false)
   }

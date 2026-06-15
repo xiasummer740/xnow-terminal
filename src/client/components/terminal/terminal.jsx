@@ -307,9 +307,9 @@ class Term extends Component {
   warnSftpFollowUnsupported = () => {
     message.warning(
       <span>
-        Fish shell/windows shell is not supported for SFTP follow SSH path feature. See:{' '}
+        Fish shell / Windows shell 不支持 SFTP 跟随 SSH 路径功能。详情见：{' '}
         <ExternalLink to="https://github.com/xiasummer740/xnow-terminal/wiki/Warning-about-sftp-follow-ssh-path-function">
-          wiki
+          帮助文档
         </ExternalLink>
       </span>,
       7,
@@ -349,7 +349,7 @@ class Term extends Component {
 
   cd = (p) => {
     if (isUnsafeFilename(p)) {
-      return message.error('File name contains unsafe characters')
+      return message.error('文件名包含不安全的字符')
     }
     this.runQuickCommand(`cd "${p}"`)
   }
@@ -454,7 +454,7 @@ class Term extends Component {
     switch (action) {
       case 'trz': {
         if (this.trzszClient && this.trzszClient.isActive) {
-          message.warning('A transfer is already in progress')
+          message.warning('传输正在进行中')
           this.handleDropFileModalCancel()
           return
         }
@@ -464,7 +464,7 @@ class Term extends Component {
       }
       case 'rz': {
         if (this.zmodemClient && this.zmodemClient.isActive) {
-          message.warning('A transfer is already in progress')
+          message.warning('传输正在进行中')
           this.handleDropFileModalCancel()
           return
         }
@@ -474,7 +474,7 @@ class Term extends Component {
       }
       case 'xmodem': {
         if (this.xmodemClient && this.xmodemClient.isActive) {
-          message.warning('A transfer is already in progress')
+          message.warning('传输正在进行中')
           this.handleDropFileModalCancel()
           return
         }
@@ -1299,6 +1299,13 @@ class Term extends Component {
     this.props.editTab(id, {
       status,
     })
+    // 连接成功后清除密码（不在内存中保留）
+    if (status === 'success') {
+      const tab = this.props.tab
+      if (tab && tab.password && !tab.isBookmark) {
+        delete tab.password
+      }
+    }
   }
 
   openNormalBuffer = () => {
@@ -1488,7 +1495,7 @@ class Term extends Component {
       return
     }
     const item =
-      window.store.bookmarksMap?.get(error.srcId) ||
+      window.store.bookmarksMap?.[error.srcId] ||
       window.store.bookmarks?.find((d) => d.id === error.srcId)
     if (!item) {
       return

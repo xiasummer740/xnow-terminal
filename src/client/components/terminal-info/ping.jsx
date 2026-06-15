@@ -110,6 +110,8 @@ export default function TerminalInfoPing (props) {
   const dataRef = useRef([])
   const canvasRef = useRef(null)
 
+  const pingCountRef = useRef(0)
+
   useEffect(() => {
     if (!isRemote || !pid) return
 
@@ -133,9 +135,15 @@ export default function TerminalInfoPing (props) {
             setMax(Math.max(...arr) + 'ms')
           }
         }
-        // 记录到历史（成功/丢包都记）
-        if (host) addPing(host, valid ? latency : -1)
-      } catch (e) { if (host) addPing(host, -1) }
+        // 每 60 秒记录一次历史（成功/丢包都记）
+        pingCountRef.current++
+        if (pingCountRef.current % 60 === 0 && host) {
+          addPing(host, valid ? latency : -1)
+        }
+      } catch (e) {
+        pingCountRef.current++
+        if (pingCountRef.current % 60 === 0 && host) addPing(host, -1)
+      }
       scheduleDraw(canvasRef.current, dataRef.current)
     }
 

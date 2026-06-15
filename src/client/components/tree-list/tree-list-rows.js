@@ -23,7 +23,7 @@ export function buildVisibleTreeRows({
     if (bookmarkMatchCache.has(bookmarkId)) {
       return bookmarkMatchCache.get(bookmarkId)
     }
-    const item = bookmarksMap.get(bookmarkId)
+    const item = bookmarksMap[bookmarkId]
     const matched = Boolean(
       item &&
       (!lowerKeyword ||
@@ -80,7 +80,7 @@ export function buildVisibleTreeRows({
     }
 
     for (const bookmarkId of group.bookmarkIds || []) {
-      const item = bookmarksMap.get(bookmarkId)
+      const item = bookmarksMap[bookmarkId]
       if (!item || (lowerKeyword && !bookmarkMatches(bookmarkId))) {
         continue
       }

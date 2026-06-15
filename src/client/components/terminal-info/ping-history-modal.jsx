@@ -91,7 +91,7 @@ function drawChart (canvas, points) {
 
 export default function PingHistoryModal ({ open, host, onClose }) {
   const [range, setRange] = useState('1h')
-  const [smooth, setSmooth] = useState(true)
+  const [smooth, setSmooth] = useState(false)
   const [bgOn, setBgOn] = useState(false)
   const canvasRef = useRef(null)
   const [stats, setStats] = useState({ points: [], lossRate: 0, total: 0, lost: 0 })
@@ -108,18 +108,10 @@ export default function PingHistoryModal ({ open, host, onClose }) {
   const config = window.store?.config || {}
   useEffect(() => { setSmooth(config.historySmooth !== false) }, [config.historySmooth])
 
-  // 从全局配置读取后台监控状态
+  // 默认开启后台监控（应用启动时自动启动）
   useEffect(() => {
-    if (!open) return
-    const enabled = config.bgMonitor
-    setBgOn(!!enabled)
-    if (enabled) {
-      const hosts = (window.store.bookmarks || []).filter(b => b.host).map(b => b.host)
-      if (hosts.length) window.pre.runGlobalAsync('startBgPing', hosts)
-    } else {
-      window.pre.runGlobalAsync('stopBgPing')
-    }
-  }, [open, config.bgMonitor])
+    setBgOn(true)
+  }, [])
 
   useEffect(() => {
     if (!open || !host) return
@@ -138,7 +130,7 @@ export default function PingHistoryModal ({ open, host, onClose }) {
       title={<span style={{ fontSize: 14, fontWeight: 600 }}>📊 历史延迟 — {host}</span>}
       open={open} onCancel={onClose} footer={null}
       width={720}
-      destroyOnClose
+      destroyOnHidden
       styles={{ content: { background: '#141414' }, header: { background: '#141414', borderBottom: '1px solid #222' } }}
     >
       {/* 工具条 */}

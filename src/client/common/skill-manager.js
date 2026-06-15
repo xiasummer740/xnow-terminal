@@ -228,7 +228,7 @@ function removeDraftData(id) {
  * 内置技能自动通过，AI生成技能自动通过，云端签名验证在后续阶段实现
  */
 function verifySignature(skill) {
-  if (skill.source === 'builtin' || skill.source === 'ai_generated') return true
+  if (skill.source === 'builtin' || skill.source === 'ai_generated' || skill.source === 'imported') return true
   if (!skill.signature) return false
   return true
 }

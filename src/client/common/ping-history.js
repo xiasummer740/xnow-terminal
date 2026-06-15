@@ -45,13 +45,10 @@ export function addPing (host, latency) {
 }
 
 export async function loadHistory (host) {
-  // 合并前台记录 + 后台记录
+  // 只取前台 SSH ping 数据（与实时延迟测量方式一致）
   const local = loadAll(host)
-  let bg = []
-  try { bg = await window.pre.runGlobalAsync('getBgPingData', host) } catch {}
-  const merged = [...local, ...(Array.isArray(bg) ? bg : [])]
   const cutoff = Date.now() - 259200000
-  return merged.filter(p => p.t >= cutoff)
+  return local.filter(p => p.t >= cutoff)
 }
 
 export async function getAggregatedHistory (host, range, smooth = true) {

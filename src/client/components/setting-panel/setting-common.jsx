@@ -409,7 +409,6 @@ export default class SettingCommon extends Component {
 
   renderCustomToggle (name, label) {
     const checked = !!this.props.config[name]
-    const { Switch } = require('antd')
     return (
       <div className='pd2b' key={'rt' + name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Switch checked={checked} size='small' onChange={v => this.onChangeValue(v, name)} />

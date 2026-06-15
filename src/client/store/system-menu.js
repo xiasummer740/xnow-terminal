@@ -61,6 +61,17 @@ export default Store => {
     store.openSettingModal()
   }
 
+  Store.prototype.onNewSshWithType = function (type) {
+    const { store } = window
+    store.storeAssign({
+      settingTab: settingMap.bookmarks
+    })
+    const item = getInitItem([], settingMap.bookmarks)
+    item.type = type
+    store.setSettingItem(item)
+    store.openSettingModal()
+  }
+
   Store.prototype.onNewSshAI = function () {
     const { store } = window
     if (store.aiConfigMissing()) {

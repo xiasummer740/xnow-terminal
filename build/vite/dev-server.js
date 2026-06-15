@@ -48,7 +48,7 @@ async function createServer () {
     server: {
       middlewareMode: true,
       hmr: {
-        port: 30085,
+        port: 30086,
         overlay: true
       }
     },

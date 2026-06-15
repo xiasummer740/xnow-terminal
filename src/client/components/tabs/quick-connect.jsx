@@ -56,7 +56,7 @@ export default function QuickConnect ({ batch, inputOnly }) {
 
     const opts = window.store.parseQuickConnect(inputValue)
     if (!opts) {
-      return message.error('Format error, please check the input', 10)
+      return message.error('格式错误，请检查输入格式', 10)
     }
 
     connectWithOptions(opts, batch)
@@ -74,7 +74,7 @@ export default function QuickConnect ({ batch, inputOnly }) {
       onChange: handleChange,
       className: 'width-100 quick-connect-input',
       onPressEnter: handleConnect,
-      placeholder: 'ssh|rdp|vnc|spice|serial|http|https://[username]:[password]@host:port?opts={...}',
+      placeholder: '用户名@主机地址:端口，如 root@192.168.1.100:22',
       prefix: inputOnly ? <HelpIcon link={wiki} /> : undefined
     }
     const iconProps = {

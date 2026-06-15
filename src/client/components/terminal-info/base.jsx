@@ -149,7 +149,7 @@ export default class TerminalInfoBase extends Component {
       terminalInfos
     } = this.props
     return (
-      <Space.Compact className='width-100'>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {
           defaults.terminalInfos.map(f => {
             const type = terminalInfos.includes(f) ? 'primary' : 'default'
@@ -159,15 +159,15 @@ export default class TerminalInfoBase extends Component {
                 type={type}
                 size='small'
                 onClick={() => this.toggleTerminalLogInfo(f)}
-                className='cap'
                 icon={mapper[f]}
+                style={{ fontSize: 11 }}
               >
                 {labelMapper[f] || f}
               </Button>
             )
           })
         }
-      </Space.Compact>
+      </div>
     )
   }
 

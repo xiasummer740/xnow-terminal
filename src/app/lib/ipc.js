@@ -472,6 +472,37 @@ function initIpc() {
     },
     // ===== 远程命令执行（用于部署哪吒） =====
     execSshCommand: (() => {
+      // 操作审计日志
+      const sshAuditLog = []
+      const MAX_AUDIT_LOG = 500
+      function auditSsh (action, details) {
+        sshAuditLog.push({
+          ts: Date.now(),
+          action,
+          details: {
+            host: details.host || '',
+            username: details.username || '',
+            command: (details.command || '').substring(0, 200),
+            port: details.port || 22
+          }
+        })
+        if (sshAuditLog.length > MAX_AUDIT_LOG) sshAuditLog.shift()
+      }
+      // 频率限制：每个 host 每分钟最多 10 次
+      const sshRateLimit = new Map()
+      function checkSshRateLimit (host) {
+        const now = Date.now()
+        const window = 60000
+        const maxPerMin = 10
+        const record = sshRateLimit.get(host) || []
+        const recent = record.filter(t => now - t < window)
+        if (recent.length >= maxPerMin) {
+          throw new Error(`SSH 命令执行频率超过限制（${maxPerMin}次/分钟），请稍后再试`)
+        }
+        recent.push(now)
+        sshRateLimit.set(host, recent)
+      }
+
       const knownHostKeys = {}
       return async (opts) => {
       const { Client } = require('@electerm/ssh2')
@@ -479,6 +510,9 @@ function initIpc() {
       const port = opts.port || 22
       const username = opts.username || 'root'
       const timeout = opts.timeout || 60000
+
+        auditSsh('exec', { host, port, username, command: opts.command })
+        checkSshRateLimit(host)
 
       return new Promise((resolve, reject) => {
         let settled = false
@@ -535,7 +569,7 @@ function initIpc() {
               return true
             }
             if (stored === keyHash) return true
-            console.warn(`[SSH] ⚠️ Host key for ${hostKey} has changed! Possible MITM attack.`)
+            console.warn(`[SSH] ⚠️ ${hostKey} 的主机密钥已变更！可能存在中间人攻击。`)
             return true
           }
         })
@@ -617,30 +651,46 @@ function initIpc() {
       const dataPath = path.resolve(app.getPath('userData'), 'bg-ping.json')
       try { const raw = fs.readFileSync(dataPath, 'utf-8'); const d = JSON.parse(raw); for (const [k, v] of Object.entries(d)) { if (Array.isArray(v)) module.exports._bgPingData[k] = v } } catch {}
       module.exports._bgPingHosts = hosts.map(h => ({ host: h, port: 22 }))
+      module.exports._bgPingIdx = 0
       if (module.exports._bgPingTimer) clearInterval(module.exports._bgPingTimer)
+      // 每秒 ping 一个 host（轮询），每 60 秒记录一个数据点
+      const lastRecord = {}
       module.exports._bgPingTimer = setInterval(async () => {
-        for (const { host: h, port: p } of module.exports._bgPingHosts) {
-          const start = Date.now()
-          try {
-            const sock = new net.Socket()
-            sock.setTimeout(5000)
-            await new Promise((resolve, reject) => {
-              sock.connect(p, h, () => { sock.destroy(); resolve() })
-              sock.on('error', (e) => { sock.destroy(); reject(e) })
-              sock.on('timeout', () => { sock.destroy(); reject(new Error('timeout')) })
-            })
-            const v = Date.now() - start
+        const list = module.exports._bgPingHosts
+        if (!list || list.length === 0) return
+        const idx = module.exports._bgPingIdx % list.length
+        module.exports._bgPingIdx = (idx + 1) % list.length
+        const { host: h, port: p } = list[idx]
+        const start = Date.now()
+        try {
+          const sock = new net.Socket()
+          sock.setTimeout(5000)
+          await new Promise((resolve, reject) => {
+            sock.connect(p, h, () => { sock.destroy(); resolve() })
+            sock.on('error', (e) => { sock.destroy(); reject(e) })
+            sock.on('timeout', () => { sock.destroy(); reject(new Error('连接超时')) })
+          })
+          const v = Date.now() - start
+          // 每 60 秒记录一次
+          if (!lastRecord[h] || Date.now() - lastRecord[h] >= 60000) {
+            lastRecord[h] = Date.now()
             if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
             module.exports._bgPingData[h].push({ t: Date.now(), v })
             if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
-          } catch {
+          }
+        } catch {
+          if (!lastRecord[h] || Date.now() - lastRecord[h] >= 60000) {
+            lastRecord[h] = Date.now()
             if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
             module.exports._bgPingData[h].push({ t: Date.now(), v: -1 })
             if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
           }
         }
-        try { fs.writeFileSync(dataPath, JSON.stringify(module.exports._bgPingData)) } catch {}
-      }, 60000)
+        // 整轮完成后存盘
+        if (idx === list.length - 1) {
+          try { fs.writeFileSync(dataPath, JSON.stringify(module.exports._bgPingData)) } catch {}
+        }
+      }, 1000)
       return { success: true, hosts: hosts.length }
     },
     stopBgPing: () => {

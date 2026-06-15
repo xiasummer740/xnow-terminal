@@ -18,8 +18,11 @@ export const defaultColors = [
   '#ffd33d',
   '#6f42c1',
   '#e99695',
-  '#24292e',
-  '#6a737d'
+  '#00bcd4',
+  '#ff4081',
+  '#7c4dff',
+  '#00e676',
+  '#ff6d00'
 ]
 
 export const getRandomDefaultColor = () => {

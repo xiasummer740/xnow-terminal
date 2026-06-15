@@ -64,7 +64,7 @@ export default function AIBookmarkForm (props) {
     }
 
     if (!description.trim()) {
-      return message.warning(e('description') + ' required')
+      return message.warning('请填写描述')
     }
 
     setLoading(true)
@@ -124,7 +124,7 @@ export default function AIBookmarkForm (props) {
       }
     } catch (error) {
       console.error('AI bookmark generation error:', error)
-      message.error('Can not generate bookmarks from AI response: ' + error.message)
+      message.error('AI 生成书签失败：' + error.message)
     } finally {
       setLoading(false)
     }
@@ -193,7 +193,7 @@ export default function AIBookmarkForm (props) {
       message.success(e('Done'))
     } catch (error) {
       console.error('AI bookmark creation error:', error)
-      message.error('Can not create bookmarks from AI response: ' + error.message)
+      message.error('AI 创建书签失败：' + error.message)
     } finally {
       setConfirmProgress(null)
     }

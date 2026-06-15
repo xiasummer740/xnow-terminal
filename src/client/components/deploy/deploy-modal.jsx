@@ -56,7 +56,7 @@ export default function DeployModal({
       width={700}
       closable={!allDone && closable}
       maskClosable={false}
-      destroyOnClose
+      destroyOnHidden
       style={{ userSelect: 'none' }}
       styles={{
         mask: { background: 'rgba(0, 0, 0, 0.75)' },

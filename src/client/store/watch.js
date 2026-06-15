@@ -46,9 +46,7 @@ export default store => {
         )
         refsStatic.add('oldState-' + name, deepCopy(n) || [])
         if (name === 'bookmarks') {
-          store.bookmarksMap = new Map(
-            n.map(d => [d.id, d])
-          )
+          store.bookmarksMap = n.reduce((map, d) => { map[d.id] = d; return map }, {})
         }
         await store.updateLastDataUpdateTime()
         if (dbNamesForSync.includes(name)) {

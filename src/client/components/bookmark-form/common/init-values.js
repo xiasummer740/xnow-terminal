@@ -3,6 +3,7 @@
  */
 import { newBookmarkIdPrefix, authTypeMap } from '../../../common/constants.js'
 import { getColorFromCategory } from '../../../common/get-category-color.js'
+import { defaultColors } from '../../../common/rand-hex-color.js'
 import findBookmarkGroupId from '../../../common/find-bookmark-group-id.js'
 import deepCopy from 'json-deep-copy'
 
@@ -30,9 +31,14 @@ export function createBaseInitValues (props, sessionType, defaults = {}) {
     category: initBookmarkGroupId
   }
 
-  // Only set default color if no color exists (for new bookmarks)
-  if (!base.color) {
-    base.color = getColorFromCategory(bookmarkGroups, base.category)
+  // 新建书签时自动分配不重复的彩色
+  const isNew = id.startsWith(newBookmarkIdPrefix)
+  if (isNew) {
+    const usedColors = new Set(
+      (window.store?.bookmarks || []).map(b => b.color).filter(Boolean)
+    )
+    const availColors = defaultColors.filter(c => !usedColors.has(c))
+    base.color = availColors.length > 0 ? availColors[0] : defaultColors[0]
   }
 
   return base

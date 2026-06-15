@@ -127,6 +127,7 @@ export default Store => {
   }
   Store.prototype.beforeExit = function (evt) {
     const { confirmBeforeExit } = window.store.config
+    const activeTransfers = window.store.fileTransfers?.filter(t => t.status === 'transferring') || []
     if (
       (confirmBeforeExit &&
       !window.confirmExit) ||
@@ -134,6 +135,9 @@ export default Store => {
     ) {
       evt.returnValue = false
       let mod = null
+      const transferWarn = activeTransfers.length > 0
+        ? `有 ${activeTransfers.length} 个文件正在传输，关闭将中断传输。`
+        : ''
       mod = Modal.confirm({
         onCancel: () => {
           window.confirmExit = false
@@ -144,13 +148,17 @@ export default Store => {
           window.store[window.exitFunction]()
         },
         title: e('quit'),
-        okText: e('ok'),
+        okText: transferWarn ? '强制关闭' : e('ok'),
         cancelText: e('cancel'),
-        content: ''
+        content: transferWarn
       })
     }
   }
   Store.prototype.beforeExitApp = function (evt, name) {
+    const activeTransfers = window.store.fileTransfers?.filter(t => t.status === 'transferring') || []
+    const transferWarn = activeTransfers.length > 0
+      ? `有 ${activeTransfers.length} 个文件正在传输，关闭将中断传输。`
+      : ''
     let mod = null
     mod = Modal.confirm({
       onCancel: () => {
@@ -161,9 +169,9 @@ export default Store => {
         window.pre.runGlobalAsync(name)
       },
       title: e('quit'),
-      okText: e('ok'),
+      okText: transferWarn ? '强制关闭' : e('ok'),
       cancelText: e('cancel'),
-      content: ''
+      content: transferWarn
     })
   }
 

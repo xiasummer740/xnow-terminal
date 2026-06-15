@@ -285,29 +285,48 @@ class Store {
   }
 }
 
-loadDataExtend(Store)
-eventExtend(Store)
-dbUpgradeExtend(Store)
-syncExtend(Store)
-appUpgradeExtend(Store)
-bookmarkGroupExtend(Store)
-bookmarkExtend(Store)
-commonExtend(Store)
-itemExtend(Store)
-quickCommandExtend(Store)
-sessionExtend(Store)
-settingExtend(Store)
-sidebarExtend(Store)
-sysMenuExtend(Store)
-tabExtend(Store)
-terminalThemeExtend(Store)
-uiThemeExtend(Store)
-transferHistoryExtend(Store)
-batchInputHistory(Store)
-transferExtend(Store)
-addressBookmarkExtend(Store)
-widgetsExtend(Store)
-mcpHandlerExtend(Store)
-workspaceExtend(Store)
+/**
+ * 安全注入 store 扩展，检测命名冲突
+ * @param {Function} extendFn — 扩展函数 (Store) => { Store.prototype.xxx = ... }
+ * @param {string} name — 扩展名称，用于冲突提示
+ */
+function applyExtension (extendFn, name) {
+  const beforeKeys = new Set(Object.getOwnPropertyNames(Store.prototype))
+  extendFn(Store)
+  const afterKeys = Object.getOwnPropertyNames(Store.prototype)
+  for (const key of afterKeys) {
+    if (!beforeKeys.has(key)) continue
+    if (key === 'constructor') continue
+    console.warn(
+      `[Store] ⚠️ 命名冲突: 扩展 "${name}" 覆盖了已有的方法 "${key}" — ` +
+      '后加载的扩展会覆盖先加载的，可能导致意外行为'
+    )
+  }
+}
+
+applyExtension(loadDataExtend, 'load-data')
+applyExtension(eventExtend, 'event')
+applyExtension(dbUpgradeExtend, 'db-upgrade')
+applyExtension(syncExtend, 'sync')
+applyExtension(appUpgradeExtend, 'app-upgrade')
+applyExtension(bookmarkGroupExtend, 'bookmark-group')
+applyExtension(bookmarkExtend, 'bookmark')
+applyExtension(commonExtend, 'common')
+applyExtension(itemExtend, 'item')
+applyExtension(quickCommandExtend, 'quick-command')
+applyExtension(sessionExtend, 'session')
+applyExtension(settingExtend, 'setting')
+applyExtension(sidebarExtend, 'sidebar')
+applyExtension(sysMenuExtend, 'system-menu')
+applyExtension(tabExtend, 'tab')
+applyExtension(terminalThemeExtend, 'terminal-theme')
+applyExtension(uiThemeExtend, 'ui-theme')
+applyExtension(transferHistoryExtend, 'transfer-history')
+applyExtension(batchInputHistory, 'batch-input-history')
+applyExtension(transferExtend, 'transfer-list')
+applyExtension(addressBookmarkExtend, 'address-bookmark')
+applyExtension(widgetsExtend, 'widgets')
+applyExtension(mcpHandlerExtend, 'mcp-handler')
+applyExtension(workspaceExtend, 'workspace')
 
 export const StateStore = Store

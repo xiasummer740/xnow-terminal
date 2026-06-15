@@ -38,7 +38,7 @@ export const maxZoom = 8
 export const minZoom = 0.5
 export const extraTabWidth = 113
 
-export const tabWidth = 160
+export const tabWidth = 120
 
 export const tabMargin = 1
 

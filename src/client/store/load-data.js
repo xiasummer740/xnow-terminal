@@ -172,7 +172,7 @@ export default (Store) => {
         const dt = JSON.parse(data || '[]')
         refsStatic.add('oldState-' + name, dt)
         if (name === 'bookmarks') {
-          ext.bookmarksMap = new Map(dt.map((d) => [d.id, d]))
+          ext.bookmarksMap = dt.reduce((map, d) => { map[d.id] = d; return map }, {})
         }
         ext[name] = dt
       }

@@ -23,10 +23,23 @@ import testCon from '../../common/test-connection'
 import newTerm from '../../common/new-terminal'
 import { isValidIP } from '../../common/is-ip'
 import { action as manateAction } from 'manate'
-import { getRandomDefaultColor } from '../../common/rand-hex-color'
+import { defaultColors, getRandomDefaultColor } from '../../common/rand-hex-color'
 
 export default function FormRenderer ({ config, props }) {
   const initialValues = config.initValues(props)
+  // 调试：打印颜色值
+  console.log('[color-debug] initValues color:', initialValues.color, 'isNew:', initialValues.id?.startsWith(newBookmarkIdPrefix))
+  // 新建书签强制分配彩色
+  if (initialValues.id?.startsWith(newBookmarkIdPrefix)) {
+    const usedColors = new Set(
+      (window.store?.bookmarks || []).map(b => b.color).filter(Boolean)
+    )
+    const freeColor = defaultColors.find(c => !usedColors.has(c))
+    if (freeColor) {
+      initialValues.color = freeColor
+      console.log('[color-debug] assigned color:', freeColor)
+    }
+  }
   const [form] = Form.useForm()
   const [ips, setIps] = useState([])
   const [authType, setAuthType] = useState(initialValues.authType || authTypeMap.password)
@@ -35,6 +48,14 @@ export default function FormRenderer ({ config, props }) {
 
   useEffect(() => {
     const init = config.initValues(props)
+    // 新建书签时强制分配未使用的彩色
+    if (init.id?.startsWith(newBookmarkIdPrefix)) {
+      const usedColors = new Set(
+        (window.store?.bookmarks || []).map(b => b.color).filter(Boolean)
+      )
+      const freeColor = defaultColors.find(c => !usedColors.has(c))
+      if (freeColor) init.color = freeColor
+    }
     form.resetFields()
     form.setFieldsValue(init)
   }, [
@@ -166,7 +187,7 @@ export default function FormRenderer ({ config, props }) {
 
   const handleSubmit = async (evt, res, isTest = false) => {
     if (res.enableSsh === false && res.enableSftp === false) {
-      return message.warning('SSH and SFTP all disabled')
+      return message.warning('SSH 和 SFTP 都已被禁用')
     }
     const obj = {
       ...props.formData,
@@ -347,7 +368,7 @@ export default function FormRenderer ({ config, props }) {
         </div>
       )
     }))
-    content = <Tabs defaultActiveKey='vpsInfo' items={items} />
+    content = <Tabs defaultActiveKey={tabs[0]?.key || 'vpsInfo'} items={items} />
   }
   const handleFinishFailed = (errInfo) => {
     console.warn('Form validation failed:', errInfo.errorFields?.map(f => f.errors).flat().join('; ') || errInfo)
