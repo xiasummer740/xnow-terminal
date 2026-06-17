@@ -651,43 +651,43 @@ function initIpc() {
       const dataPath = path.resolve(app.getPath('userData'), 'bg-ping.json')
       try { const raw = fs.readFileSync(dataPath, 'utf-8'); const d = JSON.parse(raw); for (const [k, v] of Object.entries(d)) { if (Array.isArray(v)) module.exports._bgPingData[k] = v } } catch {}
       module.exports._bgPingHosts = hosts.map(h => ({ host: h, port: 22 }))
-      module.exports._bgPingIdx = 0
       if (module.exports._bgPingTimer) clearInterval(module.exports._bgPingTimer)
-      // 每秒 ping 一个 host（轮询），每 60 秒记录一个数据点
-      const lastRecord = {}
+      // 每秒并发 ping 所有 host，每台 VPS 每秒一个数据点
+      // 每个 host 的 60 秒缓冲池
+      const bufMap = {}
       module.exports._bgPingTimer = setInterval(async () => {
         const list = module.exports._bgPingHosts
         if (!list || list.length === 0) return
-        const idx = module.exports._bgPingIdx % list.length
-        module.exports._bgPingIdx = (idx + 1) % list.length
-        const { host: h, port: p } = list[idx]
-        const start = Date.now()
-        try {
-          const sock = new net.Socket()
-          sock.setTimeout(5000)
-          await new Promise((resolve, reject) => {
-            sock.connect(p, h, () => { sock.destroy(); resolve() })
-            sock.on('error', (e) => { sock.destroy(); reject(e) })
-            sock.on('timeout', () => { sock.destroy(); reject(new Error('连接超时')) })
+        // 并发 ping 所有 host，每秒每个 host 一个数据点
+        const results = await Promise.allSettled(list.map(({ host: h, port: p }) => {
+          return new Promise((resolve) => {
+            const start = Date.now()
+            const sock = new net.Socket()
+            sock.setTimeout(5000)
+            sock.connect(p, h, () => { sock.destroy(); resolve({ host: h, latency: Date.now() - start }) })
+            sock.on('error', () => { sock.destroy(); resolve({ host: h, latency: -1 }) })
+            sock.on('timeout', () => { sock.destroy(); resolve({ host: h, latency: -1 }) })
           })
-          const v = Date.now() - start
-          // 每 60 秒记录一次
-          if (!lastRecord[h] || Date.now() - lastRecord[h] >= 60000) {
-            lastRecord[h] = Date.now()
+        }))
+        for (const r of results) {
+          const { host: h, latency: v } = r.status === 'fulfilled' ? r.value : { host: '', latency: -1 }
+          if (!h) continue
+          if (!bufMap[h]) bufMap[h] = []
+          bufMap[h].push(v)
+          // 每攒够 60 个数据点，聚合存一条
+          if (bufMap[h].length >= 60) {
+            const buf = bufMap[h].splice(0, 60)
+            const vals = buf.filter(x => x > 0)
+            const avg = vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : -1
             if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
-            module.exports._bgPingData[h].push({ t: Date.now(), v })
-            if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
-          }
-        } catch {
-          if (!lastRecord[h] || Date.now() - lastRecord[h] >= 60000) {
-            lastRecord[h] = Date.now()
-            if (!module.exports._bgPingData[h]) module.exports._bgPingData[h] = []
-            module.exports._bgPingData[h].push({ t: Date.now(), v: -1 })
-            if (module.exports._bgPingData[h].length > 5000) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 5000)
+            module.exports._bgPingData[h].push({ t: Date.now(), v: avg })
+            if (module.exports._bgPingData[h].length > 1440) module.exports._bgPingData[h].splice(0, module.exports._bgPingData[h].length - 1440)
           }
         }
-        // 整轮完成后存盘
-        if (idx === list.length - 1) {
+        // 每分钟存盘一次
+        const minKey = Math.floor(Date.now() / 60000)
+        if (module.exports._bgLastSave !== minKey) {
+          module.exports._bgLastSave = minKey
           try { fs.writeFileSync(dataPath, JSON.stringify(module.exports._bgPingData)) } catch {}
         }
       }, 1000)
@@ -697,7 +697,14 @@ function initIpc() {
       if (module.exports._bgPingTimer) { clearInterval(module.exports._bgPingTimer); module.exports._bgPingTimer = null }
       return { success: true }
     },
+    getBgPingData: (host) => {
+      return (module.exports._bgPingData || {})[host] || []
+    },
   }
+  // 初始化 module.exports 上的后台 ping 数据存储
+  module.exports._bgPingData = module.exports._bgPingData || {}
+  module.exports._bgPingTimer = null
+  module.exports._bgPingHosts = []
   ipcMain.handle('async', (event, { name, args }) => {
     return asyncGlobals[name](...args)
   })

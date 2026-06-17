@@ -110,7 +110,7 @@ export default function TerminalInfoPing (props) {
   const dataRef = useRef([])
   const canvasRef = useRef(null)
 
-  const pingCountRef = useRef(0)
+  const secBufRef = useRef([])
 
   useEffect(() => {
     if (!isRemote || !pid) return
@@ -128,21 +128,26 @@ export default function TerminalInfoPing (props) {
           else if (latency < 200) setColor('#faad14')
           else setColor('#ff4d4f')
 
-          // 统计
           const arr = dataRef.current.filter(v => v > 0)
           if (arr.length > 0) {
             setAvg(Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) + 'ms')
             setMax(Math.max(...arr) + 'ms')
           }
         }
-        // 每 60 秒记录一次历史（成功/丢包都记）
-        pingCountRef.current++
-        if (pingCountRef.current % 60 === 0 && host) {
-          addPing(host, valid ? latency : -1)
-        }
+        secBufRef.current.push(valid ? latency : -1)
       } catch (e) {
-        pingCountRef.current++
-        if (pingCountRef.current % 60 === 0 && host) addPing(host, -1)
+        secBufRef.current.push(-1)
+      }
+      // 每 60 秒聚合前 60 个数据点存一条历史
+      if (secBufRef.current.length >= 60 && host) {
+        const buf = secBufRef.current.splice(0, 60)
+        const vals = buf.filter(v => v > 0)
+        if (vals.length > 0) {
+          const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+          addPing(host, avg)
+        } else {
+          addPing(host, -1) // 全部丢包
+        }
       }
       scheduleDraw(canvasRef.current, dataRef.current)
     }

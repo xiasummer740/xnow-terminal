@@ -24,12 +24,20 @@ const EVENT_NAME_CONFIG = 'ai-config-history-update'
 
 const e = window.translate
 
-// AI 平台预设
+// AI 平台预设（国内外主流 + 自定义）
 const AI_PLATFORMS = [
   { label: '🔵 DeepSeek V4 (推荐)', value: 'deepseek', url: 'https://api.deepseek.com', path: '/chat/completions', model: 'deepseek-chat', key: '' },
   { label: '🟢 OpenAI', value: 'openai', url: 'https://api.openai.com', path: '/v1/chat/completions', model: 'gpt-4o', key: '' },
   { label: '🟣 Anthropic Claude', value: 'claude', url: 'https://api.anthropic.com', path: '/v1/messages', model: 'claude-sonnet-4-20250514', key: '' },
-  { label: '🟠 通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },
+  { label: '🔴 Google Gemini', value: 'gemini', url: 'https://generativelanguage.googleapis.com', path: '/v1beta/models', model: 'gemini-2.0-flash', key: '' },
+  { label: '🟠 月之暗面 Moonshot', value: 'moonshot', url: 'https://api.moonshot.cn', path: '/v1/chat/completions', model: 'moonshot-v1-8k', key: '' },
+  { label: '🟡 智谱 GLM', value: 'glm', url: 'https://open.bigmodel.cn/api/paas/v4', path: '/chat/completions', model: 'glm-4-plus', key: '' },
+  { label: '🔵 阿里通义千问', value: 'qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode', path: '/v1/chat/completions', model: 'qwen-plus', key: '' },
+  { label: '🟢 字节豆包', value: 'doubao', url: 'https://ark.cn-beijing.volces.com/api/v3', path: '/chat/completions', model: 'doubao-pro-32k', key: '' },
+  { label: '🟣 零一万物 Yi', value: 'yi', url: 'https://api.lingyiwanwu.com', path: '/v1/chat/completions', model: 'yi-34b-chat', key: '' },
+  { label: '🔴 Groq', value: 'groq', url: 'https://api.groq.com', path: '/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', key: '' },
+  { label: '🟠 Mistral AI', value: 'mistral', url: 'https://api.mistral.ai', path: '/v1/chat/completions', model: 'mistral-large-latest', key: '' },
+  { label: '🟡 xAI Grok', value: 'xai', url: 'https://api.x.ai', path: '/v1/chat/completions', model: 'grok-2', key: '' },
   { label: '⚫ 自定义', value: 'custom', url: '', path: '/chat/completions', model: '', key: '' }
 ]
 
@@ -50,6 +58,9 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
   const [testing, setTesting] = useState(false)
   const baseURLAI = Form.useWatch('baseURLAI', form)
 
+  // 当前选中的 AI 平台
+  const currentPlatform = AI_PLATFORMS.find(p => p.url === baseURLAI)?.value || undefined
+
   // 根据已选平台提供对应模型的建议列表
   const modelOptions = useMemo(() => {
     const platform = AI_PLATFORMS.find(p => p.url === baseURLAI)?.value
@@ -61,17 +72,55 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
       openai: [
         { value: 'gpt-4o', label: 'GPT-4o（最强多模态）' },
         { value: 'gpt-4o-mini', label: 'GPT-4o-mini（快速便宜）' },
-        { value: 'o3-mini', label: 'o3-mini（推理模型）' }
+        { value: 'o3-mini', label: 'o3-mini（推理模型）' },
+        { value: 'gpt-4.1', label: 'GPT-4.1（最新）' }
       ],
       claude: [
         { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4（平衡）' },
         { value: 'claude-opus-4-20250514', label: 'Claude Opus 4（最强）' },
         { value: 'claude-haiku-4-20250514', label: 'Claude Haiku 4（快速）' }
       ],
+      gemini: [
+        { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash（快速）' },
+        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro（最强）' }
+      ],
+      moonshot: [
+        { value: 'moonshot-v1-8k', label: 'Moonshot v1 8K' },
+        { value: 'moonshot-v1-32k', label: 'Moonshot v1 32K' },
+        { value: 'moonshot-v1-128k', label: 'Moonshot v1 128K' }
+      ],
+      glm: [
+        { value: 'glm-4-plus', label: 'GLM-4-Plus（最新）' },
+        { value: 'glm-4-air', label: 'GLM-4-Air（经济）' },
+        { value: 'glm-4-flash', label: 'GLM-4-Flash（快速）' }
+      ],
       qwen: [
         { value: 'qwen-plus', label: 'Qwen Plus' },
         { value: 'qwen-max', label: 'Qwen Max' },
         { value: 'qwen-turbo', label: 'Qwen Turbo' }
+      ],
+      doubao: [
+        { value: 'doubao-pro-32k', label: '豆包 Pro 32K' },
+        { value: 'doubao-pro-128k', label: '豆包 Pro 128K' },
+        { value: 'doubao-lite-32k', label: '豆包 Lite 32K' }
+      ],
+      yi: [
+        { value: 'yi-34b-chat', label: 'Yi-34B-Chat' },
+        { value: 'yi-large', label: 'Yi-Large' }
+      ],
+      groq: [
+        { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+        { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+        { value: 'gemma2-9b-it', label: 'Gemma 2 9B' }
+      ],
+      mistral: [
+        { value: 'mistral-large-latest', label: 'Mistral Large' },
+        { value: 'mistral-small-latest', label: 'Mistral Small' },
+        { value: 'codestral-latest', label: 'Codestral（代码）' }
+      ],
+      xai: [
+        { value: 'grok-2', label: 'Grok 2' },
+        { value: 'grok-3', label: 'Grok 3' }
       ]
     }
     return modelMap[platform] || []
@@ -170,16 +219,16 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
       >
         <Form.Item label='AI 平台'>
           <Select
+            value={currentPlatform}
             placeholder='选择 AI 平台自动填充配置'
             options={AI_PLATFORMS}
             onChange={(val) => {
               const p = AI_PLATFORMS.find(p => p.value === val)
-              if (p && p.value !== 'custom') {
-                form.setFieldsValue({
-                  baseURLAI: p.url,
-                  apiPathAI: p.path,
-                  modelAI: p.model
-                })
+              if (!p) return
+              if (p.value === 'custom') {
+                form.setFieldsValue({ baseURLAI: '', apiPathAI: '/chat/completions', modelAI: '' })
+              } else {
+                form.setFieldsValue({ baseURLAI: p.url, apiPathAI: p.path, modelAI: p.model })
               }
             }}
           />
