@@ -9,7 +9,6 @@ const DEFAULT_HEIGHT = 600
 
 export default function AIFloatWindow(props) {
   const { store } = props
-  const windowRef = useRef(null)
   const [position, setPosition] = useState({
     x: store.aiFloatPositionX || DEFAULT_WIDTH,
     y: store.aiFloatPositionY || 100,
@@ -22,6 +21,10 @@ export default function AIFloatWindow(props) {
   const [resizing, setResizing] = useState(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 })
+  const positionRef = useRef(position)
+  positionRef.current = position
+  const sizeRef = useRef(size)
+  sizeRef.current = size
 
   // ── 拖拽 ──
   const handleDragStart = useCallback(
@@ -53,9 +56,9 @@ export default function AIFloatWindow(props) {
   const handleDragEnd = useCallback(() => {
     if (dragging) {
       setDragging(false)
-      store.saveAIFloatPosition(position.x, position.y)
+      store.saveAIFloatPosition(positionRef.current.x, positionRef.current.y)
     }
-  }, [dragging, position, store])
+  }, [dragging, store])
 
   // ── 缩放 ──
   const handleResizeStart = useCallback(
@@ -88,9 +91,9 @@ export default function AIFloatWindow(props) {
   const handleResizeEnd = useCallback(() => {
     if (resizing) {
       setResizing(false)
-      store.saveAIFloatSize(size.width, size.height)
+      store.saveAIFloatSize(sizeRef.current.width, sizeRef.current.height)
     }
-  }, [resizing, size, store])
+  }, [resizing, store])
 
   // ── 全局事件监听 ──
   useEffect(() => {
@@ -142,7 +145,6 @@ export default function AIFloatWindow(props) {
   return (
     <div
       className="ai-float-window"
-      ref={windowRef}
       style={{
         left: position.x + 'px',
         top: position.y + 'px',
