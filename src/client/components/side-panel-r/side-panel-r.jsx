@@ -8,8 +8,7 @@ import {
 } from '@ant-design/icons'
 import {
   Typography,
-  Flex,
-  Tag
+  Flex
 } from 'antd'
 
 export default memo(function RightSidePanel (
@@ -27,9 +26,7 @@ export default memo(function RightSidePanel (
   if (!rightPanelVisible) {
     return null
   }
-  const tag = rightPanelTab === 'ai'
-    ? <Tag className='mg1r'>AI</Tag>
-    : <InfoCircleOutlined className='mg1r' />
+  const tag = <InfoCircleOutlined className='mg1r' />
 
   function onDragEnd (nw) {
     window.store.setRightSidePanelWidth(nw)

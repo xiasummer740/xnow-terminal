@@ -27,7 +27,7 @@ import ConnectionHoppingWarning from './connection-hopping-warnning'
 import QuickSearch from '../quick-search/quick-search'
 import SshConfigLoadNotify from '../ssh-config/ssh-config-load-notify'
 import LoadSshConfigs from '../ssh-config/load-ssh-configs'
-import AIChat from '../ai/ai-chat-entry'
+import AIFloatWindow from '../ai/ai-float-window'
 import AIConfigModal from '../ai/ai-config-modal'
 import Opacity from '../common/opacity'
 import MoveItemModal from '../tree-list/move-item-modal'
@@ -235,15 +235,6 @@ export default auto(function Index (props) {
     hasOldConnectionHoppingBookmark: store.hasOldConnectionHoppingBookmark,
     configLoaded
   }
-  const aiChatProps = {
-    aiChatHistory: store.aiChatHistory,
-    config,
-    selectedTabIds: store.batchInputSelectedTabIds,
-    tabs: store.getTabs(),
-    activeTabId: store.activeTabId,
-    showAIConfig: store.showAIConfig,
-    rightPanelTab
-  }
   const cmdSuggestionsProps = {
     suggestions: store.terminalCommandSuggestions
   }
@@ -291,8 +282,8 @@ export default auto(function Index (props) {
         <Remote2RemoteHandlers />
         <Resolutions {...resProps} />
         <InfoModal {...infoModalProps} />
+        <AIFloatWindow store={store} />
         <RightSidePanel {...rightPanelProps}>
-          <AIChat {...aiChatProps} />
           <TerminalInfo key={store.activeTabId} {...terminalInfoProps} />
         </RightSidePanel>
         <SshConfigLoadNotify {...sshConfigProps} />
