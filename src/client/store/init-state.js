@@ -127,6 +127,8 @@ export default () => {
     rightPanelAIVisible: false,
     rightPanelAIWidth: parseInt(ls.getItem(rightPanelAIWidthLsKey), 10) || 480,
     rightPanelVPSWidth: parseInt(ls.getItem(rightPanelVPSWidthLsKey), 10) || 380,
+    _vpsForceClosed: false,
+    _vpsForceOpen: false,
 
     // for settings related
     settingItem: initSettingItem([], settingMap.bookmarks),

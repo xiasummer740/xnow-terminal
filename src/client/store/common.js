@@ -40,7 +40,8 @@ export default Store => {
   Store.prototype.openInfoPanel = action(function () {
     const { store } = window
     const hasHost = !!(store.currentTab && store.currentTab.host)
-    const currentlyVisible = hasHost ? !store._vpsForceClosed : store._vpsForceOpen
+    if (!hasHost) return  // 无 host 时 VPS 面板不会渲染，不做任何操作
+    const currentlyVisible = !store._vpsForceClosed
     if (currentlyVisible) {
       // 当前可见 → 关闭
       store._vpsForceOpen = false
