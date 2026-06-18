@@ -121,6 +121,13 @@ export default () => {
     showSkillDiscovery: false,
     pendingSkillDraft: null,
 
+    // AI float window state
+    aiFloatVisible: false,
+    aiFloatPositionX: parseInt(ls.getItem('aiFloatPositionX'), 10) || 100,
+    aiFloatPositionY: parseInt(ls.getItem('aiFloatPositionY'), 10) || 100,
+    aiFloatWidth: parseInt(ls.getItem('aiFloatWidth'), 10) || 520,
+    aiFloatHeight: parseInt(ls.getItem('aiFloatHeight'), 10) || 600,
+
     // for settings related
     settingItem: initSettingItem([], settingMap.bookmarks),
     settingTab: settingMap.bookmarks, // setting tab

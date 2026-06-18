@@ -247,19 +247,34 @@ export default Store => {
 
   Store.prototype.handleOpenAIPanel = function () {
     const { store } = window
-    store.rightPanelVisible = true
-    store.rightPanelTab = 'ai'
+    store.aiFloatVisible = !store.aiFloatVisible
   }
 
   Store.prototype.explainWithAi = function (txt) {
     const { store } = window
-    store.handleOpenAIPanel()
+    store.aiFloatVisible = true
     setTimeout(() => {
       refsStatic.get('AIChat')?.setPrompt(`explain terminal output: ${txt}`)
     }, 500)
     setTimeout(() => {
       refsStatic.get('AIChat')?.handleSubmit()
     }, 1200)
+  }
+
+  Store.prototype.saveAIFloatPosition = function (x, y) {
+    const { store } = window
+    store.aiFloatPositionX = x
+    store.aiFloatPositionY = y
+    ls.setItem('aiFloatPositionX', String(x))
+    ls.setItem('aiFloatPositionY', String(y))
+  }
+
+  Store.prototype.saveAIFloatSize = function (w, h) {
+    const { store } = window
+    store.aiFloatWidth = w
+    store.aiFloatHeight = h
+    ls.setItem('aiFloatWidth', String(w))
+    ls.setItem('aiFloatHeight', String(h))
   }
 
   Store.prototype.runCommandInTerminal = function (cmd) {
