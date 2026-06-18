@@ -137,6 +137,10 @@ export default store => {
     if (tab && store.rightPanelVisible) {
       window.store.openInfoPanelAction()
     }
+    // 切换标签时重置 VPS 强制关闭（新标签有 host 则自动弹出）
+    if (tab && tab.host && store._vpsForceClosed) {
+      store._vpsForceClosed = false
+    }
     return store.activeTabId
   }).start()
 }

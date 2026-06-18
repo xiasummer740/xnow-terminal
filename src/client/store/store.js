@@ -100,6 +100,12 @@ class Store {
     return Array.from(window.store._batchInputSelectedTabIds)
   }
 
+  get rightPanelVPSVisible () {
+    const tab = this.tabs.find(t => t.id === this.activeTabId)
+    const hasHost = !!(tab && tab.host)
+    return hasHost && !this._vpsForceClosed
+  }
+
   get rightPanelTitle () {
     const {
       rightPanelTab,

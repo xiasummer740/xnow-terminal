@@ -126,7 +126,6 @@ export default () => {
     // Right panel state (AI + VPS docked panels, replaces old AI float window)
     rightPanelAIVisible: false,
     rightPanelAIWidth: parseInt(ls.getItem(rightPanelAIWidthLsKey), 10) || 480,
-    rightPanelVPSVisible: false,
     rightPanelVPSWidth: parseInt(ls.getItem(rightPanelVPSWidthLsKey), 10) || 380,
 
     // for settings related

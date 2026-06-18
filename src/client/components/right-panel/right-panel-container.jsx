@@ -92,28 +92,19 @@ export default auto(function RightPanelContainer (props) {
     }
   }, [handleAIResizeMove, handleAIResizeEnd, handleVPSResizeMove, handleVPSResizeEnd])
 
-  // ── VPS 可见性：计算属性 ──
-  const _activeTab = store.tabs.find(t => t.id === store.activeTabId)
-  const _hasHost = !!(_activeTab && _activeTab.host)
-  const _vpsVisible = _hasHost && !store._vpsForceClosed
+  // ── VPS 可见性：使用 store 计算属性 ──
+  const _vpsVisible = store.rightPanelVPSVisible
   const _aiVisible = store.rightPanelAIVisible
 
-  // 切换标签重置手动关闭
-  const _prevAid = useRef(store.activeTabId)
-  useEffect(() => {
-    if (_prevAid.current !== store.activeTabId) {
-      _prevAid.current = store.activeTabId
-      if (_hasHost && store._vpsForceClosed) store._vpsForceClosed = false
-    }
-  })
-
-  // 窗口大小同步
+  // 窗口大小同步（resizeWindow IPC + innerWidth 预调整）
   const _prevV = useRef(_vpsVisible)
   useEffect(() => {
     if (_vpsVisible !== _prevV.current) {
       _prevV.current = _vpsVisible
+      const delta = _vpsVisible ? store.rightPanelVPSWidth : -store.rightPanelVPSWidth
+      store.innerWidth = window.innerWidth + delta
       window.pre.runGlobalAsync('resizeWindow', {
-        width: window.outerWidth + (_vpsVisible ? store.rightPanelVPSWidth : -store.rightPanelVPSWidth),
+        width: window.outerWidth + delta,
         height: window.outerHeight
       })
     }
