@@ -10,7 +10,11 @@ import {
   rightSidebarWidthKey,
   addPanelWidthLsKey,
   dismissDelKeyTipLsKey,
-  connectionMap
+  connectionMap,
+  aiFloatPositionXLsKey,
+  aiFloatPositionYLsKey,
+  aiFloatWidthLsKey,
+  aiFloatHeightLsKey
 } from '../common/constants'
 import * as ls from '../common/safe-local-storage'
 import { refs, refsStatic } from '../components/common/ref'
@@ -265,16 +269,16 @@ export default Store => {
     const { store } = window
     store.aiFloatPositionX = x
     store.aiFloatPositionY = y
-    ls.setItem('aiFloatPositionX', String(x))
-    ls.setItem('aiFloatPositionY', String(y))
+    ls.setItem(aiFloatPositionXLsKey, String(x))
+    ls.setItem(aiFloatPositionYLsKey, String(y))
   }
 
   Store.prototype.saveAIFloatSize = function (w, h) {
     const { store } = window
     store.aiFloatWidth = w
     store.aiFloatHeight = h
-    ls.setItem('aiFloatWidth', String(w))
-    ls.setItem('aiFloatHeight', String(h))
+    ls.setItem(aiFloatWidthLsKey, String(w))
+    ls.setItem(aiFloatHeightLsKey, String(h))
   }
 
   Store.prototype.runCommandInTerminal = function (cmd) {

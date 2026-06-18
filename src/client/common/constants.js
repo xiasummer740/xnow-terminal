@@ -150,6 +150,10 @@ export const rightSidebarWidthKey = 'right-sidebar-width'
 export const addPanelWidthLsKey = 'addPanelWidth'
 export const sftpDefaultSortSettingKey = 'sftp-default-sort'
 export const qmSortByFrequencyKey = 'qm-sort-by-frequency'
+export const aiFloatPositionXLsKey = 'ai-float-position-x'
+export const aiFloatPositionYLsKey = 'ai-float-position-y'
+export const aiFloatWidthLsKey = 'ai-float-width'
+export const aiFloatHeightLsKey = 'ai-float-height'
 
 export const commonBaudRates = [
   110,
