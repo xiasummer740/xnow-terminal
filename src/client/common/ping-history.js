@@ -46,22 +46,10 @@ export function addPing (host, latency) {
 
 export async function loadHistory (host) {
   const cutoff = Date.now() - 259200000
-  // 前台 SSH ping 数据（已打开的标签页）
+  // 前台 SSH ping 数据（SSH keepalive，体现真实的端到端延迟）
   const local = (loadAll(host) || []).filter(p => p.t >= cutoff)
-  // 后台 TCP ping 数据（所有书签的 VPS）
-  let bg = []
-  try { bg = await window.pre.runGlobalAsync('getBgPingData', host) } catch (e) { console.warn('[history] getBgPingData error:', e) }
-  const bgFiltered = (Array.isArray(bg) ? bg : []).filter(p => p.t >= cutoff)
-  console.log('[history] host:', host, 'local:', local.length, 'bg:', Array.isArray(bg) ? bg.length : 'N/A', 'merged:', local.length + bgFiltered.length)
-  // 合并两个数据源，去重（取时间戳最新的）
-  const seen = new Set()
-  const merged = [...local, ...bgFiltered].filter(p => {
-    const key = Math.floor(p.t / 60000) // 按分钟去重
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-  return merged.sort((a, b) => a.t - b.t)
+  if (local.length > 0) return local.sort((a, b) => a.t - b.t)
+  return []
 }
 
 export async function getAggregatedHistory (host, range, smooth = true) {

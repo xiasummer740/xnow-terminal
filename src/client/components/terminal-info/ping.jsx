@@ -8,14 +8,16 @@ import { tcpPing } from '../terminal/terminal-apis'
 import { addPing } from '../../common/ping-history'
 import PingHistoryModal from './ping-history-modal'
 
-const MAX_POINTS = 60
-const CHART_W = 280
-const CHART_H = 50
+const MAX_POINTS = 120
+const CHART_W = 300
+const CHART_H = 80
 const BAR_W = 3
 const BAR_GAP = 1.5
-const BAR_R = 1 // 圆角半径
+const BAR_R = 1
 
-// Canvas 画柱状图
+// 丢包惩罚（丢包时用此值占位，便于肉眼看到高度）
+const LOSS_PLACEHOLDER = 500
+
 let rafId = null
 function scheduleDraw (canvas, data) {
   if (rafId) cancelAnimationFrame(rafId)
@@ -36,47 +38,54 @@ function drawChart (canvas, data) {
 
   if (data.length < 2) return
 
-  // 计算Y轴范围
-  const vals = data.filter(v => v > 0)
-  if (vals.length === 0) return
-  const maxVal = Math.max(...vals)
-  const minVal = Math.min(...vals)
-  const range = Math.max(maxVal - minVal, 20)
-  const yMin = Math.max(0, minVal - range * 0.1)
-  const yMax = maxVal + range * 0.1
+  // Y轴范围：用有效值算，但给丢包柱留空间
+  const vals = data.filter(v => v > 0 && v < LOSS_PLACEHOLDER)
+  if (vals.length === 0 && !data.some(v => v <= 0)) return
+  const maxVal = vals.length > 0 ? Math.max(...vals) : 200
+  const yMax = Math.max(maxVal * 1.2, 100)
 
-  const scaleY = (v) => CHART_H - 2 - ((v - yMin) / (yMax - yMin)) * (CHART_H - 4)
+  const scaleY = (v) => {
+    if (v <= 0) return CHART_H - 2 // 丢包→底部红线
+    return CHART_H - 2 - (v / yMax) * (CHART_H - 4)
+  }
 
-  // 刻度线
+  // 网格线（固定 100/200/300ms）
+  const gridLines = [100, 200, 300]
   ctx.strokeStyle = '#222'
   ctx.lineWidth = 0.5
-  const steps = 4
-  for (let i = 0; i <= steps; i++) {
-    const val = yMin + (yMax - yMin) * i / steps
-    const y = scaleY(val)
+  ctx.setLineDash([2, 3])
+  for (const g of gridLines) {
+    const y = scaleY(g)
+    if (y < 0 || y > CHART_H) continue
     ctx.beginPath()
     ctx.moveTo(0, y)
     ctx.lineTo(CHART_W, y)
     ctx.stroke()
-    // 刻度值
     ctx.fillStyle = '#555'
-    ctx.font = '9px monospace'
-    ctx.fillText(Math.round(val) + '', 2, y - 2)
+    ctx.font = '8px monospace'
+    ctx.fillText(g + 'ms', 2, y - 2)
   }
+  ctx.setLineDash([])
 
-  // 画柱子（圆角+渐变）
+  // 画柱子
   const barStep = BAR_W + BAR_GAP
   const totalBars = Math.min(data.length, Math.floor(CHART_W / barStep))
   const startIdx = data.length - totalBars
 
   for (let i = 0; i < totalBars; i++) {
     const v = data[startIdx + i]
-    if (v <= 0) continue
     const x = i * barStep
+
+    if (v <= 0) {
+      // 丢包：底部红线
+      ctx.fillStyle = '#ff4d4f'
+      ctx.fillRect(x, CHART_H - 4, BAR_W, 3)
+      continue
+    }
+
     const h = Math.max(CHART_H - 2 - scaleY(v), 1)
     const y = scaleY(v)
 
-    // 渐变填充
     let topColor, bottomColor
     if (v > 250) { topColor = '#ff7875'; bottomColor = '#ff4d4f' }
     else if (v > 150) { topColor = '#ffc53d'; bottomColor = '#faad14' }
@@ -87,7 +96,6 @@ function drawChart (canvas, data) {
     grad.addColorStop(1, bottomColor)
     ctx.fillStyle = grad
 
-    // 圆角矩形
     ctx.beginPath()
     const r = Math.min(BAR_R, h / 2)
     ctx.moveTo(x, y + r)
@@ -106,17 +114,25 @@ export default function TerminalInfoPing (props) {
   const [color, setColor] = useState('#999')
   const [avg, setAvg] = useState('--')
   const [max, setMax] = useState('--')
+  const [lost, setLost] = useState(0)
+  const [total, setTotal] = useState(0)
   const [historyOpen, setHistoryOpen] = useState(false)
   const dataRef = useRef([])
   const canvasRef = useRef(null)
 
   const secBufRef = useRef([])
+  const lossCount = useRef(0)
+  const totalCount = useRef(0)
 
   useEffect(() => {
     if (!isRemote || !pid) return
 
+    lossCount.current = 0
+    totalCount.current = 0
+
     let timer
     const measure = async () => {
+      totalCount.current++
       try {
         const latency = await tcpPing(pid)
         const valid = latency > 0
@@ -133,12 +149,22 @@ export default function TerminalInfoPing (props) {
             setAvg(Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) + 'ms')
             setMax(Math.max(...arr) + 'ms')
           }
+        } else {
+          lossCount.current++
+          dataRef.current.push(-1) // 丢包也入 chart，显示为红线
+          if (dataRef.current.length > MAX_POINTS) dataRef.current.shift()
         }
+        setLost(lossCount.current)
+        setTotal(totalCount.current)
         secBufRef.current.push(valid ? latency : -1)
       } catch (e) {
+        lossCount.current++
+        dataRef.current.push(-1)
+        if (dataRef.current.length > MAX_POINTS) dataRef.current.shift()
+        setLost(lossCount.current)
+        setTotal(totalCount.current)
         secBufRef.current.push(-1)
       }
-      // 每 60 秒聚合前 60 个数据点存一条历史
       if (secBufRef.current.length >= 60 && host) {
         const buf = secBufRef.current.splice(0, 60)
         const vals = buf.filter(v => v > 0)
@@ -146,7 +172,7 @@ export default function TerminalInfoPing (props) {
           const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
           addPing(host, avg)
         } else {
-          addPing(host, -1) // 全部丢包
+          addPing(host, -1)
         }
       }
       scheduleDraw(canvasRef.current, dataRef.current)
@@ -159,9 +185,10 @@ export default function TerminalInfoPing (props) {
 
   if (!isRemote) return null
 
+  const lossRate = total > 0 ? (lost / total * 100).toFixed(1) : '0.0'
+
   return (
     <div className='terminal-info-section terminal-info-ping' style={{ padding: '8px 0', borderBottom: '1px solid #333' }}>
-      {/* 当前延迟 + 统计 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <b><ApiOutlined /> 实时延迟</b>
         <Tooltip title='历史延迟'>
@@ -169,16 +196,17 @@ export default function TerminalInfoPing (props) {
         </Tooltip>
       </div>
       <PingHistoryModal open={historyOpen} host={host} onClose={() => setHistoryOpen(false)} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 }}>
-        <span style={{ fontSize: 11, color: '#888' }}>
-          均{avg} / 最{max}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 0 }}>
+        <span style={{ color, fontSize: 26, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums' }}>{ping}</span>
+        <span style={{ color: '#666', fontSize: 11 }}>RTT</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: parseInt(lossRate) > 5 ? '#ff4d4f' : '#888' }}>
+          丢包 {lossRate}% ({lost}/{total})
         </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
-        <span style={{ color, fontSize: 22, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums' }}>{ping}</span>
-        <span style={{ color: '#666', fontSize: 11 }}>RTT</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 4px' }}>
+        <span style={{ fontSize: 11, color: '#888' }}>均{avg}</span>
+        <span style={{ fontSize: 11, color: '#888' }}>最{max}</span>
       </div>
-      {/* 柱状图 */}
       <canvas
         ref={canvasRef}
         style={{ width: CHART_W, height: CHART_H, display: 'block', borderRadius: 4 }}
