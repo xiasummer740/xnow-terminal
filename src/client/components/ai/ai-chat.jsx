@@ -123,7 +123,7 @@ export default function AIChat (props) {
       setPrompt,
       handleSubmit
     })
-    if (props.rightPanelTab === 'ai' && window.store.aiConfigMissing()) {
+    if (!props.isFloatWindow && props.rightPanelTab === 'ai' && window.store.aiConfigMissing()) {
       window.store.toggleAIConfig()
     }
     return () => {
@@ -131,7 +131,7 @@ export default function AIChat (props) {
     }
   }, [handleSubmit])
 
-  if (props.rightPanelTab !== 'ai') {
+  if (!props.isFloatWindow && props.rightPanelTab !== 'ai') {
     return null
   }
 
