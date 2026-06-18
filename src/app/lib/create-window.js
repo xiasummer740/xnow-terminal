@@ -108,6 +108,11 @@ exports.createWindow = async function (userConfig) {
         })
         win.center()
       }
+      try { win.webContents.send('window-state-change', { isMaximized: false }) } catch {}
+    })
+    win.on('maximize', function () {
+      try { win.webContents.send('window-state-change', { isMaximized: true }) } catch {}
+    })
     })
     win.on('resize', _.debounce(function () {
       if (!win.isMaximized()) {

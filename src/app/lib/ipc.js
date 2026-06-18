@@ -43,6 +43,7 @@ const {
 } = require('../common/app-props')
 const { getScreenSize, maximize, unmaximize } = require('./window-control')
 const { openFileWithEditor } = require('./open-file-with-editor')
+const autoUpdater = require('./auto-updater')
 const { loadFontList } = require('./font-list')
 const { checkDbUpgrade, doUpgrade } = require('../upgrade')
 const { listSerialPorts } = require('./serial-port')
@@ -317,6 +318,17 @@ function initIpc() {
     AIchatWithTools,
     getStreamContent,
     stopStream,
+    // electron-updater
+    autoUpdaterCheck: () => {
+      const win = globalState.get('win')
+      autoUpdater.checkForUpdates(win)
+    },
+    autoUpdaterDownload: () => {
+      autoUpdater.downloadUpdate()
+    },
+    autoUpdaterInstall: () => {
+      autoUpdater.quitAndInstall()
+    },
     setTitle: (title) => {
       const win = globalState.get('win')
       win && win.setTitle(packInfo.name + ' - ' + title)

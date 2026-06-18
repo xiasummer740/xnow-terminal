@@ -54,7 +54,7 @@ export default class Upgrade extends PureComponent {
   }
 
   handleCheckUpdate = (isManual) => {
-    this.getLatestRelease(isManual)?.catch(() => {})
+    window.pre.runGlobalAsync('autoUpdaterCheck')
   }
 
   changeProps = (update) => {
@@ -132,30 +132,8 @@ export default class Upgrade extends PureComponent {
   }
 
   doUpgrade = debounce(async () => {
-    const { installSrc } = this.props
-    if (!isMac && !isWin && installSrc === 'npm') {
-      return window.store.addTab({
-        ...newTerm(undefined, true),
-        runScripts: [
-          {
-            script: 'npm install -g xnow-terminal',
-            delay: 500
-          }
-        ]
-      })
-    }
-    this.changeProps({
-      upgrading: true
-    })
-    const proxy = window.store.getProxySetting()
-    this.update = await upgrade({
-      mirror: this.state.mirror,
-      proxy,
-      onData: this.onData,
-      onEnd: this.onEnd,
-      onError: this.onError
-    })
-    this.downloadTimer = setTimeout(this.timeout, downloadUpgradeTimeout)
+    // electron-updater 下载
+    window.pre.runGlobalAsync('autoUpdaterDownload')
   }, 100)
 
   handleSkipVersion = () => {
@@ -293,9 +271,42 @@ export default class Upgrade extends PureComponent {
   }
 
   renderUpgradeContent = () => {
+    const { downloading, percent, readyToInstall } = this.props.upgradeInfo
+    if (downloading) {
+      return (
+        <div style={{ padding: '12px 0' }}>
+          <p style={{ marginBottom: 8, color: '#888' }}>正在下载更新...</p>
+          <div style={{
+            width: '100%', height: 6, background: '#333', borderRadius: 3, overflow: 'hidden'
+          }}>
+            <div style={{
+              width: (percent || 0) + '%', height: '100%',
+              background: 'linear-gradient(90deg, #52c41a, #73d13d)',
+              borderRadius: 3, transition: 'width 0.3s'
+            }} />
+          </div>
+          <p style={{ marginTop: 6, fontSize: 12, color: '#888' }}>{percent || 0}%</p>
+        </div>
+      )
+    }
+    if (readyToInstall) {
+      return (
+        <div>
+          <p style={{ color: '#52c41a', marginBottom: 12 }}>更新已下载完成！</p>
+          <Button type='primary' onClick={() => window.pre.runGlobalAsync('autoUpdaterInstall')}>
+            立即安装并重启
+          </Button>
+        </div>
+      )
+    }
     return (
       <div>
-        <p style={{ color: '#888' }}>当前已是最新版本，可手动检查更新。</p>
+        <p style={{ color: '#888' }}>新版本可用，点击下载更新。</p>
+        <div className='pd1t'>
+          <Button type='primary' onClick={() => this.doUpgrade()} icon={<DownloadOutlined />}>
+            下载更新
+          </Button>
+        </div>
         <div className='pd1t'>{this.renderLinks()}</div>
       </div>
     )
@@ -362,17 +373,17 @@ export default class Upgrade extends PureComponent {
   }
 
   render () {
-    const { shouldUpgrade, checkingRemoteVersion, error, showManualDownload } = this.props.upgradeInfo
+    const { shouldUpgrade, checking, error, showManualDownload } = this.props.upgradeInfo
     if (showManualDownload) {
       return this.renderManualDownload()
     }
     if (error) {
       return this.renderError(error)
     }
-    if (!shouldUpgrade) {
+    if (checking) {
       return null
     }
-    if (checkingRemoteVersion) {
+    if (!shouldUpgrade) {
       return null
     }
     return this.renderUpgradePanel()

@@ -52,6 +52,14 @@ export default auto(function Index (props) {
     setTimeout(store.triggerResize, 200)
     const { ipcOnEvent } = window.pre
     ipcOnEvent('checkupdate', store.onCheckUpdate)
+    // electron-updater 事件：可用/下载进度/完成
+    ipcOnEvent('auto-update-status', (e, data) => {
+      if (store.onAutoUpdateStatus) store.onAutoUpdateStatus(data)
+    })
+    // 窗口最大化/还原状态同步（OS 事件 → store）
+    ipcOnEvent('window-state-change', (e, { isMaximized }) => {
+      store.isMaximized = isMaximized
+    })
     // 启动后自动检查更新（延迟5秒，避免启动卡顿）
     setTimeout(() => store.onCheckUpdate(false), 5000)
     ipcOnEvent('open-about', store.openAbout)
