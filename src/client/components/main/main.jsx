@@ -22,12 +22,11 @@ import { isMac, isWin, textTerminalBgValue } from '../../common/constants'
 import { ConfigProvider } from 'antd'
 import { NotificationContainer } from '../common/notification'
 import InfoModal from '../sidebar/info-modal.jsx'
-import RightSidePanel from '../side-panel-r/side-panel-r'
+import RightPanelContainer from '../right-panel/right-panel-container'
 import ConnectionHoppingWarning from './connection-hopping-warnning'
 import QuickSearch from '../quick-search/quick-search'
 import SshConfigLoadNotify from '../ssh-config/ssh-config-load-notify'
 import LoadSshConfigs from '../ssh-config/load-ssh-configs'
-import AIFloatWindow from '../ai/ai-float-window'
 import AIConfigModal from '../ai/ai-config-modal'
 import Opacity from '../common/opacity'
 import MoveItemModal from '../tree-list/move-item-modal'
@@ -40,8 +39,11 @@ import UnixTimestampTooltip from '../terminal/unix-timestamp-tooltip'
 import { pick } from 'lodash-es'
 import deepCopy from 'json-deep-copy'
 import './wrapper.styl'
-import TerminalInfo from '../terminal-info/terminal-info-entry'
 import './term-fullscreen.styl'
+
+// 简易文件日志（排查用）：window.pre.runGlobalAsync('writeLog', '消息')
+// 日志路径：os.tmpdir() + '/xnow-debug.log'
+// 不需要时才删除下面这组 IPC 注册
 
 export default auto(function Index (props) {
   useEffect(() => {
@@ -109,8 +111,6 @@ export default auto(function Index (props) {
     transferHistory,
     transferToConfirm,
     openResolutionEdit,
-    rightPanelTitle,
-    rightPanelTab
   } = store
   const upgradeInfo = deepCopy(store.upgradeInfo)
   const cls = classnames({
@@ -206,24 +206,6 @@ export default auto(function Index (props) {
     openResolutionEdit
   }
 
-  const rightPanelProps = {
-    rightPanelVisible: store.rightPanelVisible,
-    rightPanelPinned: store.rightPanelPinned,
-    rightPanelWidth: store.rightPanelWidth,
-    title: rightPanelTitle,
-    rightPanelTab
-  }
-  const terminalInfoProps = {
-    rightPanelTab,
-    ...deepCopy(store.terminalInfoProps),
-    host: store.currentTab?.host || config.host,
-    port: store.currentTab?.port || config.port,
-    ...pick(config, [
-      'saveTerminalLogToFile',
-      'terminalInfos',
-      'sessionLogPath'
-    ])
-  }
   const sshConfigProps = {
     ...pick(store, [
       'settingTab',
@@ -282,10 +264,7 @@ export default auto(function Index (props) {
         <Remote2RemoteHandlers />
         <Resolutions {...resProps} />
         <InfoModal {...infoModalProps} />
-        <AIFloatWindow store={store} />
-        <RightSidePanel {...rightPanelProps}>
-          <TerminalInfo key={store.activeTabId} {...terminalInfoProps} />
-        </RightSidePanel>
+        <RightPanelContainer store={store} />
         <SshConfigLoadNotify {...sshConfigProps} />
         <LoadSshConfigs
           showSshConfigModal={store.showSshConfigModal}

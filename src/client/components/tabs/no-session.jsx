@@ -56,7 +56,7 @@ export default function NoSessionPanel ({ height }) {
           <div className='no-session-logo'>
             <img src={logoPath} className='no-session-logo-img' />
           </div>
-          <h2 className='no-session-title'>XNOW Terminal</h2>
+          <h2 className='no-session-title'>XNOW Terminal{window.et.isDev ? ' 开发版' : ''}</h2>
           <Tag className='no-session-version' color='#08c'>{packInfo.version}</Tag>
           <p className='no-session-subtitle'>连接和管理你的远程服务器</p>
         </div>

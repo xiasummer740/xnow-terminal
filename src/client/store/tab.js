@@ -230,11 +230,6 @@ export default Store => {
 
     if (removedIds.length) {
       window.store.fixCurrentTabIds(tabs, removedIds)
-      // 当最后一个远程标签页关闭时，自动关闭右侧信息面板
-      const hasRemoteTab = tabs.some(t => t.host || (t.type && t.type !== 'local'))
-      if (!hasRemoteTab) {
-        window.store.rightPanelVisible = false
-      }
     }
   }
 

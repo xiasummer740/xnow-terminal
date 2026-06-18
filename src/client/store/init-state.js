@@ -20,10 +20,8 @@ import {
   addPanelWidthLsKey,
   dismissDelKeyTipLsKey,
   qmSortByFrequencyKey,
-  aiFloatPositionXLsKey,
-  aiFloatPositionYLsKey,
-  aiFloatWidthLsKey,
-  aiFloatHeightLsKey,
+  rightPanelAIWidthLsKey,
+  rightPanelVPSWidthLsKey,
   resolutionsLsKey,
   syncServerDataKey,
   splitMap
@@ -125,12 +123,11 @@ export default () => {
     showSkillDiscovery: false,
     pendingSkillDraft: null,
 
-    // AI float window state
-    aiFloatVisible: false,
-    aiFloatPositionX: parseInt(ls.getItem(aiFloatPositionXLsKey), 10) || 100,
-    aiFloatPositionY: parseInt(ls.getItem(aiFloatPositionYLsKey), 10) || 100,
-    aiFloatWidth: parseInt(ls.getItem(aiFloatWidthLsKey), 10) || 520,
-    aiFloatHeight: parseInt(ls.getItem(aiFloatHeightLsKey), 10) || 600,
+    // Right panel state (AI + VPS docked panels, replaces old AI float window)
+    rightPanelAIVisible: false,
+    rightPanelAIWidth: parseInt(ls.getItem(rightPanelAIWidthLsKey), 10) || 480,
+    rightPanelVPSVisible: false,
+    rightPanelVPSWidth: parseInt(ls.getItem(rightPanelVPSWidthLsKey), 10) || 380,
 
     // for settings related
     settingItem: initSettingItem([], settingMap.bookmarks),

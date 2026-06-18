@@ -155,6 +155,10 @@ export const aiFloatPositionYLsKey = 'ai-float-position-y'
 export const aiFloatWidthLsKey = 'ai-float-width'
 export const aiFloatHeightLsKey = 'ai-float-height'
 
+// Right panel widths (replaces AI float width for docked panels)
+export const rightPanelAIWidthLsKey = 'right-panel-ai-width'
+export const rightPanelVPSWidthLsKey = 'right-panel-vps-width'
+
 export const commonBaudRates = [
   110,
   300,

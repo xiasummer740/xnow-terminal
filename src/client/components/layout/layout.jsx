@@ -33,24 +33,23 @@ export default auto(function Layout (props) {
       width,
       height,
       pinnedQuickCommandBar,
-      // tabsHeight,
       leftSidebarWidth,
-      // infoPanelPinned,
       pinned,
-      rightPanelVisible,
-      rightPanelPinned,
-      rightPanelWidth,
+      rightPanelAIVisible,
+      rightPanelAIWidth,
+      rightPanelVPSVisible,
+      rightPanelVPSWidth,
       resizeTrigger,
       inActiveTerminal
     } = props.store
     const h = height - footerHeight - (inActiveTerminal && pinnedQuickCommandBar ? quickCommandBoxHeight : 0) + resizeTrigger
     const l = pinned ? sidebarWidth + leftSidebarWidth : sidebarWidth
-    const r = rightPanelVisible && rightPanelPinned ? rightPanelWidth : 0
+    const rightTotal = (rightPanelAIVisible ? rightPanelAIWidth : 0) + (rightPanelVPSVisible ? rightPanelVPSWidth : 0)
     return {
       height: h,
       top: 0,
       left: l,
-      width: width - l - r
+      width: width - l - rightTotal
     }
   }
 
@@ -61,14 +60,15 @@ export default auto(function Layout (props) {
       width,
       pinnedQuickCommandBar,
       leftSidebarWidth,
-      rightPanelVisible,
-      rightPanelPinned,
-      rightPanelWidth,
+      rightPanelAIVisible,
+      rightPanelAIWidth,
+      rightPanelVPSVisible,
+      rightPanelVPSWidth,
       pinned
     } = props.store
     const l = pinned ? leftSidebarWidth : 0
-    const r = rightPanelPinned && rightPanelVisible ? rightPanelWidth : 0
-    const w = width - l - r - sidebarWidth
+    const rightTotal = (rightPanelAIVisible ? rightPanelAIWidth : 0) + (rightPanelVPSVisible ? rightPanelVPSWidth : 0)
+    const w = width - l - rightTotal - sidebarWidth
     const h = height - footerHeight - (pinnedQuickCommandBar ? quickCommandBoxHeight : 0)
     return layoutAlg(layout, w, h)
   }

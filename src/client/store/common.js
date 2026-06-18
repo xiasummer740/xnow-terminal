@@ -11,10 +11,8 @@ import {
   addPanelWidthLsKey,
   dismissDelKeyTipLsKey,
   connectionMap,
-  aiFloatPositionXLsKey,
-  aiFloatPositionYLsKey,
-  aiFloatWidthLsKey,
-  aiFloatHeightLsKey
+  rightPanelAIWidthLsKey,
+  rightPanelVPSWidthLsKey
 } from '../common/constants'
 import * as ls from '../common/safe-local-storage'
 import { refs, refsStatic } from '../components/common/ref'
@@ -41,9 +39,28 @@ export default Store => {
 
   Store.prototype.openInfoPanel = action(function () {
     const { store } = window
-    store.rightPanelVisible = true
-    store.rightPanelTab = 'info'
-    store.openInfoPanelAction()
+    const hasHost = !!(store.currentTab && store.currentTab.host)
+    const currentlyVisible = hasHost ? !store._vpsForceClosed : store._vpsForceOpen
+    if (currentlyVisible) {
+      // 当前可见 → 关闭
+      store._vpsForceOpen = false
+      store._vpsForceClosed = true
+      store.innerWidth = window.innerWidth - store.rightPanelVPSWidth
+      window.pre.runGlobalAsync('resizeWindow', {
+        width: window.outerWidth - store.rightPanelVPSWidth,
+        height: window.outerHeight
+      })
+    } else {
+      // 当前隐藏 → 打开
+      store._vpsForceOpen = true
+      store._vpsForceClosed = false
+      store.innerWidth = window.innerWidth + store.rightPanelVPSWidth
+      window.pre.runGlobalAsync('resizeWindow', {
+        width: window.outerWidth + store.rightPanelVPSWidth,
+        height: window.outerHeight
+      })
+      store.openInfoPanelAction()
+    }
   })
 
   Store.prototype.openInfoPanelAction = function () {
@@ -251,12 +268,27 @@ export default Store => {
 
   Store.prototype.handleOpenAIPanel = function () {
     const { store } = window
-    store.aiFloatVisible = !store.aiFloatVisible
+    const opening = !store.rightPanelAIVisible
+    const delta = opening ? store.rightPanelAIWidth : -store.rightPanelAIWidth
+    store.rightPanelAIVisible = opening
+    store.innerWidth = window.innerWidth + delta
+    window.pre.runGlobalAsync('resizeWindow', {
+      width: window.outerWidth + delta,
+      height: window.outerHeight
+    })
   }
 
   Store.prototype.explainWithAi = function (txt) {
     const { store } = window
-    store.aiFloatVisible = true
+    const wasVisible = store.rightPanelAIVisible
+    store.rightPanelAIVisible = true
+    store.innerWidth = window.innerWidth + store.rightPanelAIWidth
+    if (!wasVisible) {
+      window.pre.runGlobalAsync('resizeWindow', {
+        width: window.outerWidth + store.rightPanelAIWidth,
+        height: window.outerHeight
+      })
+    }
     setTimeout(() => {
       refsStatic.get('AIChat')?.setPrompt(`explain terminal output: ${txt}`)
     }, 500)
@@ -265,20 +297,16 @@ export default Store => {
     }, 1200)
   }
 
-  Store.prototype.saveAIFloatPosition = function (x, y) {
+  Store.prototype.setRightPanelAIWidth = function (w) {
     const { store } = window
-    store.aiFloatPositionX = x
-    store.aiFloatPositionY = y
-    ls.setItem(aiFloatPositionXLsKey, String(x))
-    ls.setItem(aiFloatPositionYLsKey, String(y))
+    store.rightPanelAIWidth = w
+    ls.setItem(rightPanelAIWidthLsKey, String(w))
   }
 
-  Store.prototype.saveAIFloatSize = function (w, h) {
+  Store.prototype.setRightPanelVPSWidth = function (w) {
     const { store } = window
-    store.aiFloatWidth = w
-    store.aiFloatHeight = h
-    ls.setItem(aiFloatWidthLsKey, String(w))
-    ls.setItem(aiFloatHeightLsKey, String(h))
+    store.rightPanelVPSWidth = w
+    ls.setItem(rightPanelVPSWidthLsKey, String(w))
   }
 
   Store.prototype.runCommandInTerminal = function (cmd) {

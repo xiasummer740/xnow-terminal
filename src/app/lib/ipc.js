@@ -295,6 +295,23 @@ function initIpc() {
     setWindowSize: (update) => {
       lastStateManager.set('windowSize', update)
     },
+    // 动态增加/减少窗口宽度（右侧面板展开/收起），不改变终端区域大小
+    // 文件日志（排查用）：echo 写入系统临时目录
+    writeLog: (msg) => {
+      try {
+        const fs = require('fs')
+        const p = require('path')
+        const logFile = p.join(require('os').tmpdir(), 'xnow-debug.log')
+        fs.appendFileSync(logFile, new Date().toISOString() + ' ' + msg + '\n')
+      } catch (_) {}
+    },
+    resizeWindow: ({ width, height }) => {
+      const win = globalState.get('win')
+      if (win) {
+        const bounds = win.getBounds()
+        win.setBounds({ width, height })
+      }
+    },
     saveUserConfig,
     AIchat,
     AIchatWithTools,
