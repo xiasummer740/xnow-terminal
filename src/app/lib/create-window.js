@@ -32,7 +32,7 @@ exports.createWindow = async function (userConfig) {
     fullscreenable: true,
     minWidth: minWindowWidth,
     minHeight: minWindowHeight,
-    title: 'XNOW',
+    title: isDev ? 'XNOW 开发版' : 'XNOW',
     frame: true,
     transparent: false,
     backgroundColor: '#0a0e1a',
