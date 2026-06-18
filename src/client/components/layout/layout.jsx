@@ -30,7 +30,6 @@ export default auto(function Layout (props) {
 
   const calcLayoutStyle = () => {
     const {
-      width,
       height,
       pinnedQuickCommandBar,
       leftSidebarWidth,
@@ -42,6 +41,9 @@ export default auto(function Layout (props) {
       resizeTrigger,
       inActiveTerminal
     } = props.store
+    // 始终使用实际窗口宽度，不依赖 innerWidth 的预膨胀值
+    //（防止窗口最大化时 setBounds 无法扩展导致面板覆盖终端）
+    const actualWidth = window.innerWidth
     const h = height - footerHeight - (inActiveTerminal && pinnedQuickCommandBar ? quickCommandBoxHeight : 0) + resizeTrigger
     const l = pinned ? sidebarWidth + leftSidebarWidth : sidebarWidth
     const rightTotal = (rightPanelAIVisible ? rightPanelAIWidth : 0) + (rightPanelVPSVisible ? rightPanelVPSWidth : 0)
@@ -49,7 +51,7 @@ export default auto(function Layout (props) {
       height: h,
       top: 0,
       left: l,
-      width: width - l - rightTotal
+      width: actualWidth - l - rightTotal
     }
   }
 
@@ -57,7 +59,6 @@ export default auto(function Layout (props) {
     const {
       layout,
       height,
-      width,
       pinnedQuickCommandBar,
       leftSidebarWidth,
       rightPanelAIVisible,
@@ -67,8 +68,9 @@ export default auto(function Layout (props) {
       pinned
     } = props.store
     const l = pinned ? leftSidebarWidth : 0
+    const actualWidth = window.innerWidth
     const rightTotal = (rightPanelAIVisible ? rightPanelAIWidth : 0) + (rightPanelVPSVisible ? rightPanelVPSWidth : 0)
-    const w = width - l - rightTotal - sidebarWidth
+    const w = actualWidth - l - rightTotal - sidebarWidth
     const h = height - footerHeight - (pinnedQuickCommandBar ? quickCommandBoxHeight : 0)
     return layoutAlg(layout, w, h)
   }
