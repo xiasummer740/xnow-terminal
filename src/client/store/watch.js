@@ -124,6 +124,7 @@ export default store => {
     return store.syncServerStatus
   }).start()
 
+  let _vpsLastTabId = ''
   autoRun(() => {
     store.updateBatchInputSelectedTabIds()
     const tabs = store.getTabs()
@@ -138,8 +139,10 @@ export default store => {
       window.store.openInfoPanelAction()
     }
     // 切换标签时重置 VPS 强制关闭（新标签有 host 则自动弹出）
-    if (tab && tab.host && store._vpsForceClosed) {
-      store._vpsForceClosed = false
+    // 不直接读 _vpsForceClosed 避免 manate 将其加入依赖导致循环重置
+    if (_vpsLastTabId !== activeTabId) {
+      _vpsLastTabId = activeTabId
+      if (tab && tab.host) store._vpsForceClosed = false
     }
     return store.activeTabId
   }).start()
