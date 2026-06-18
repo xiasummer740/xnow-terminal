@@ -15,13 +15,14 @@ const BAR_W = 3
 const BAR_GAP = 1.5
 const BAR_R = 1
 
-// 丢包惩罚（丢包时用此值占位，便于肉眼看到高度）
-const LOSS_PLACEHOLDER = 500
+function scheduleDraw (canvas, data, rafRef) {
+  if (rafRef?.current) cancelAnimationFrame(rafRef.current)
+  const id = requestAnimationFrame(() => drawChart(canvas, data))
+  if (rafRef) rafRef.current = id
+}
 
-let rafId = null
-function scheduleDraw (canvas, data) {
-  if (rafId) cancelAnimationFrame(rafId)
-  rafId = requestAnimationFrame(() => drawChart(canvas, data))
+function getCssVar (name, fallback) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 }
 
 function drawChart (canvas, data) {
@@ -32,14 +33,14 @@ function drawChart (canvas, data) {
   canvas.height = CHART_H * dpr
   ctx.scale(dpr, dpr)
 
-  // 背景
-  ctx.fillStyle = '#0d0d0d'
+  // 主题兼容背景
+  ctx.fillStyle = getCssVar('--main', '#0d0d0d')
   ctx.fillRect(0, 0, CHART_W, CHART_H)
 
   if (data.length < 2) return
 
   // Y轴范围：用有效值算，但给丢包柱留空间
-  const vals = data.filter(v => v > 0 && v < LOSS_PLACEHOLDER)
+  const vals = data.filter(v => v > 0 && v < 500)
   if (vals.length === 0 && !data.some(v => v <= 0)) return
   const maxVal = vals.length > 0 ? Math.max(...vals) : 200
   const yMax = Math.max(maxVal * 1.2, 100)
@@ -50,8 +51,10 @@ function drawChart (canvas, data) {
   }
 
   // 网格线（固定 100/200/300ms）
+  const gridColor = getCssVar('--text-dark', '#888')
+  const gridLineColor = getCssVar('--main-darker', '#333')
   const gridLines = [100, 200, 300]
-  ctx.strokeStyle = '#222'
+  ctx.strokeStyle = gridLineColor
   ctx.lineWidth = 0.5
   ctx.setLineDash([2, 3])
   for (const g of gridLines) {
@@ -61,7 +64,7 @@ function drawChart (canvas, data) {
     ctx.moveTo(0, y)
     ctx.lineTo(CHART_W, y)
     ctx.stroke()
-    ctx.fillStyle = '#555'
+    ctx.fillStyle = gridColor
     ctx.font = '8px monospace'
     ctx.fillText(g + 'ms', 2, y - 2)
   }
@@ -123,12 +126,15 @@ export default function TerminalInfoPing (props) {
   const secBufRef = useRef([])
   const lossCount = useRef(0)
   const totalCount = useRef(0)
+  const rafIdRef = useRef(null)
 
   useEffect(() => {
     if (!isRemote || !pid) return
 
     lossCount.current = 0
     totalCount.current = 0
+    dataRef.current = []
+    secBufRef.current = []
 
     let timer
     const measure = async () => {
@@ -175,7 +181,7 @@ export default function TerminalInfoPing (props) {
           addPing(host, -1)
         }
       }
-      scheduleDraw(canvasRef.current, dataRef.current)
+      scheduleDraw(canvasRef.current, dataRef.current, rafIdRef)
     }
 
     timer = setInterval(measure, 1000)
