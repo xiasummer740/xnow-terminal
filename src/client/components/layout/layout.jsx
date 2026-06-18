@@ -42,7 +42,7 @@ export default auto(function Layout (props) {
       inActiveTerminal
     } = props.store
     // 始终使用实际窗口宽度，不依赖 innerWidth 的预膨胀值
-    //（防止窗口最大化时 setBounds 无法扩展导致面板覆盖终端）
+    // （防止窗口最大化时 setBounds 无法扩展导致面板覆盖终端）
     const actualWidth = window.innerWidth
     const h = height - footerHeight - (inActiveTerminal && pinnedQuickCommandBar ? quickCommandBoxHeight : 0) + resizeTrigger
     const l = pinned ? sidebarWidth + leftSidebarWidth : sidebarWidth
