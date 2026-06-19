@@ -44,6 +44,12 @@ if (needsRebuild) {
   console.log('Native modules already built, skipping electron-rebuild')
 }
 
+// 同步编译产物到 work/app（开发模式直接从 work/app 启动）
+const workPtyBuild = resolve(__dirname, '../../work/app/node_modules/node-pty/build/Release')
+if (existsSync(ptyBuildFile) && existsSync(workPtyBuild)) {
+  cp('-r', resolve(__dirname, '../../node_modules/node-pty/build/Release/*'), workPtyBuild + '/')
+}
+
 if (!existsSync(prePushPath)) {
   cp(prePushPathFrom, prePushPath)
 }
