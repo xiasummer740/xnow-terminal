@@ -1186,7 +1186,14 @@ class Term extends Component {
       })
     })
 
-    this.processExecutionQueue()
+    await this.processExecutionQueue()
+
+    // 本地终端初始无 scripts 时发回车触发提示符
+    if (this.isLocal()) {
+      setTimeout(() => {
+        this.attachAddon?._sendData('\r')
+      }, 100)
+    }
   }
 
   shouldUseManualHistory = () => {
