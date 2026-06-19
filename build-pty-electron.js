@@ -1,9 +1,53 @@
 /**
- * Build node-pty for Electron with Spectre mitigation disabled
+ * ⚠️ 安全模式 — 手动编译 node-pty（非必要请勿运行）
+ *
+ * 警告：手动编译 node-pty 可能破坏预编译二进制，导致终端无法工作。
+ * electron-builder 打包时会自动处理 node-pty 编译（electron-rebuild），
+ * 不需要手动跑此脚本。
+ *
+ * 正确方式：
+ *   npx electron-builder --win --x64
+ *
+ * 如果确实需要手动编译（如开发 Electron ABI 不匹配问题），请传 --force 参数：
+ *   node build-pty-electron.js --force
  */
+
 const { spawnSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
+
+// ── 安全检查 ──
+const args = process.argv.slice(2)
+const forceMode = args.includes('--force')
+
+console.log('')
+console.log(' ╔═══════════════════════════════════════════════════════╗')
+console.log(' ║                                                       ║')
+console.log(' ║   ⚠️  手动编译 node-pty 可能导致终端无法工作         ║')
+console.log(' ║                                                       ║')
+console.log(' ║  electron-builder 打包时会自动调用 electron-rebuild   ║')
+console.log(' ║   正确处理 node-pty 编译。                           ║')
+console.log(' ║                                                       ║')
+console.log(' ║  正确构建方式：                                       ║')
+console.log(' ║    npx electron-builder --win --x64                   ║')
+console.log(' ║                                                       ║')
+console.log(' ║  强制运行此脚本：                                     ║')
+console.log(' ║    node build-pty-electron.js --force                 ║')
+console.log(' ║                                                       ║')
+console.log(' ╚═══════════════════════════════════════════════════════╝')
+console.log('')
+
+if (!forceMode) {
+  console.log('❌ 已中止。如确需手动编译，请加 --force 参数。')
+  process.exit(0)
+}
+
+console.log('⚠️  强制模式已启用，开始手动编译 node-pty...')
+console.log('')
+
+// ═══════════════════════════════════════════════════════════════
+// 以下为原始编译逻辑，仅在 --force 模式下执行
+// ═══════════════════════════════════════════════════════════════
 
 const ROOT = __dirname
 const PTY_DIR = path.join(ROOT, 'node_modules', 'node-pty')
@@ -18,7 +62,6 @@ function clean () {
       fs.rmSync(p, { recursive: true, force: true })
     }
   }
-  // Remove vcxproj files
   try {
     const files = fs.readdirSync(BUILD_DIR)
     for (const f of files) {
@@ -26,7 +69,6 @@ function clean () {
         fs.unlinkSync(path.join(BUILD_DIR, f))
       }
     }
-    // Also check subdirectories
     const walkDir = (dir) => {
       try {
         fs.readdirSync(dir).forEach(f => {
@@ -130,7 +172,6 @@ function verify () {
   return false
 }
 
-// Main
 clean()
 configure()
 patchVcxproj()
@@ -138,6 +179,8 @@ build()
 
 if (verify()) {
   console.log('\n✅ Build SUCCESSFUL!')
+  console.log('⚠️  注意：手动编译的 node-pty 可能覆盖预编译版本，')
+  console.log('   如果终端无法工作，请重新 npm install 恢复。')
   process.exit(0)
 } else {
   console.log('\n❌ Build FAILED')
