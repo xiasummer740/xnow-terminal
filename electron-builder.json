@@ -22,6 +22,7 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "artifactName": "XNOW-Terminal-${version}-win-x64-installer.${ext}"
+    "artifactName": "XNOW-Terminal-${version}-win-x64-installer.${ext}",
+    "deleteAppDataOnUninstall": false
   }
 }
