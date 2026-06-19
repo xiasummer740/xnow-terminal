@@ -30,6 +30,7 @@ function buildAddBookmarkParameters () {
 
 // 高危命令检测 — 只拦跑路级操作
 const DANGEROUS_PATTERNS = [
+  // Linux
   /^rm\s+(-rf\s+)?\/$/,
   /^rm\s+(-rf\s+)?\/\*/,
   /^mkfs/,
@@ -38,7 +39,14 @@ const DANGEROUS_PATTERNS = [
   /^\s*reboot\s*$/,
   /^\s*shutdown\s/,
   /^\s*poweroff\s*$/,
-  /^\s*halt\s*$/
+  /^\s*halt\s*$/,
+  // Windows
+  /^format\s+\w+:/,
+  /^del\s+\/f\s+\/s/,
+  /^rd\s+\/s\s+\/q\s+\w:\\/,
+  /^rmdir\s+\/s\s+\/q\s+\w:\\/,
+  /^diskpart\s*$/,
+  /^reg\s+delete/
 ]
 
 function isDangerousCommand (cmd) {
@@ -421,12 +429,42 @@ export const agentTools = [
         required: ['url']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'confirm_with_user',
+      description: '向用户显示确认对话框，等待用户确认或取消后继续。在修改配置、删文件、重启服务等操作前调用此工具获取用户许可。',
+      parameters: {
+        type: 'object',
+        properties: {
+          message: {
+            type: 'string',
+            description: '向用户展示的确认信息，说明要做什么操作以及风险。'
+          }
+        },
+        required: ['message']
+      }
+    }
   }
 ]
 
 export async function executeToolCall (toolName, args) {
   const store = window.store
   switch (toolName) {
+    case 'confirm_with_user': {
+      const confirmed = await new Promise(resolve => {
+        Modal.confirm({
+          title: '🤖 AI 需要确认',
+          content: args.message || '确认执行此操作吗？',
+          okText: '确认',
+          cancelText: '取消',
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false)
+        })
+      })
+      return JSON.stringify({ confirmed, message: confirmed ? '用户已确认' : '用户已取消' })
+    }
     case 'send_terminal_command': {
       // 高危命令弹窗确认
       const cmd = (args.command || '').trim()

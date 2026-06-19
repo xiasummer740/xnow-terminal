@@ -1,6 +1,6 @@
 /* global localStorage */
 import { agentTools, executeToolCall } from './agent-tools'
-import { getInstalledSkills, saveDraft, hasSimilarSkill } from '../../common/skill-manager'
+import { getInstalledSkills, saveDraft, hasSimilarSkill, BUILTIN_SKILLS } from '../../common/skill-manager'
 
 const MAX_ITERATIONS = 150
 const MEMORY_KEY = 'xnow_agent_memory'
@@ -29,12 +29,15 @@ function buildAgentSystemPrompt (config) {
       memories.map((m, i) => `${i + 1}. ${m}`).join('\n')
     : ''
 
-  // 加载已安装技能
+  // 加载可用技能（已安装 + 未安装的内置技能）
   const installedSkills = getInstalledSkills()
-  const skillsText = installedSkills.length > 0
-    ? '\n\n## 已安装技能\n' +
-      installedSkills.map(s =>
-        `### ${s.name}\n${s.description || ''}\n${s.prompt || ''}`
+  const installedIds = new Set(installedSkills.map(s => s.id))
+  const availableBuiltin = BUILTIN_SKILLS.filter(s => !installedIds.has(s.id))
+  const allSkills = [...installedSkills, ...availableBuiltin]
+  const skillsText = allSkills.length > 0
+    ? '\n\n## 可用技能\n' +
+      allSkills.map(s =>
+        `### ${s.name}${s.source === 'builtin' && !installedIds.has(s.id) ? ' (内置)' : ''}\n${s.description || ''}\n${s.prompt || ''}`
       ).join('\n\n')
     : ''
 
@@ -353,8 +356,13 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming,
       let args
       try { args = JSON.parse(toolCall.function.arguments) } catch { args = {} }
 
-      // 自动补 tabId：AI 未指定时使用锁定时的活跃标签
-      if (toolCall.function.name === 'send_terminal_command' && !args.tabId) {
+      // 自动补 tabId：所有支持可选 tabId 的工具，AI 未指定时使用锁定时的活跃标签
+      const TAB_ID_TOOLS = [
+        'send_terminal_command', 'get_terminal_output', 'close_tab',
+        'sftp_list', 'sftp_stat', 'sftp_read_file', 'sftp_del',
+        'sftp_upload', 'sftp_download'
+      ]
+      if (TAB_ID_TOOLS.includes(toolCall.function.name) && !args.tabId) {
         if (lockedTabId) args.tabId = lockedTabId
       }
 
