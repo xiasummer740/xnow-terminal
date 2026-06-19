@@ -377,7 +377,8 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
                 if (r?.success) count++
               }
               message.success(`成功导入 ${count}/${skills.length} 个 Claude 技能`)
-            }}>
+            }}
+            >
               导入 Claude 技能
             </Button>
           </Space>

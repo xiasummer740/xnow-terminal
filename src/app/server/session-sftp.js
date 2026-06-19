@@ -5,7 +5,7 @@ const {
   readRemoteFile,
   writeRemoteFile
 } = require('./sftp-file')
-const log = require("../common/log")
+const log = require('../common/log')
 const { commonExtends } = require('./session-common.js')
 const { TerminalBase } = require('./session-base.js')
 const {

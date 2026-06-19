@@ -7,15 +7,15 @@ const MIN_HEIGHT = 400
 const DEFAULT_WIDTH = 520
 const DEFAULT_HEIGHT = 600
 
-export default function AIFloatWindow(props) {
+export default function AIFloatWindow (props) {
   const { store } = props
   const [position, setPosition] = useState({
     x: store.aiFloatPositionX || DEFAULT_WIDTH,
-    y: store.aiFloatPositionY || 100,
+    y: store.aiFloatPositionY || 100
   })
   const [size, setSize] = useState({
     width: store.aiFloatWidth || DEFAULT_WIDTH,
-    height: store.aiFloatHeight || DEFAULT_HEIGHT,
+    height: store.aiFloatHeight || DEFAULT_HEIGHT
   })
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(false)
@@ -35,10 +35,10 @@ export default function AIFloatWindow(props) {
         x: e.clientX,
         y: e.clientY,
         posX: position.x,
-        posY: position.y,
+        posY: position.y
       }
     },
-    [position],
+    [position]
   )
 
   const handleDragMove = useCallback(
@@ -50,7 +50,7 @@ export default function AIFloatWindow(props) {
       const newY = Math.max(0, dragStart.current.posY + dy)
       setPosition({ x: newX, y: newY })
     },
-    [dragging],
+    [dragging]
   )
 
   const handleDragEnd = useCallback(() => {
@@ -70,10 +70,10 @@ export default function AIFloatWindow(props) {
         x: e.clientX,
         y: e.clientY,
         w: size.width,
-        h: size.height,
+        h: size.height
       }
     },
-    [size],
+    [size]
   )
 
   const handleResizeMove = useCallback(
@@ -85,7 +85,7 @@ export default function AIFloatWindow(props) {
       const newH = Math.max(MIN_HEIGHT, resizeStart.current.h + dh)
       setSize({ width: newW, height: newH })
     },
-    [resizing],
+    [resizing]
   )
 
   const handleResizeEnd = useCallback(() => {
@@ -139,34 +139,34 @@ export default function AIFloatWindow(props) {
     tabs: store.getTabs(),
     activeTabId: store.activeTabId,
     showAIConfig: store.showAIConfig,
-    isFloatWindow: true, // 标记让 AIChat 知道在浮窗中
+    isFloatWindow: true // 标记让 AIChat 知道在浮窗中
   }
 
   return (
     <div
-      className="ai-float-window"
+      className='ai-float-window'
       style={{
         left: position.x + 'px',
         top: position.y + 'px',
         width: size.width + 'px',
-        height: size.height + 'px',
+        height: size.height + 'px'
       }}
     >
       {/* 标题栏（拖拽手柄） */}
-      <div className="ai-float-titlebar" onMouseDown={handleDragStart}>
-        <span className="ai-float-title">AI Assistant</span>
-        <div className="ai-float-controls">
-          <CloseOutlined className="ai-float-close-btn" onClick={handleClose} title="关闭" />
+      <div className='ai-float-titlebar' onMouseDown={handleDragStart}>
+        <span className='ai-float-title'>AI Assistant</span>
+        <div className='ai-float-controls'>
+          <CloseOutlined className='ai-float-close-btn' onClick={handleClose} title='关闭' />
         </div>
       </div>
 
       {/* 内容区域 */}
-      <div className="ai-float-content">
+      <div className='ai-float-content'>
         <AIChat {...aiChatProps} />
       </div>
 
       {/* 缩放手柄 */}
-      <div className="ai-float-resize-handle" onMouseDown={handleResizeStart} />
+      <div className='ai-float-resize-handle' onMouseDown={handleResizeStart} />
     </div>
   )
 }

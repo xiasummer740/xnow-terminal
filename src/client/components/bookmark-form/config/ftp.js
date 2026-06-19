@@ -16,7 +16,7 @@ const ftpConfig = {
       password: '',
       secure: false,
       encode: 'utf-8',
-      ...getAuthTypeDefault(props),
+      ...getAuthTypeDefault(props)
     })
   },
   layout: formItemLayout,
@@ -31,25 +31,25 @@ const ftpConfig = {
           type: 'input',
           name: 'host',
           label: () => e('host'),
-          rules: [{ required: true, message: e('host') + ' required' }],
+          rules: [{ required: true, message: e('host') + ' required' }]
         },
         commonFields.port,
         {
           type: 'profileItem',
           name: '__profile__',
           label: '',
-          profileFilter: (d) => !isEmpty(d.ftp),
+          profileFilter: (d) => !isEmpty(d.ftp)
         },
         { type: 'input', name: 'user', label: () => e('username') },
         { type: 'password', name: 'password', label: () => e('password') },
         { type: 'switch', name: 'secure', label: () => e('secure'), valuePropName: 'checked' },
         commonFields.encode,
         commonFields.proxy,
-        commonFields.type,
-      ],
+        commonFields.type
+      ]
     },
-    vpsInfoTab(),
-  ],
+    vpsInfoTab()
+  ]
 }
 
 export default ftpConfig

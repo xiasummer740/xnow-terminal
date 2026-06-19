@@ -4,7 +4,7 @@
 
 const { createProxyAgent } = require('../lib/proxy-agent')
 
-function fetch(options) {
+function fetch (options) {
   const rp = require('axios')
   rp.defaults.proxy = false
   return rp(options)
@@ -36,7 +36,7 @@ function fetch(options) {
     })
 }
 
-async function wsFetchHandler(ws, msg) {
+async function wsFetchHandler (ws, msg) {
   const { id, options, proxy } = msg
   const agent = createProxyAgent(proxy)
   if (agent) {
@@ -47,12 +47,12 @@ async function wsFetchHandler(ws, msg) {
     ws.s({
       error: res.error,
       code: res.code,
-      id,
+      id
     })
   } else {
     ws.s({
       data: res.data,
-      id,
+      id
     })
   }
 }

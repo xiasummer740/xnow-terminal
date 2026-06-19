@@ -1,3 +1,4 @@
+/* global localStorage */
 /**
  * Ping 历史记录 — localStorage 轻量存储
  * 每次 ping 入队，每 30s 批量写入一次
@@ -79,7 +80,7 @@ export async function getAggregatedHistory (host, range, smooth = true) {
   if (smooth && points.length > 10) {
     const w = Math.max(1, Math.floor(points.length / 15))
     points = points.map((p, i) => {
-      const s = Math.max(0, i - w), e = Math.min(points.length, i + w + 1)
+      const s = Math.max(0, i - w); const e = Math.min(points.length, i + w + 1)
       const sl = points.slice(s, e)
       return { t: p.t, v: Math.round(sl.reduce((a, b) => a + b.v, 0) / sl.length) }
     })

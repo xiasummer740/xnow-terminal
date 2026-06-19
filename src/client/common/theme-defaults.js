@@ -17,6 +17,7 @@ function parsor (themeTxt) {
   }, {})
 }
 
+// eslint-disable-next-line no-unused-vars
 const defaultThemeDark = () => {
   return parsor(`
 main-dark=#000
@@ -77,6 +78,7 @@ brightWhite=#d2c7a9
   )
 }
 
+// eslint-disable-next-line no-unused-vars
 const defaultThemeDarkTerminal = () => {
   return {
     foreground: '#bbbbbb',

@@ -27,7 +27,6 @@ function autoBackup (dbFolder, mainDbPath, dataDbPath) {
   try {
     const today = new Date().toISOString().slice(0, 10)
     const backupMain = resolve(backupDir, `xnow-${today}.db`)
-    const backupData = resolve(backupDir, `xnow_data-${today}.db`)
 
     // 只备份主库（xnow.db）即可，数据变动都在主库
     if (fs.existsSync(mainDbPath) && !fs.existsSync(backupMain)) {
@@ -244,26 +243,26 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
       const qid = query._id || query.id
       db.exec('BEGIN IMMEDIATE')
       try {
-      const newData = updateObj.$set || updateObj
-      const { _id, data } = toRow({
-        _id: qid,
-        ...newData
-      }, dbName)
-      let stmt
-      let res
-      if (upsert) {
-        stmt = db.prepare(`REPLACE INTO \`${dbName}\` (_id, data) VALUES (?, ?)`)
-        res = stmt.run(_id, data)
-      } else {
-        stmt = db.prepare(`UPDATE \`${dbName}\` SET data = ? WHERE _id = ?`)
-        res = stmt.run(data, qid)
+        const newData = updateObj.$set || updateObj
+        const { _id, data } = toRow({
+          _id: qid,
+          ...newData
+        }, dbName)
+        let stmt
+        let res
+        if (upsert) {
+          stmt = db.prepare(`REPLACE INTO \`${dbName}\` (_id, data) VALUES (?, ?)`)
+          res = stmt.run(_id, data)
+        } else {
+          stmt = db.prepare(`UPDATE \`${dbName}\` SET data = ? WHERE _id = ?`)
+          res = stmt.run(data, qid)
+        }
+        db.exec('COMMIT')
+        return res.changes
+      } catch (e) {
+        db.exec('ROLLBACK')
+        throw e
       }
-      db.exec('COMMIT')
-      return res.changes
-    } catch (e) {
-      db.exec('ROLLBACK')
-      throw e
-    }
     }
   }
 

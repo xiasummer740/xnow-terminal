@@ -3,7 +3,6 @@
  */
 
 const log = require('../common/log')
-const { resolve: pathResolve } = require('path')
 const { TerminalBase } = require('./session-base')
 const globalState = require('./global-state')
 const os = require('os')

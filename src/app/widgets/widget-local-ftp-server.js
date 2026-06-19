@@ -1,4 +1,4 @@
-const log = require("../common/log")
+const log = require('../common/log')
 const os = require('os')
 const uid = require('../common/uid')
 const { customRequire } = require('../lib/custom-require')

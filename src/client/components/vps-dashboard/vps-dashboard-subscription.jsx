@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { Tag, Empty, Tooltip, Progress, Input, Button, message } from 'antd'
 import { copy as clipboardCopy } from '../../common/clipboard'
 import {
-  ThunderboltOutlined,
   LinkOutlined,
   SearchOutlined,
   CopyOutlined,

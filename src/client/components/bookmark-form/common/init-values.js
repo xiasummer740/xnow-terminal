@@ -2,7 +2,6 @@
  * Common utilities for config initValues
  */
 import { newBookmarkIdPrefix, authTypeMap } from '../../../common/constants.js'
-import { getColorFromCategory } from '../../../common/get-category-color.js'
 import { defaultColors } from '../../../common/rand-hex-color.js'
 import findBookmarkGroupId from '../../../common/find-bookmark-group-id.js'
 import deepCopy from 'json-deep-copy'

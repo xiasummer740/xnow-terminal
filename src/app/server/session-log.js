@@ -5,7 +5,7 @@
 const { resolve } = require('path')
 const { existsSync, mkdirSync, createWriteStream } = require('fs')
 
-function mkLogDir(logDir) {
+function mkLogDir (logDir) {
   try {
     if (!existsSync(logDir)) {
       mkdirSync(logDir, { recursive: true })
@@ -16,7 +16,7 @@ function mkLogDir(logDir) {
 }
 
 class SessionLog {
-  constructor(options) {
+  constructor (options) {
     this.options = options
     const { logDir } = options
     const logPath = resolve(logDir, options.fileName)
@@ -24,11 +24,11 @@ class SessionLog {
     this.stream = createWriteStream(logPath, { flags: 'a' })
   }
 
-  write(text) {
+  write (text) {
     this.stream.write(text)
   }
 
-  destroy() {
+  destroy () {
     this.stream.destroy()
   }
 }

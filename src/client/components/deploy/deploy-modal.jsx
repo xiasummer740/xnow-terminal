@@ -6,23 +6,23 @@
  * - 等宽发光绿字，实时日志滚动
  * - 完成后 3s 倒计时自动关闭
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { Modal, Progress } from 'antd'
 
 const ICONS = {
   pending: '○',
   running: '▶',
   success: '✅',
-  error: '❌',
+  error: '❌'
 }
 
-export default function DeployModal({
+export default function DeployModal ({
   open,
   onClose,
   onCancel,
   title = '🚀 XNOW 部署引擎',
   steps = [],
-  closable = true,
+  closable = true
 }) {
   const logRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -65,12 +65,12 @@ export default function DeployModal({
           backdropFilter: 'blur(14px)',
           border: '1px solid rgba(0, 255, 65, 0.12)',
           borderRadius: 10,
-          boxShadow: '0 0 30px rgba(0, 255, 65, 0.05)',
+          boxShadow: '0 0 30px rgba(0, 255, 65, 0.05)'
         },
         header: {
           background: 'transparent',
-          borderBottom: '1px solid rgba(0, 255, 65, 0.08)',
-        },
+          borderBottom: '1px solid rgba(0, 255, 65, 0.08)'
+        }
       }}
       modalRender={(node) => (
         <div style={{ fontFamily: "'Maple Mono', 'Courier New', Consolas, monospace" }}>{node}</div>
@@ -83,7 +83,7 @@ export default function DeployModal({
             fontWeight: 600,
             marginBottom: 16,
             color: '#00ff41',
-            letterSpacing: 1,
+            letterSpacing: 1
           }}
         >
           {title}
@@ -96,7 +96,7 @@ export default function DeployModal({
             marginBottom: 14,
             padding: '6px 0',
             userSelect: 'none',
-            cursor: 'default',
+            cursor: 'default'
           }}
         >
           {steps.map((step, i) => (
@@ -105,7 +105,7 @@ export default function DeployModal({
               style={{
                 marginBottom: 5,
                 opacity: step.status === 'pending' ? 0.35 : 1,
-                transition: 'opacity 0.3s',
+                transition: 'opacity 0.3s'
               }}
             >
               <span style={{ marginRight: 10, fontSize: 14 }}>
@@ -120,7 +120,7 @@ export default function DeployModal({
                         ? '#52c41a'
                         : step.status === 'running'
                           ? '#00ff41'
-                          : '#666',
+                          : '#666'
                 }}
               >
                 {step.message}
@@ -134,8 +134,8 @@ export default function DeployModal({
         {!allDone && (
           <Progress
             percent={percent}
-            strokeColor="#00ff41"
-            trailColor="#1a2a1a"
+            strokeColor='#00ff41'
+            trailColor='#1a2a1a'
             showInfo={false}
             style={{ marginBottom: 6 }}
           />
@@ -147,7 +147,7 @@ export default function DeployModal({
               padding: '8px 0 4px',
               color: allSuccess ? '#52c41a' : '#ff4d4f',
               fontSize: 13,
-              letterSpacing: 0.5,
+              letterSpacing: 0.5
             }}
           >
             {allSuccess
@@ -165,7 +165,7 @@ export default function DeployModal({
  * @param {string[]} messages - 步骤消息列表
  * @returns {{message: string, status: string}[]}
  */
-export function createSteps(messages) {
+export function createSteps (messages) {
   return messages.map((msg) => ({ message: msg, status: 'pending' }))
 }
 
@@ -176,6 +176,6 @@ export function createSteps(messages) {
  * @param {'pending'|'running'|'success'|'error'} status
  * @returns {{message: string, status: string}[]}
  */
-export function updateStep(steps, index, status) {
+export function updateStep (steps, index, status) {
   return steps.map((s, i) => (i === index ? { ...s, status } : s))
 }

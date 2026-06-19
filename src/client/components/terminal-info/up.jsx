@@ -5,11 +5,16 @@
 import { ClockCircleOutlined } from '@ant-design/icons'
 
 const unitMap = {
-  'years': '年', 'year': '年',
-  'weeks': '周', 'week': '周',
-  'days': '天', 'day': '天',
-  'hours': '小时', 'hour': '小时',
-  'minutes': '分钟', 'minute': '分钟'
+  years: '年',
+  year: '年',
+  weeks: '周',
+  week: '周',
+  days: '天',
+  day: '天',
+  hours: '小时',
+  hour: '小时',
+  minutes: '分钟',
+  minute: '分钟'
 }
 
 function translateUptime (str) {

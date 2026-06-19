@@ -5,7 +5,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { runCmd, localTracert } from '../terminal/terminal-apis'
-import { NewPromise } from '../../common/promise-timeout'
 
 /* ========== 线路识别数据库 ========== */
 
@@ -158,7 +157,7 @@ const LINE_INFO = [
   { prefix: '205.185.', name: 'BuyVM/FranTech', asn: '', color: '#eb2f96', badge: 'BuyVM' },
 
   // ─── 11.x.x.x — 中国运营商内网/公网 ───
-  { prefix: '11.', name: '中国运营商', asn: '', color: '#5b8def', badge: 'CN' },
+  { prefix: '11.', name: '中国运营商', asn: '', color: '#5b8def', badge: 'CN' }
 ]
 
 const LAN_PREFIXES = ['192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.',
@@ -255,29 +254,46 @@ const styles = {
     padding: '4px 0 0'
   },
   title: {
-    fontSize: 11, fontWeight: 600, color: 'var(--text-light)',
-    padding: '0 10px 4px', letterSpacing: 0.5,
-    display: 'flex', alignItems: 'center', gap: 5
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--text-light)',
+    padding: '0 10px 4px',
+    letterSpacing: 0.5,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5
   },
   detectBtn: {
-    fontSize: 11, cursor: 'pointer',
+    fontSize: 11,
+    cursor: 'pointer',
     border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: 4, padding: '2px 8px',
+    borderRadius: 4,
+    padding: '2px 8px',
     background: 'rgba(255,255,255,0.04)',
     color: 'var(--text-dark)',
-    display: 'inline-flex', alignItems: 'center', gap: 4,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
     transition: 'all 0.2s'
   },
   routeBlock: {
     padding: '0 10px', marginBottom: 4
   },
   subTitle: {
-    fontSize: 10, fontWeight: 600, color: 'var(--text-dark)',
-    marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4
+    fontSize: 10,
+    fontWeight: 600,
+    color: 'var(--text-dark)',
+    marginBottom: 3,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4
   },
   hopRow: {
-    display: 'flex', alignItems: 'center', gap: 4,
-    fontSize: 11, padding: '1px 0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 11,
+    padding: '1px 0',
     borderBottom: '1px solid rgba(255,255,255,0.03)',
     fontVariantNumeric: 'tabular-nums'
   },
@@ -288,8 +304,12 @@ const styles = {
     color: 'var(--text-dark)', fontFamily: 'monospace', flex: 1
   },
   badge: {
-    fontSize: 9, fontWeight: 600, padding: '0 4px',
-    borderRadius: 3, lineHeight: '16px', flexShrink: 0
+    fontSize: 9,
+    fontWeight: 600,
+    padding: '0 4px',
+    borderRadius: 3,
+    lineHeight: '16px',
+    flexShrink: 0
   },
   loading: {
     fontSize: 11, color: 'var(--text-light)', padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 5
@@ -350,7 +370,6 @@ export default function RouteDetect (props) {
   const [detected, setDetected] = useState(false)
   const [vpsPublicIp, setVpsPublicIp] = useState('')
   const [localPublicIp, setLocalPublicIp] = useState('')
-  const [localLanIp, setLocalLanIp] = useState('')
 
   const cancelledRef = useRef(false)
 
@@ -367,7 +386,6 @@ export default function RouteDetect (props) {
     setDetected(false)
     setVpsPublicIp('')
     setLocalPublicIp('')
-    setLocalLanIp('')
 
     let localError = ''
 
@@ -391,7 +409,7 @@ export default function RouteDetect (props) {
       const vpsResult = await runCmd(pid, "echo $SSH_CONNECTION | awk '{print $3}'")
       vpsIp = (vpsResult || '').trim()
       if (!vpsIp) {
-        const vpsResult2 = await runCmd(pid, "curl -s ifconfig.me || curl -s ip.sb || curl -s icanhazip.com")
+        const vpsResult2 = await runCmd(pid, 'curl -s ifconfig.me || curl -s ip.sb || curl -s icanhazip.com')
         vpsIp = (vpsResult2 || '').trim()
       }
       setVpsPublicIp(vpsIp)
@@ -405,7 +423,7 @@ export default function RouteDetect (props) {
       try {
         forwardRaw = await Promise.race([
           localTracert(host),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('TRACERT_TIMEOUT')), 45000))
+          new Promise((resolve, reject) => setTimeout(() => reject(new Error('TRACERT_TIMEOUT')), 45000))
         ])
       } catch (e) {
         forwardRaw = ''
@@ -422,7 +440,7 @@ export default function RouteDetect (props) {
         try {
           returnRaw = await Promise.race([
             runCmd(pid, `traceroute -n ${localIp} 2>/dev/null || tracepath -n ${localIp} 2>/dev/null || echo ''`),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('TRACEROUTE_TIMEOUT')), 30000))
+            new Promise((resolve, reject) => setTimeout(() => reject(new Error('TRACEROUTE_TIMEOUT')), 30000))
           ])
         } catch (e) {
           returnRaw = ''
@@ -467,7 +485,8 @@ export default function RouteDetect (props) {
             style={styles.detectBtn}
             onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.1)' }}
             onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.04)' }}
-          >▶ 检测</button>
+          >▶ 检测
+          </button>
         )}
         {!loading && hasResult && (
           <button
@@ -475,18 +494,25 @@ export default function RouteDetect (props) {
             style={{ ...styles.detectBtn, borderColor: 'rgba(82,196,26,0.3)' }}
             onMouseEnter={e => { e.target.style.background = 'rgba(82,196,26,0.1)' }}
             onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.04)' }}
-          >↻ 重新检测</button>
+          >↻ 重新检测
+          </button>
         )}
       </div>
 
       {/* 检测中 */}
       {loading && (
         <div style={styles.loading}>
-          <span className='spin' style={{
-            display: 'inline-block', width: 10, height: 10,
-            border: '2px solid var(--text-light)', borderRadius: '50%',
-            borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite'
-          }} />
+          <span
+            className='spin' style={{
+              display: 'inline-block',
+              width: 10,
+              height: 10,
+              border: '2px solid var(--text-light)',
+              borderRadius: '50%',
+              borderTopColor: 'transparent',
+              animation: 'spin 0.8s linear infinite'
+            }}
+          />
           正在检测路由（需要 30-60 秒）...
         </div>
       )}
@@ -560,7 +586,8 @@ export default function RouteDetect (props) {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-      `}</style>
+      `}
+      </style>
     </div>
   )
 }

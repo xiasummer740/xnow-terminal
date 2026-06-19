@@ -21,10 +21,13 @@ export function getMasterSteps () {
 
 async function ssh (bookmark, cmd, timeout = 30000) {
   return window.pre.runGlobalAsync('execSshCommand', {
-    host: bookmark.host, port: bookmark.port || 22,
+    host: bookmark.host,
+    port: bookmark.port || 22,
     username: bookmark.username || 'root',
-    password: bookmark.password, privateKey: bookmark.privateKey,
-    command: cmd, timeout
+    password: bookmark.password,
+    privateKey: bookmark.privateKey,
+    command: cmd,
+    timeout
   })
 }
 
@@ -56,10 +59,9 @@ export async function deployMaster (bookmark, onStepUpdate) {
     const installCmd = `(apt-get install -y unzip 2>/dev/null || yum install -y unzip 2>/dev/null || true) && curl -sL "${zipUrl}" -o /tmp/nezha-dash.zip && mkdir -p /opt/nezha/dashboard/data && unzip -jo /tmp/nezha-dash.zip -d /opt/nezha/dashboard/ && chmod +x /opt/nezha/dashboard/* && rm -f /tmp/nezha-dash.zip && echo "DONE" || echo "FAILED"`
     const r1 = await ssh(bookmark, installCmd, 120000)
     if (!r1?.includes('DONE')) {
-      const detail = (r1 || '无响应').substring(0, 200)
       console.error('[deploy] 下载安装失败:', r1)
       update(1, 'error')
-      return { success: false, error: `下载安装失败，请检查服务器网络和磁盘空间` }
+      return { success: false, error: '下载安装失败，请检查服务器网络和磁盘空间' }
     }
     // 自动检测实际二进制文件名
     const listOut = await ssh(bookmark, 'ls /opt/nezha/dashboard/*-linux-* /opt/nezha/dashboard/nezha* /opt/nezha/dashboard/dashboard 2>/dev/null | head -1', 5000)
@@ -133,7 +135,7 @@ export async function deployMaster (bookmark, onStepUpdate) {
     // 停 Dashboard → 装 sqlite3 → 插入用户（带 bcrypt 密码）
     await ssh(bookmark, 'systemctl stop nezha-dashboard', 15000)
     await ssh(bookmark, '(apt-get install -y sqlite3 2>/dev/null || yum install -y sqlite 2>/dev/null || true)', 30000)
-    const dbPath = await ssh(bookmark, `find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1`, 5000)
+    const dbPath = await ssh(bookmark, 'find /opt/nezha/dashboard/data/ -name "*.db" 2>/dev/null | head -1', 5000)
     if (dbPath?.trim()) {
       await ssh(bookmark, `sqlite3 "${dbPath.trim()}" "DELETE FROM users; INSERT INTO users (id,username,password,role,token_version) VALUES (1,'${adminEmail}','${escapedHash}',0,0);" 2>&1`, 10000)
     }
@@ -157,14 +159,19 @@ export async function deployMaster (bookmark, onStepUpdate) {
 
     if (!apiToken) {
       return {
-        success: true, dashboardUrl, adminEmail, adminPass,
+        success: true,
+        dashboardUrl,
+        adminEmail,
+        adminPass,
         setupGuide: `XNOW 监控已部署成功！\n\n首次使用请打开浏览器访问 ${dashboardUrl}\n点击「开始使用」创建管理员账号\n创建后在「系统设置 → API Tokens」生成 Token\n填到下方输入框中即可使用。`
       }
     }
 
     return {
-      success: true, dashboardUrl, apiToken,
-      setupGuide: `✅ 全部完成！API Token 已自动创建并填入。`
+      success: true,
+      dashboardUrl,
+      apiToken,
+      setupGuide: '✅ 全部完成！API Token 已自动创建并填入。'
     }
   } catch (e) {
     const idx = currentSteps.findIndex(s => s.status === 'running')

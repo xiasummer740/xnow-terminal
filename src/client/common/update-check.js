@@ -10,7 +10,7 @@ const RELEASE_API = 'https://api.github.com/repos/xiasummer740/xnow-terminal/rel
 const CACHE_TTL = 10 * 60 * 1000
 let cache = { data: null, time: 0 }
 
-async function fetchData(url) {
+async function fetchData (url) {
   const data = {
     action: 'fetch',
     options: {
@@ -19,15 +19,15 @@ async function fetchData(url) {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'XNOW-Terminal',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
     },
-    proxy: window.store.getProxySetting(),
+    proxy: window.store.getProxySetting()
   }
   return fetch(data).catch(err => err?.message || err || '请求失败')
 }
 
-export async function getLatestReleaseVersion() {
+export async function getLatestReleaseVersion () {
   try {
     if (cache.data && Date.now() - cache.time < CACHE_TTL) {
       return cache.data
@@ -55,14 +55,14 @@ export async function getLatestReleaseVersion() {
   }
 }
 
-export async function getLatestReleaseInfo() {
+export async function getLatestReleaseInfo () {
   try {
     const res = await fetchData(RELEASE_API)
     if (res?.body) {
       return {
         body: res.body,
         date: res.published_at ? new Date(res.published_at).toISOString().slice(0, 10) : '',
-        html_url: res.html_url || 'https://github.com/xiasummer740/xnow-terminal/releases/latest',
+        html_url: res.html_url || 'https://github.com/xiasummer740/xnow-terminal/releases/latest'
       }
     }
     return null
@@ -72,7 +72,7 @@ export async function getLatestReleaseInfo() {
 }
 
 /** 获取缓存的版本信息，用于面板显示（不触发网络请求） */
-export function getCachedVersionInfo() {
+export function getCachedVersionInfo () {
   if (cache.data && Date.now() - cache.time < CACHE_TTL) {
     return cache.data
   }
@@ -80,6 +80,6 @@ export function getCachedVersionInfo() {
 }
 
 /** 清空缓存（手动检查时调用） */
-export function clearReleaseCache() {
+export function clearReleaseCache () {
   cache = { data: null, time: 0 }
 }

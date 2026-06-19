@@ -20,7 +20,6 @@ import {
   tabWidth,
   tabMargin,
   extraTabWidth,
-  windowControlWidth,
   isMacJs
 } from '../../common/constants'
 import WindowControl from './window-control'

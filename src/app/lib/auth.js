@@ -7,7 +7,7 @@ const ITERATIONS_CURRENT = 600000
 // 旧版 1000 次迭代 — 仅用于验证旧密码，验证通过后自动升级
 const ITERATIONS_LEGACY = 1000
 
-function pbkdf2Async(password, salt, iterations, keyLength, digest) {
+function pbkdf2Async (password, salt, iterations, keyLength, digest) {
   const crypto = require('crypto')
   return new Promise((resolve, reject) => {
     crypto.pbkdf2(password, salt, iterations, keyLength, digest, (err, key) => {
@@ -17,20 +17,20 @@ function pbkdf2Async(password, salt, iterations, keyLength, digest) {
   })
 }
 
-async function hashPassword(password) {
+async function hashPassword (password) {
   const crypto = require('crypto')
   const salt = crypto.randomBytes(16).toString('hex')
   const hashedPassword = await pbkdf2Async(password, salt, ITERATIONS_CURRENT, 64, 'sha512')
   return { salt, hashedPassword, iterations: ITERATIONS_CURRENT }
 }
 
-async function comparePasswords(password, salt, hashedPassword, iterations) {
+async function comparePasswords (password, salt, hashedPassword, iterations) {
   const iters = iterations || ITERATIONS_LEGACY
   const hash = await pbkdf2Async(password, salt, iters, 64, 'sha512')
   return hash === hashedPassword
 }
 
-exports.setPassword = async function setPassword(password) {
+exports.setPassword = async function setPassword (password) {
   const q = { _id: userConfigId }
   const userConfig = (await dbAction('data', 'findOne', q)) || {}
   if (password === '') {
@@ -43,9 +43,9 @@ exports.setPassword = async function setPassword(password) {
         ...userConfig,
         salt: '',
         hashedPassword: '',
-        iterations: undefined,
+        iterations: undefined
       },
-      { upsert: true },
+      { upsert: true }
     )
     return true
   }
@@ -59,14 +59,14 @@ exports.setPassword = async function setPassword(password) {
       ...userConfig,
       salt,
       hashedPassword,
-      iterations,
+      iterations
     },
-    { upsert: true },
+    { upsert: true }
   )
   return true
 }
 
-exports.checkPassword = async function checkPassword(password) {
+exports.checkPassword = async function checkPassword (password) {
   const axios = require('axios')
   axios.defaults.proxy = false
   if (!password) {
@@ -85,7 +85,7 @@ exports.checkPassword = async function checkPassword(password) {
       const {
         salt: newSalt,
         hashedPassword: newHash,
-        iterations: newIters,
+        iterations: newIters
       } = await hashPassword(password)
       await dbAction(
         'data',
@@ -96,16 +96,16 @@ exports.checkPassword = async function checkPassword(password) {
           ...record,
           salt: newSalt,
           hashedPassword: newHash,
-          iterations: newIters,
+          iterations: newIters
         },
-        { upsert: true },
+        { upsert: true }
       ).catch((err) => {
         console.error('升级密码迭代失败:', err.message)
       })
     }
     const port = await getPort()
     await axios.post(`http://127.0.0.1:${port}/auth`, {
-      token: hashedPassword,
+      token: hashedPassword
     })
   }
   return r

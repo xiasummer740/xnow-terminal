@@ -29,9 +29,9 @@ const webConfig = {
               validator: (_, value) =>
                 /^[a-z\d.+-]+:\/\/[^\s/$.?#].[^\s]*$/i.test(value)
                   ? Promise.resolve()
-                  : Promise.reject(new Error(e('URL must start with http:// or https://'))),
-            },
-          ],
+                  : Promise.reject(new Error(e('URL must start with http:// or https://')))
+            }
+          ]
         },
         commonFields.description,
         { type: 'input', name: 'useragent', label: () => e('useragent') },
@@ -39,13 +39,13 @@ const webConfig = {
           type: 'switch',
           name: 'hideAddressBar',
           label: 'hideAddressBar',
-          valuePropName: 'checked',
+          valuePropName: 'checked'
         },
-        commonFields.type,
-      ],
+        commonFields.type
+      ]
     },
-    vpsInfoTab(),
-  ],
+    vpsInfoTab()
+  ]
 }
 
 export default webConfig

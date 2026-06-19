@@ -5,11 +5,11 @@ import { useState } from 'react'
 import { Button, Input, message, Select, Space, Divider, Alert } from 'antd'
 import { CloudServerOutlined, ApiOutlined, LinkOutlined, InfoCircleOutlined, BugOutlined } from '@ant-design/icons'
 import { testConnection } from '../../common/nezha-api'
-import DeployModal, { createSteps } from '../deploy/deploy-modal'
+import DeployModal from '../deploy/deploy-modal'
 import { deployMaster, getMasterSteps } from '../deploy/deploy-master'
 import copy from 'json-deep-copy'
 
-export default function TabNezha() {
+export default function TabNezha () {
   const { store } = window
   const nezhaCfg = store.config.nezha || {}
   const [dashboardUrl, setDashboardUrl] = useState(nezhaCfg.dashboardUrl || '')
@@ -25,7 +25,7 @@ export default function TabNezha() {
     .filter((b) => b.host)
     .map((b) => ({
       label: `${b.title || b.host} (${b.host})`,
-      value: b.id,
+      value: b.id
     }))
 
   const handleTest = async () => {
@@ -70,8 +70,8 @@ export default function TabNezha() {
         nezha: {
           dashboardUrl: result.dashboardUrl,
           apiToken: result.apiToken || '',
-          masterBookmarkId: masterId,
-        },
+          masterBookmarkId: masterId
+        }
       })
       message.success('✅ 主控部署成功！')
     } else {
@@ -84,8 +84,8 @@ export default function TabNezha() {
       nezha: {
         dashboardUrl,
         apiToken,
-        masterBookmarkId: masterId,
-      },
+        masterBookmarkId: masterId
+      }
     })
     message.success('配置已保存')
   }
@@ -101,32 +101,35 @@ export default function TabNezha() {
     if (!bm) { setDiagResult('未找到服务器书签'); setDiaging(false); return }
     try {
       const cmds = [
-        `echo '=== Dashboard 安装目录 ==='`,
-        `ls -la /opt/nezha/dashboard/ 2>/dev/null || echo '目录不存在'`,
-        `echo ''`,
-        `echo '=== Dashboard 程序 ==='`,
-        `ls -la /opt/nezha/dashboard/dashboard-* /opt/nezha/dashboard/nezha* 2>/dev/null || echo '程序不存在或不可执行'`,
-        `echo ''`,
-        `echo '=== 配置文件 ==='`,
-        `cat /opt/nezha/dashboard/data/config.yaml 2>/dev/null || echo '配置文件不存在'`,
-        `echo ''`,
-        `echo '=== systemd 服务状态 ==='`,
-        `systemctl status nezha-dashboard 2>&1 | head -20`,
-        `echo ''`,
-        `echo '=== 服务日志(最近15行) ==='`,
-        `journalctl -u nezha-dashboard --no-pager -n 15 2>/dev/null || echo '日志不可用'`,
-        `echo ''`,
-        `echo '=== 端口监听 ==='`,
-        `ss -tlnp 2>/dev/null | grep 8008 || netstat -tlnp 2>/dev/null | grep 8008 || echo '8008端口未监听'`,
-        `echo ''`,
-        `echo '=== 防火墙 ==='`,
-        `(which ufw >/dev/null && ufw status | head -15) || echo 'ufw未安装'`
+        'echo \'=== Dashboard 安装目录 ===\'',
+        'ls -la /opt/nezha/dashboard/ 2>/dev/null || echo \'目录不存在\'',
+        'echo \'\'',
+        'echo \'=== Dashboard 程序 ===\'',
+        'ls -la /opt/nezha/dashboard/dashboard-* /opt/nezha/dashboard/nezha* 2>/dev/null || echo \'程序不存在或不可执行\'',
+        'echo \'\'',
+        'echo \'=== 配置文件 ===\'',
+        'cat /opt/nezha/dashboard/data/config.yaml 2>/dev/null || echo \'配置文件不存在\'',
+        'echo \'\'',
+        'echo \'=== systemd 服务状态 ===\'',
+        'systemctl status nezha-dashboard 2>&1 | head -20',
+        'echo \'\'',
+        'echo \'=== 服务日志(最近15行) ===\'',
+        'journalctl -u nezha-dashboard --no-pager -n 15 2>/dev/null || echo \'日志不可用\'',
+        'echo \'\'',
+        'echo \'=== 端口监听 ===\'',
+        'ss -tlnp 2>/dev/null | grep 8008 || netstat -tlnp 2>/dev/null | grep 8008 || echo \'8008端口未监听\'',
+        'echo \'\'',
+        'echo \'=== 防火墙 ===\'',
+        '(which ufw >/dev/null && ufw status | head -15) || echo \'ufw未安装\''
       ].join('\n')
       const result = await window.pre.runGlobalAsync('execSshCommand', {
-        host: bm.host, port: bm.port || 22,
+        host: bm.host,
+        port: bm.port || 22,
         username: bm.username || 'root',
-        password: bm.password, privateKey: bm.privateKey,
-        command: cmds, timeout: 15000
+        password: bm.password,
+        privateKey: bm.privateKey,
+        command: cmds,
+        timeout: 15000
       })
       setDiagResult(result || '无返回数据')
     } catch (e) {
@@ -137,7 +140,7 @@ export default function TabNezha() {
   }
 
   return (
-    <div className="tab-nezha" style={{ padding: '0 16px' }}>
+    <div className='tab-nezha' style={{ padding: '0 16px' }}>
       {/* 部署主控 */}
       <div style={{ marginBottom: 24 }}>
         <h4 style={{ color: '#e0e0e0', marginBottom: 12 }}>
@@ -147,7 +150,7 @@ export default function TabNezha() {
         <div style={{ marginBottom: 8 }}>
           <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>选择主控服务器</div>
           <Select
-            placeholder="选择一台 VPS 作为 XNOW 监控主控"
+            placeholder='选择一台 VPS 作为 XNOW 监控主控'
             style={{ width: '100%' }}
             value={masterId || undefined}
             onChange={setMasterId}
@@ -155,7 +158,7 @@ export default function TabNezha() {
             allowClear
           />
         </div>
-        <Button type="primary" icon={<CloudServerOutlined />} onClick={handleDeployMaster}>
+        <Button type='primary' icon={<CloudServerOutlined />} onClick={handleDeployMaster}>
           一键部署主控
         </Button>
         <div style={{ color: '#666', fontSize: 11, marginTop: 6 }}>
@@ -173,7 +176,7 @@ export default function TabNezha() {
       <div style={{ marginBottom: 12 }}>
         <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>Dashboard 地址</div>
         <Input
-          placeholder="http://your-server:8008"
+          placeholder='http://your-server:8008'
           value={dashboardUrl}
           onChange={(e) => setDashboardUrl(e.target.value)}
           style={{ background: '#1a1a1a', border: '1px solid #333', color: '#ccc' }}
@@ -182,7 +185,7 @@ export default function TabNezha() {
       <div style={{ marginBottom: 12 }}>
         <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>API Token</div>
         <Input.Password
-          placeholder="nzp_xxxxxxxxxxxx"
+          placeholder='nzp_xxxxxxxxxxxx'
           value={apiToken}
           onChange={(e) => setApiToken(e.target.value)}
           style={{ background: '#1a1a1a', border: '1px solid #333', color: '#ccc' }}
@@ -190,7 +193,7 @@ export default function TabNezha() {
       </div>
 
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={handleSave}>
+        <Button type='primary' onClick={handleSave}>
           保存
         </Button>
         <Button icon={<LinkOutlined />} loading={testing} onClick={handleTest}>
@@ -203,7 +206,7 @@ export default function TabNezha() {
 
       {diagResult && (
         <Alert
-          type="info"
+          type='info'
           message={<pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 11, color: '#0f0', fontFamily: "'Maple Mono', monospace" }}>{diagResult}</pre>}
           showIcon={false}
           style={{ background: '#0a0a0a', border: '1px solid #333', marginBottom: 16, maxHeight: 300, overflow: 'auto' }}
@@ -212,7 +215,7 @@ export default function TabNezha() {
 
       {setupGuide && (
         <Alert
-          type="info"
+          type='info'
           message={setupGuide}
           showIcon
           icon={<InfoCircleOutlined />}
@@ -237,7 +240,7 @@ export default function TabNezha() {
           style={{
             background: '#1a1a1a',
             border: `1px solid ${testResult.success ? '#52c41a' : '#ff4d4f'}`,
-            color: testResult.success ? '#52c41a' : '#ff4d4f',
+            color: testResult.success ? '#52c41a' : '#ff4d4f'
           }}
         />
       )}

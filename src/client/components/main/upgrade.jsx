@@ -6,13 +6,11 @@ import {
   getLatestReleaseVersion,
   clearReleaseCache
 } from '../../common/update-check'
-import upgrade from '../../common/upgrade'
 import compare from '../../common/version-compare'
 import Link from '../common/external-link'
-import { isMac, isWin, packInfo, downloadUpgradeTimeout } from '../../common/constants'
+import { isMac, isWin, packInfo } from '../../common/constants'
 import { checkSkipSrc } from '../../common/check-skip-src'
 import { debounce } from 'lodash-es'
-import newTerm from '../../common/new-terminal'
 import Markdown from '../common/markdown'
 import { refsStatic } from '../common/ref'
 import message from '../common/message'
@@ -278,12 +276,16 @@ export default class Upgrade extends PureComponent {
           <p style={{ marginBottom: 8, color: '#888' }}>正在下载更新...</p>
           <div style={{
             width: '100%', height: 6, background: '#333', borderRadius: 3, overflow: 'hidden'
-          }}>
+          }}
+          >
             <div style={{
-              width: (percent || 0) + '%', height: '100%',
+              width: (percent || 0) + '%',
+              height: '100%',
               background: 'linear-gradient(90deg, #52c41a, #73d13d)',
-              borderRadius: 3, transition: 'width 0.3s'
-            }} />
+              borderRadius: 3,
+              transition: 'width 0.3s'
+            }}
+            />
           </div>
           <p style={{ marginTop: 6, fontSize: 12, color: '#888' }}>{percent || 0}%</p>
         </div>

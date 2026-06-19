@@ -54,8 +54,7 @@ export default function WindowControl (props) {
         >
           {maximized
             ? <SwitcherOutlined className='iblock font14 widnow-control-icon icon-maximize is-max' />
-            : <BorderOutlined className='iblock font14 widnow-control-icon icon-maximize' />
-          }
+            : <BorderOutlined className='iblock font14 widnow-control-icon icon-maximize' />}
         </div>
       </Tooltip>
       <Tooltip title={e('close')} placement='bottom'>

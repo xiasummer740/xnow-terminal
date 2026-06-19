@@ -65,37 +65,40 @@ export default auto(function InfoModal (props) {
 
     return (
       <div className='mg1b mg2t'>
-        {shouldUpgrade && remoteVersion ? (
-          <div style={{
-            background: 'var(--primary, #1890ff)',
-            borderRadius: 8,
-            padding: '12px 16px',
-            marginBottom: 12,
-            color: '#fff'
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
-              <ArrowUpOutlined style={{ marginRight: 6 }} />发现新版本 {remoteVersion}
+        {shouldUpgrade && remoteVersion
+          ? (
+            <div style={{
+              background: 'var(--primary, #1890ff)',
+              borderRadius: 8,
+              padding: '12px 16px',
+              marginBottom: 12,
+              color: '#fff'
+            }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
+                <ArrowUpOutlined style={{ marginRight: 6 }} />发现新版本 {remoteVersion}
+              </div>
+              <Space>
+                <Button
+                  type='default'
+                  ghost
+                  loading={upgrading}
+                  onClick={handleUpgrade}
+                  icon={<ArrowUpOutlined />}
+                >
+                  一键升级
+                </Button>
+                <Button
+                  type='link'
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                  onClick={() => onCheckUpdate(true)}
+                >
+                  查看详情
+                </Button>
+              </Space>
             </div>
-            <Space>
-              <Button
-                type='default'
-                ghost
-                loading={upgrading}
-                onClick={handleUpgrade}
-                icon={<ArrowUpOutlined />}
-              >
-                一键升级
-              </Button>
-              <Button
-                type='link'
-                style={{ color: 'rgba(255,255,255,0.8)' }}
-                onClick={() => onCheckUpdate(true)}
-              >
-                查看详情
-              </Button>
-            </Space>
-          </div>
-        ) : null}
+            )
+          : null}
         <Button
           type={shouldUpgrade ? 'default' : 'primary'}
           loading={onCheckUpdating}

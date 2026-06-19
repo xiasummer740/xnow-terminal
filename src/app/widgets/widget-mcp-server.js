@@ -5,7 +5,7 @@
  * Uses a simple local MCP implementation
  */
 
-const log = require("../common/log")
+const log = require('../common/log')
 const { ipcMain } = require('electron')
 const { McpServer } = require('../mcp/server/mcp.js')
 const { StreamableHTTPServerTransport } = require('../mcp/server/streamableHttp.js')

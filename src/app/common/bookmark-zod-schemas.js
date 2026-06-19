@@ -2,12 +2,12 @@ const { z } = require('../lib/zod')
 
 const runScriptSchema = z.object({
   delay: z.number().optional().describe('Delay in ms before executing this command'),
-  script: z.string().describe('Command to execute'),
+  script: z.string().describe('Command to execute')
 })
 
 const quickCommandSchema = z.object({
   name: z.string().describe('Quick command name'),
-  command: z.string().describe('Command'),
+  command: z.string().describe('Command')
 })
 
 const sshTunnelSchema = z.object({
@@ -18,7 +18,7 @@ const sshTunnelSchema = z.object({
   sshTunnelLocalPort: z.number().optional().describe('Local port'),
   sshTunnelRemoteHost: z.string().optional().describe('Remote host'),
   sshTunnelRemotePort: z.number().optional().describe('Remote port'),
-  name: z.string().optional().describe('Tunnel name'),
+  name: z.string().optional().describe('Tunnel name')
 })
 
 const connectionHoppingSchema = z.object({
@@ -30,7 +30,7 @@ const connectionHoppingSchema = z.object({
   passphrase: z.string().optional().describe('Passphrase'),
   certificate: z.string().optional().describe('Certificate'),
   authType: z.string().optional().describe('Auth type'),
-  profile: z.string().optional().describe('Profile id'),
+  profile: z.string().optional().describe('Profile id')
 })
 
 const commonNetworkBookmarkProps = {
@@ -50,7 +50,7 @@ const commonNetworkBookmarkProps = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 const sshBookmarkSchema = {
@@ -85,7 +85,7 @@ const sshBookmarkSchema = {
   connectionHoppings: z
     .array(connectionHoppingSchema)
     .optional()
-    .describe('Connection hopping definitions'),
+    .describe('Connection hopping definitions')
 }
 
 const telnetBookmarkSchema = {
@@ -95,7 +95,7 @@ const telnetBookmarkSchema = {
   username: z.string().optional().describe('Telnet username'),
   password: z.string().optional().describe('Telnet password'),
   loginPrompt: z.string().optional().describe('Login prompt regex'),
-  passwordPrompt: z.string().optional().describe('Password prompt regex'),
+  passwordPrompt: z.string().optional().describe('Password prompt regex')
 }
 
 const serialBookmarkSchema = {
@@ -116,13 +116,13 @@ const serialBookmarkSchema = {
     .enum(['\r', '\n', '\r\n'])
     .optional()
     .describe(
-      'TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)',
+      'TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)'
     ),
   rxLineEnding: z
     .enum(['none', 'lf_to_crlf', 'cr_to_crlf'])
     .optional()
     .describe(
-      'RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)',
+      'RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)'
     ),
   description: z.string().optional().describe('Bookmark description'),
   vpsUrl: z.string().optional().describe('VPS management panel URL'),
@@ -130,7 +130,7 @@ const serialBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
   // runScripts: z.array(runScriptSchema).optional().describe('Run scripts after connected')
 }
 
@@ -143,7 +143,7 @@ const localBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
   // runScripts: z.array(runScriptSchema).optional().describe('Run scripts after connected'),
   // execWindows: z.string().optional().describe('Windows exec path (overrides global setting)'),
   // execMac: z.string().optional().describe('Mac exec path (overrides global setting)'),
@@ -162,5 +162,5 @@ module.exports = {
   sshBookmarkSchema,
   telnetBookmarkSchema,
   serialBookmarkSchema,
-  localBookmarkSchema,
+  localBookmarkSchema
 }

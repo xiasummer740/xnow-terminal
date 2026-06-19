@@ -14,7 +14,7 @@ const e = window.translate
 
 window.store = store
 
-export default function Login() {
+export default function Login () {
   const [pass, setPass] = useState('')
   const [logined, setLogined] = useState(!window.pre.requireAuth)
   const [submitting, setSubmitting] = useState(false)
@@ -56,17 +56,17 @@ export default function Login() {
   }
 
   const renderAfter = () => {
-    return <ArrowRightOutlined className="mg1x pointer" onClick={handleSubmit} />
+    return <ArrowRightOutlined className='mg1x pointer' onClick={handleSubmit} />
   }
 
   const renderLogin = () => {
     return (
-      <div className="login-wrap">
+      <div className='login-wrap'>
         <AppDrag />
         <WindowControl store={window.store} />
-        <div className="pd3 aligncenter">
+        <div className='pd3 aligncenter'>
           <LogoElem />
-          <div className="pd3 aligncenter">
+          <div className='pd3 aligncenter'>
             <Password
               value={pass}
               readOnly={submitting}
@@ -77,7 +77,7 @@ export default function Login() {
             />
           </div>
           {submitting && (
-            <div className="aligncenter">
+            <div className='aligncenter'>
               <Spin spinning />
             </div>
           )}

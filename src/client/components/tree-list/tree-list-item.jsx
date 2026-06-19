@@ -8,7 +8,7 @@ import classnames from 'classnames'
 import highlight from '../common/highlight'
 import uid from '../../common/uid'
 
-function areEqual(prevProps, nextProps) {
+function areEqual (prevProps, nextProps) {
   const prevSelected = prevProps.selectedItemId === prevProps.item.id
   const nextSelected = nextProps.selectedItemId === nextProps.item.id
   const prevSearchSelected = Boolean(prevProps.searchSelected)
@@ -29,7 +29,7 @@ function areEqual(prevProps, nextProps) {
   )
 }
 
-function TreeListItem(props) {
+function TreeListItem (props) {
   const onSelect = (e) => {
     props.onSelect(e)
   }
@@ -58,24 +58,26 @@ function TreeListItem(props) {
   const cls = classnames(
     {
       selected: selectedItemId === item.id,
-      'search-selected': props.searchSelected,
+      'search-selected': props.searchSelected
     },
     'tree-item',
     {
       'is-category': isGroup,
-      level2: item.level === 2,
-    },
+      level2: item.level === 2
+    }
   )
   const tag = isGroup ? '' : createTitleTag(item)
   const colorTag =
-    isGroup && item.color ? (
-      <span
-        className="category-color-tag"
-        style={{
-          backgroundColor: item.color,
-        }}
-      />
-    ) : null
+    isGroup && item.color
+      ? (
+        <span
+          className='category-color-tag'
+          style={{
+            backgroundColor: item.color
+          }}
+        />
+        )
+      : null
   const title = isGroup ? item.title : props.itemLabel
   const titleAll = title + (item.description ? ' - ' + item.description : '')
   const titleHighlight = isGroup ? item.title || 'no title' : highlight(title, props.keyword)
@@ -90,7 +92,7 @@ function TreeListItem(props) {
     onDragStart,
     onDragEnter,
     onDragLeave,
-    onDrop,
+    onDrop
   }
   const onDoubleClickTitle = (e) => {
     if (!isGroup && item.id) {
@@ -116,27 +118,29 @@ function TreeListItem(props) {
     onDoubleClick: onDoubleClickTitle,
     'data-item-id': item.id,
     'data-is-group': isGroup ? 'true' : 'false',
-    'data-parent-id': props.parentId,
+    'data-parent-id': props.parentId
   }
   const key = item.id || uid()
   const xxuiLink =
-    !isGroup && item.vpsXrayPanel ? (
-      <span
-        className="tree-item-xxui-link"
-        title={'打开 XX-UI 面板 ' + item.vpsXrayPanel}
-        onClick={(e) => {
-          e.stopPropagation()
-          window.openLink(item.vpsXrayPanel, '_blank')
-        }}
-        style={{ marginLeft: 6, color: '#52c41a', fontSize: 12 }}
-      >
+    !isGroup && item.vpsXrayPanel
+      ? (
         <span
-          style={{ fontSize: 10, border: '1px solid #52c41a', borderRadius: 3, padding: '0 3px' }}
+          className='tree-item-xxui-link'
+          title={'打开 XX-UI 面板 ' + item.vpsXrayPanel}
+          onClick={(e) => {
+            e.stopPropagation()
+            window.openLink(item.vpsXrayPanel, '_blank')
+          }}
+          style={{ marginLeft: 6, color: '#52c41a', fontSize: 12 }}
         >
-          UI
+          <span
+            style={{ fontSize: 10, border: '1px solid #52c41a', borderRadius: 3, padding: '0 3px' }}
+          >
+            UI
+          </span>
         </span>
-      </span>
-    ) : null
+        )
+      : null
   // 到期提醒
   const expiryWarn =
     !isGroup && item.vpsExpiry
@@ -144,13 +148,14 @@ function TreeListItem(props) {
           const d = new Date(item.vpsExpiry)
           if (isNaN(d.getTime())) return null
           const days = Math.ceil((d - Date.now()) / 86400000)
-          if (days <= 0)
+          if (days <= 0) {
             return (
-              <span title="已到期！" style={{ marginLeft: 4, color: '#ff4d4f', fontSize: 11 }}>
+              <span title='已到期！' style={{ marginLeft: 4, color: '#ff4d4f', fontSize: 11 }}>
                 ⚠过期
               </span>
             )
-          if (days <= 7)
+          }
+          if (days <= 7) {
             return (
               <span
                 title={`${days}天后到期`}
@@ -159,6 +164,7 @@ function TreeListItem(props) {
                 ⚠{days}天
               </span>
             )
+          }
           return null
         })()
       : null

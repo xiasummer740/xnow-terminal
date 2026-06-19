@@ -58,6 +58,7 @@ exports.createWindow = async function (userConfig) {
   // 内容安全策略（CSP），防御 XSS 攻击
   // 注意：webview 加载外部页面不受此 CSP 影响（独立进程）
   win.webContents.session.webRequest.onHeadersReceived(function (details, callback) {
+    // eslint-disable-next-line n/no-callback-literal
     callback({
       responseHeaders: Object.assign({}, details.responseHeaders, {
         'Content-Security-Policy': [
@@ -98,7 +99,7 @@ exports.createWindow = async function (userConfig) {
       setTimeout(() => win.webContents.openDevTools({ mode: 'detach' }), 1000)
     }
     win.on('unmaximize', function () {
-      var bounds = win.getBounds()
+      const bounds = win.getBounds()
       if (bounds.width < minWindowWidth || bounds.height < minWindowHeight) {
         win.setBounds({
           x: 0,
@@ -119,7 +120,7 @@ exports.createWindow = async function (userConfig) {
       }
     }, 200))
     win.on('move', _.debounce(function () {
-      var bounds = win.getBounds()
+      const bounds = win.getBounds()
       setWindowPos({ x: bounds.x, y: bounds.y })
     }, 100))
 

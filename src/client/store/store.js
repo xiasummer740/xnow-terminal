@@ -36,8 +36,7 @@ import {
   settingMap,
   terminalSshConfigType,
   paneMap,
-  staticNewItemTabs,
-  isWin
+  staticNewItemTabs
 } from '../common/constants'
 import getInitItem from '../common/init-setting-item'
 import createTitle from '../common/create-title'

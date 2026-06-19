@@ -64,11 +64,11 @@ export default function SkillDiscoveryNotification () {
   }
 
   const categoryColors = {
-    '运维工具': 'blue',
-    '监控工具': 'cyan',
-    '部署工具': 'geekblue',
-    '安全工具': 'red',
-    'AI工具': 'purple'
+    运维工具: 'blue',
+    监控工具: 'cyan',
+    部署工具: 'geekblue',
+    安全工具: 'red',
+    AI工具: 'purple'
   }
 
   return (

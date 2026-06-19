@@ -1,6 +1,7 @@
 /**
  * 右侧面板 - 网络延迟 + 精细柱状图 + 历史记录
  */
+/* global cancelAnimationFrame, getComputedStyle */
 import { ApiOutlined, BarChartOutlined } from '@ant-design/icons'
 import { useEffect, useState, useRef } from 'react'
 import { Tooltip } from 'antd'
@@ -90,9 +91,7 @@ function drawChart (canvas, data) {
     const y = scaleY(v)
 
     let topColor, bottomColor
-    if (v > 250) { topColor = '#ff7875'; bottomColor = '#ff4d4f' }
-    else if (v > 150) { topColor = '#ffc53d'; bottomColor = '#faad14' }
-    else { topColor = '#73d13d'; bottomColor = '#52c41a' }
+    if (v > 250) { topColor = '#ff7875'; bottomColor = '#ff4d4f' } else if (v > 150) { topColor = '#ffc53d'; bottomColor = '#faad14' } else { topColor = '#73d13d'; bottomColor = '#52c41a' }
 
     const grad = ctx.createLinearGradient(x, y, x, y + h)
     grad.addColorStop(0, topColor)
@@ -136,7 +135,6 @@ export default function TerminalInfoPing (props) {
     dataRef.current = []
     secBufRef.current = []
 
-    let timer
     const measure = async () => {
       totalCount.current++
       try {
@@ -184,7 +182,7 @@ export default function TerminalInfoPing (props) {
       scheduleDraw(canvasRef.current, dataRef.current, rafIdRef)
     }
 
-    timer = setInterval(measure, 1000)
+    const timer = setInterval(measure, 1000)
     measure()
     return () => clearInterval(timer)
   }, [pid, isRemote])

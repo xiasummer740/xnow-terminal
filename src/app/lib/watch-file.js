@@ -1,4 +1,4 @@
-const log = require("../common/log")
+const log = require('../common/log')
 const fs = require('original-fs')
 const globalState = require('./glob-state')
 const _ = require('./lodash.js')
@@ -20,7 +20,7 @@ const onWatch = _.debounce(
     }
   },
   300,
-  { leading: false, trailing: true },
+  { leading: false, trailing: true }
 )
 
 exports.watchFile = (path) => {

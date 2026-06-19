@@ -1,4 +1,4 @@
-const log = require("../common/log")
+const log = require('../common/log')
 const os = require('os')
 // const path = require('path')
 const express = require('express')

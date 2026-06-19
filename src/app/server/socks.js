@@ -2,7 +2,7 @@
  * socks proxy wrapper
  */
 
-const log = require("../common/log")
+const log = require('../common/log')
 const { request } = require('http')
 
 function isValidIP (input) {

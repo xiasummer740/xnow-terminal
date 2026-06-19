@@ -38,6 +38,7 @@ export default memo(function RightSidePanel (
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   function onResizeEnd () {
     if (panelRef.current) {
       window.store.setRightSidePanelWidth(parseInt(panelRef.current.style.width))

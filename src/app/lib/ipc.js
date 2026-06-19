@@ -9,7 +9,7 @@ const {
   dialog,
   powerMonitor,
   globalShortcut,
-  shell,
+  shell
 } = require('electron')
 const globalState = require('./glob-state')
 const ipcSyncFuncs = require('./ipc-sync')
@@ -30,7 +30,7 @@ const {
   registerDeepLink,
   unregisterDeepLink,
   checkProtocolRegistration,
-  getPendingDeepLink,
+  getPendingDeepLink
 } = require('./deep-link')
 const {
   packInfo,
@@ -39,7 +39,7 @@ const {
   isMac,
   exePath,
   isPortable,
-  sshKeysPath,
+  sshKeysPath
 } = require('../common/app-props')
 const { getScreenSize, maximize, unmaximize } = require('./window-control')
 const { openFileWithEditor } = require('./open-file-with-editor')
@@ -130,7 +130,7 @@ const SAFE_ENV_KEYS = [
   'KDE_FULL_SESSION',
   'CI',
   'DOCKER_HOST',
-  'CONTAINER',
+  'CONTAINER'
 ]
 
 // ===== 安全工具函数 (AI Agent 文件操作/请求防护) =====
@@ -139,7 +139,7 @@ const { resolve: pathResolve } = require('path')
 // 检测路径遍历攻击
 const PATH_TRAVERSAL_RE = /(?:^|[\\/])\.\.[\\/]/
 
-function isPathSafe(targetPath) {
+function isPathSafe (targetPath) {
   if (PATH_TRAVERSAL_RE.test(targetPath)) return false
   const resolved = pathResolve(targetPath)
   // 阻止访问系统敏感目录
@@ -158,7 +158,7 @@ function isPathSafe(targetPath) {
 }
 
 // 检测内网/本地地址（防 SSRF）
-function isPrivateHost(hostname) {
+function isPrivateHost (hostname) {
   const lower = hostname.toLowerCase()
   if (['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'].includes(lower)) return true
   const m = lower.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/)
@@ -173,7 +173,7 @@ function isPrivateHost(hostname) {
   return false
 }
 
-async function initAppServer() {
+async function initAppServer () {
   const { config } = await getConfig(globalState.get('serverInited'))
   const { langs, sysLocale } = await loadLocales()
   const language = getLang(config, sysLocale, langs)
@@ -184,9 +184,9 @@ async function initAppServer() {
       {
         ...process.env,
         appPath,
-        sshKeysPath,
+        sshKeysPath
       },
-      sysLocale,
+      sysLocale
     )
     child.on('message', (m) => {
       if (m && m.showFileInFolder) {
@@ -204,11 +204,11 @@ async function initAppServer() {
   globalState.set('config', config)
 }
 
-function initIpc() {
+function initIpc () {
   powerMonitor.on('resume', () => {
     globalState.get('win').webContents.send('power-resume', null)
   })
-  async function init() {
+  async function init () {
     const { langs, langMap } = await loadLocales()
     const config = globalState.get('config')
     const globs = {
@@ -218,7 +218,7 @@ function initIpc() {
       installSrc,
       appPath,
       exePath,
-      isPortable,
+      isPortable
     }
     initApp(langMap, config)
     initShortCut(globalShortcut, globalState.get('win'), config)
@@ -234,7 +234,7 @@ function initIpc() {
       try {
         const out = execSync(
           'powershell -c "Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root"',
-          { encoding: 'utf8', timeout: 5000 },
+          { encoding: 'utf8', timeout: 5000 }
         )
         return out
           .split(/\r?\n/)
@@ -318,7 +318,6 @@ function initIpc() {
     resizeWindow: ({ width, height }) => {
       const win = globalState.get('win')
       if (win) {
-        const bounds = win.getBounds()
         win.setBounds({ width, height })
       }
     },
@@ -364,7 +363,7 @@ function initIpc() {
         return SAFE_ENV_KEYS.includes(key) ? process.env[key] : ''
       }
       return Object.fromEntries(
-        SAFE_ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]]),
+        SAFE_ENV_KEYS.filter((k) => process.env[k] !== undefined).map((k) => [k, process.env[k]])
       )
     },
     // ===== 文件系统工具 (AI Agent) =====
@@ -378,7 +377,7 @@ function initIpc() {
         return JSON.stringify({
           content: fs.readFileSync(filePath, 'utf-8'),
           size: stat.size,
-          path: filePath,
+          path: filePath
         })
       } catch (e) {
         return JSON.stringify({ error: e.message })
@@ -387,14 +386,14 @@ function initIpc() {
     writeLocalFile: async (filePath, content) => {
       try {
         if (!isPathSafe(filePath)) return JSON.stringify({ error: '路径不允许' })
-        const fs = require('fs'),
-          path = require('path')
+        const fs = require('fs')
+        const path = require('path')
         fs.mkdirSync(path.dirname(filePath), { recursive: true })
         fs.writeFileSync(filePath, content, 'utf-8')
         return JSON.stringify({
           success: true,
           path: filePath,
-          bytes: Buffer.byteLength(content, 'utf-8'),
+          bytes: Buffer.byteLength(content, 'utf-8')
         })
       } catch (e) {
         return JSON.stringify({ error: e.message })
@@ -403,16 +402,16 @@ function initIpc() {
     listDirectory: async (dirPath) => {
       try {
         if (!isPathSafe(dirPath)) return JSON.stringify({ error: '路径不允许' })
-        const fs = require('fs'),
-          path = require('path')
+        const fs = require('fs')
+        const path = require('path')
         const items = fs.readdirSync(dirPath, { withFileTypes: true })
         return JSON.stringify({
           path: dirPath,
           items: items.map((i) => ({
             name: i.name,
             type: i.isDirectory() ? 'dir' : 'file',
-            size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0,
-          })),
+            size: i.isFile() ? fs.statSync(path.join(dirPath, i.name)).size : 0
+          }))
         })
       } catch (e) {
         return JSON.stringify({ error: e.message })
@@ -429,7 +428,7 @@ function initIpc() {
           maxBuffer: 2097152,
           timeout: 15000,
           encoding: 'utf8',
-          windowsHide: true,
+          windowsHide: true
         })
         const lines = output.split('\n').filter(Boolean)
         return JSON.stringify({ total: lines.length, results: lines.slice(0, 200).join('\n') })
@@ -445,7 +444,7 @@ function initIpc() {
           return JSON.stringify({ error: '不允许访问内网地址' })
         }
         const http = url.startsWith('https') ? require('https') : require('http')
-        return new Promise((r) => {
+        return new Promise((resolve) => {
           const req = http.get(
             url,
             { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } },
@@ -455,18 +454,18 @@ function initIpc() {
                 d += c
                 if (d.length > 500000) {
                   req.destroy()
-                  r(JSON.stringify({ error: '响应过大截断', preview: d.slice(0, 500000) }))
+                  resolve(JSON.stringify({ error: '响应过大截断', preview: d.slice(0, 500000) }))
                 }
               })
               res.on('end', () =>
-                r(JSON.stringify({ status: res.statusCode, content: d.slice(0, 100000) })),
+                resolve(JSON.stringify({ status: res.statusCode, content: d.slice(0, 100000) }))
               )
-            },
+            }
           )
-          req.on('error', (e) => r(JSON.stringify({ error: e.message })))
+          req.on('error', (e) => resolve(JSON.stringify({ error: e.message })))
           req.on('timeout', function () {
             this.destroy()
-            r(JSON.stringify({ error: '请求超时' }))
+            resolve(JSON.stringify({ error: '请求超时' }))
           })
         })
       } catch (e) {
@@ -484,7 +483,7 @@ function initIpc() {
           exportedAt: new Date().toISOString(),
           totalBookmarks: bookmarks.length,
           bookmarks,
-          bookmarkGroups,
+          bookmarkGroups
         }
         return JSON.stringify(backup)
       } catch (e) {
@@ -543,76 +542,77 @@ function initIpc() {
 
       const knownHostKeys = {}
       return async (opts) => {
-      const { Client } = require('@electerm/ssh2')
-      const host = opts.host || opts.ipv4
-      const port = opts.port || 22
-      const username = opts.username || 'root'
-      const timeout = opts.timeout || 60000
+        const { Client } = require('@electerm/ssh2')
+        const host = opts.host || opts.ipv4
+        const port = opts.port || 22
+        const username = opts.username || 'root'
+        const timeout = opts.timeout || 60000
 
         auditSsh('exec', { host, port, username, command: opts.command })
         checkSshRateLimit(host)
 
-      return new Promise((resolve, reject) => {
-        let settled = false
-        const conn = new Client()
-        const timer = setTimeout(() => {
-          if (settled) return
-          settled = true
-          conn.end()
-          reject(new Error('SSH 连接超时'))
-        }, timeout)
+        return new Promise((resolve, reject) => {
+          let settled = false
+          const conn = new Client()
+          const timer = setTimeout(() => {
+            if (settled) return
+            settled = true
+            conn.end()
+            reject(new Error('SSH 连接超时'))
+          }, timeout)
 
-        conn.on('ready', () => {
-          if (settled) return
-          clearTimeout(timer)
-          conn.exec(opts.command, (err, stream) => {
-            if (err) {
-              conn.end()
-              if (settled) return
-              settled = true
-              return reject(err)
-            }
-            let output = ''
-            stream.on('data', (data) => { output += data.toString() })
-            stream.stderr.on('data', (data) => { output += data.toString() })
-            stream.on('close', (code) => {
-              conn.end()
-              if (settled) return
-              settled = true
-              resolve(output.trim())
+          conn.on('ready', () => {
+            if (settled) return
+            clearTimeout(timer)
+            conn.exec(opts.command, (err, stream) => {
+              if (err) {
+                conn.end()
+                if (settled) return
+                settled = true
+                return reject(err)
+              }
+              let output = ''
+              stream.on('data', (data) => { output += data.toString() })
+              stream.stderr.on('data', (data) => { output += data.toString() })
+              stream.on('close', (code) => {
+                conn.end()
+                if (settled) return
+                settled = true
+                resolve(output.trim())
+              })
             })
           })
-        })
 
-        conn.on('error', (err) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          reject(err)
-        })
+          conn.on('error', (err) => {
+            if (settled) return
+            settled = true
+            clearTimeout(timer)
+            reject(err)
+          })
 
-        const hostKey = host + ':' + port
-        conn.connect({
-          host,
-          port,
-          username,
-          password: opts.password,
-          privateKey: opts.privateKey,
-          readyTimeout: timeout,
-          keepaliveInterval: 0,
-          hostVerifier: (keyHash) => {
-            const stored = knownHostKeys[hostKey]
-            if (!stored) {
-              knownHostKeys[hostKey] = keyHash
+          const hostKey = host + ':' + port
+          conn.connect({
+            host,
+            port,
+            username,
+            password: opts.password,
+            privateKey: opts.privateKey,
+            readyTimeout: timeout,
+            keepaliveInterval: 0,
+            hostVerifier: (keyHash) => {
+              const stored = knownHostKeys[hostKey]
+              if (!stored) {
+                knownHostKeys[hostKey] = keyHash
+                return true
+              }
+              if (stored === keyHash) return true
+              console.warn(`[SSH] ⚠️ ${hostKey} 的主机密钥已变更！可能存在中间人攻击。`)
               return true
             }
-            if (stored === keyHash) return true
-            console.warn(`[SSH] ⚠️ ${hostKey} 的主机密钥已变更！可能存在中间人攻击。`)
-            return true
-          }
+          })
         })
-      })
-    }})(),
+      }
+    })(),
     // ===== 签发哪吒 JWT（用 Dashboard 的 jwt_secret_key） =====
     signNezhaJwt: (secret) => {
       const jwt = require('jsonwebtoken')
@@ -737,7 +737,7 @@ function initIpc() {
     },
     getBgPingData: (host) => {
       return (module.exports._bgPingData || {})[host] || []
-    },
+    }
   }
   // 初始化 module.exports 上的后台 ping 数据存储
   module.exports._bgPingData = module.exports._bgPingData || {}

@@ -6,25 +6,25 @@
  * 2. 在 Console 中粘贴以下代码
  */
 
-(function triggerAgentTask() {
+(function triggerAgentTask () {
   // 获取 AIChat 组件的引用（通过 refsStatic）
-  var aiChat = window.refsStatic && window.refsStatic.get('AIChat');
+  const aiChat = window.refsStatic && window.refsStatic.get('AIChat')
   if (!aiChat) {
-    console.error('❌ AIChat ref not found. Make sure the AI panel is visible.');
-    return;
+    console.error('❌ AIChat ref not found. Make sure the AI panel is visible.')
+    return
   }
 
   // 设置 prompt
-  aiChat.setPrompt('检查当前系统的磁盘使用情况，列出所有磁盘分区的总大小、已用空间、可用空间和使用百分比');
+  aiChat.setPrompt('检查当前系统的磁盘使用情况，列出所有磁盘分区的总大小、已用空间、可用空间和使用百分比')
 
   // 先切换到 Agent 模式
   // 注意: mode 默认在 localStorage 中保存
-  localStorage.setItem('ai-chat-mode', 'agent');
+  window.localStorage.setItem('ai-chat-mode', 'agent')
 
   // 提交
-  setTimeout(function() {
-    aiChat.handleSubmit();
-    console.log('✅ Agent task submitted!');
-    console.log('⏳ Wait 30-60s for the agent to complete...');
-  }, 500);
-})();
+  setTimeout(function () {
+    aiChat.handleSubmit()
+    console.log('✅ Agent task submitted!')
+    console.log('⏳ Wait 30-60s for the agent to complete...')
+  }, 500)
+})()

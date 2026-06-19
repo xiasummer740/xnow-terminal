@@ -4,7 +4,6 @@
 
 const lastStateManager = require('./last-state')
 const {
-  isDev,
   minWindowWidth,
   minWindowHeight,
   isLinux

@@ -39,7 +39,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   sshTunnelsItem: {
     sshTunnel: 'string - forwardRemoteToLocal|forwardLocalToRemote|dynamicForward',
@@ -47,7 +47,7 @@ const bookmarkSchema = {
     sshTunnelLocalPort: 'number',
     sshTunnelRemoteHost: 'string',
     sshTunnelRemotePort: 'number',
-    name: 'string - optional tunnel name',
+    name: 'string - optional tunnel name'
   },
   connectionHoppingsItem: {
     host: 'string',
@@ -58,7 +58,7 @@ const bookmarkSchema = {
     passphrase: 'string - passphrase',
     certificate: 'string',
     authType: 'string',
-    profile: 'string - profile id',
+    profile: 'string - profile id'
   },
   telnet: {
     type: 'telnet',
@@ -80,7 +80,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   serial: {
     type: 'serial',
@@ -105,7 +105,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   vnc: {
     type: 'vnc',
@@ -128,7 +128,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   rdp: {
     type: 'rdp',
@@ -146,7 +146,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   ftp: {
     type: 'ftp',
@@ -164,7 +164,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   web: {
     type: 'web',
@@ -177,7 +177,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   local: {
     type: 'local',
@@ -196,7 +196,7 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
+    vpsXrayPanel: 'string - XX-UI panel URL'
   },
   spice: {
     type: 'spice',
@@ -214,11 +214,11 @@ const bookmarkSchema = {
     vpsPrice: 'string - VPS purchase price',
     vpsTraffic: 'string - VPS traffic/bandwidth',
     vpsRecharge: 'string - VPS recharge/auto-renew info',
-    vpsXrayPanel: 'string - XX-UI panel URL',
-  },
+    vpsXrayPanel: 'string - XX-UI panel URL'
+  }
 }
 
-export function buildPrompt(description) {
+export function buildPrompt (description) {
   const lang = window.store.config.languageAI || window.store.getLangName()
   const schemaDescription = Object.entries(bookmarkSchema)
     .map(([type, fields]) => {

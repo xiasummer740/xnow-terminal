@@ -12,7 +12,7 @@ const os = require('os')
 
 let _certs = null
 
-function loadMacOS() {
+function loadMacOS () {
   try {
     return execSync(
       'security find-certificate -a -p ' +
@@ -20,19 +20,19 @@ function loadMacOS() {
         '/Library/Keychains/System.keychain ' +
         os.homedir() +
         '/Library/Keychains/login.keychain-db',
-      { encoding: 'utf8', timeout: 10000 },
+      { encoding: 'utf8', timeout: 10000 }
     )
   } catch {
     return ''
   }
 }
 
-function loadLinux() {
+function loadLinux () {
   const dirs = [
     '/etc/ssl/certs',
     '/etc/pki/tls/certs',
     '/etc/pki/ca-trust/extracted/pem',
-    '/usr/local/share/certs',
+    '/usr/local/share/certs'
   ]
   const files = []
   for (const dir of dirs) {
@@ -54,7 +54,7 @@ function loadLinux() {
     const bundlePaths = [
       '/etc/ssl/certs/ca-certificates.crt',
       '/etc/pki/tls/certs/ca-bundle.crt',
-      '/etc/ssl/ca-bundle.pem',
+      '/etc/ssl/ca-bundle.pem'
     ]
     for (const p of bundlePaths) {
       if (existsSync(p)) {
@@ -74,7 +74,7 @@ function loadLinux() {
     .join('\n')
 }
 
-function loadWindows() {
+function loadWindows () {
   try {
     return execSync(
       'powershell -NoLogo -NonInteractive -Command ' +
@@ -85,14 +85,14 @@ function loadWindows() {
         "[System.Convert]::ToBase64String($_.RawData, 'InsertLineBreaks'); " +
         "'-----END CERTIFICATE-----' } " +
         '} catch { }"',
-      { encoding: 'utf8', timeout: 10000, windowsHide: true },
+      { encoding: 'utf8', timeout: 10000, windowsHide: true }
     )
   } catch {
     return ''
   }
 }
 
-function getSystemCAs() {
+function getSystemCAs () {
   if (_certs !== null) {
     return _certs
   }

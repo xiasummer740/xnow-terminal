@@ -6,7 +6,7 @@ import { Card, Tag, Progress, Tooltip } from 'antd'
 import { ThunderboltOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { getServerList, connectServerWs } from '../../common/nezha-api'
 
-export default function MonitorCards({ onSshConnect, onSelectDetail }) {
+export default function MonitorCards ({ onSshConnect, onSelectDetail }) {
   const [servers, setServers] = useState([])
   const wsRef = useRef(null)
 
@@ -39,7 +39,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: 12,
+        gap: 12
       }}
     >
       {servers.map((s) => {
@@ -53,7 +53,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
         return (
           <Card
             key={s.id}
-            size="small"
+            size='small'
             hoverable
             style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 8 }}
             styles={{ body: { padding: 14 } }}
@@ -64,7 +64,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: 10,
+                marginBottom: 10
               }}
             >
               <span style={{ color: '#e0e0e0', fontWeight: 600, fontSize: 13 }}>
@@ -84,7 +84,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                   color: '#999',
                   marginBottom: 2,
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'space-between'
                 }}
               >
                 <span>CPU</span>
@@ -92,9 +92,9 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
               </div>
               <Progress
                 percent={Math.min(100, Math.round(cpu))}
-                size="small"
+                size='small'
                 strokeColor={cpu > 80 ? '#ff4d4f' : cpu > 50 ? '#faad14' : '#1890ff'}
-                trailColor="#2a2a2a"
+                trailColor='#2a2a2a'
                 showInfo={false}
               />
             </div>
@@ -105,7 +105,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                   color: '#999',
                   marginBottom: 2,
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'space-between'
                 }}
               >
                 <span>内存</span>
@@ -113,9 +113,9 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
               </div>
               <Progress
                 percent={Math.min(100, Math.round(memPct))}
-                size="small"
+                size='small'
                 strokeColor={memPct > 80 ? '#ff4d4f' : memPct > 50 ? '#faad14' : '#52c41a'}
-                trailColor="#2a2a2a"
+                trailColor='#2a2a2a'
                 showInfo={false}
               />
             </div>
@@ -126,7 +126,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                   color: '#999',
                   marginBottom: 2,
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'space-between'
                 }}
               >
                 <span>磁盘</span>
@@ -134,9 +134,9 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
               </div>
               <Progress
                 percent={Math.min(100, Math.round(diskPct))}
-                size="small"
+                size='small'
                 strokeColor={diskPct > 80 ? '#ff4d4f' : diskPct > 50 ? '#faad14' : '#52c41a'}
-                trailColor="#2a2a2a"
+                trailColor='#2a2a2a'
                 showInfo={false}
               />
             </div>
@@ -146,10 +146,10 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                 gap: 12,
                 justifyContent: 'flex-end',
                 borderTop: '1px solid #2a2a2a',
-                paddingTop: 8,
+                paddingTop: 8
               }}
             >
-              <Tooltip title="SSH 连接">
+              <Tooltip title='SSH 连接'>
                 <ThunderboltOutlined
                   style={{ color: '#888', cursor: 'pointer', fontSize: 14 }}
                   onClick={(e) => {
@@ -158,7 +158,7 @@ export default function MonitorCards({ onSshConnect, onSelectDetail }) {
                   }}
                 />
               </Tooltip>
-              <Tooltip title="查看详情">
+              <Tooltip title='查看详情'>
                 <InfoCircleOutlined
                   style={{ color: '#888', cursor: 'pointer', fontSize: 14 }}
                   onClick={(e) => {

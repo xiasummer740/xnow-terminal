@@ -13,7 +13,7 @@ const rdpConfig = {
     return createBaseInitValues(props, terminalRdpType, {
       port: 3389,
       connectionHoppings: [],
-      ...getAuthTypeDefault(props),
+      ...getAuthTypeDefault(props)
     })
   },
   layout: formItemLayout,
@@ -25,7 +25,7 @@ const rdpConfig = {
         {
           type: 'wiki',
           name: 'rdp-limitation-warning',
-          link: 'https://github.com/xiasummer740/xnow-terminal/wiki/RDP-limitation',
+          link: 'https://github.com/xiasummer740/xnow-terminal/wiki/RDP-limitation'
         },
         commonFields.category,
         commonFields.colorTitle,
@@ -33,32 +33,32 @@ const rdpConfig = {
           type: 'input',
           name: 'host',
           label: () => e('host'),
-          rules: [{ required: true, message: e('host') + ' required' }],
+          rules: [{ required: true, message: e('host') + ' required' }]
         },
         commonFields.port,
         {
           type: 'profileItem',
           name: '__profile__',
           label: '',
-          profileFilter: (d) => !isEmpty(d.rdp),
+          profileFilter: (d) => !isEmpty(d.rdp)
         },
         {
           ...commonFields.username,
-          rules: [{ required: true, message: e('username') + ' required' }],
+          rules: [{ required: true, message: e('username') + ' required' }]
         },
         {
           ...commonFields.password,
-          rules: [{ required: true, message: e('password') + ' required' }],
+          rules: [{ required: true, message: e('password') + ' required' }]
         },
         commonFields.description,
         { type: 'input', name: 'domain', label: () => e('domain') },
         commonFields.proxy,
-        commonFields.type,
-      ],
+        commonFields.type
+      ]
     },
     connectionHoppingTab(),
-    vpsInfoTab(),
-  ],
+    vpsInfoTab()
+  ]
 }
 
 export default rdpConfig

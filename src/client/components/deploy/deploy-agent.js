@@ -17,10 +17,13 @@ export function getAgentSteps (serverName) {
 
 async function ssh (bookmark, cmd, timeout = 30000) {
   return window.pre.runGlobalAsync('execSshCommand', {
-    host: bookmark.host, port: bookmark.port || 22,
+    host: bookmark.host,
+    port: bookmark.port || 22,
     username: bookmark.username || 'root',
-    password: bookmark.password, privateKey: bookmark.privateKey,
-    command: cmd, timeout
+    password: bookmark.password,
+    privateKey: bookmark.privateKey,
+    command: cmd,
+    timeout
   })
 }
 
@@ -41,7 +44,7 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
 
     // Step 1: 安装 Go
     update(1, 'running')
-    const goCmd = `command -v go && echo 'GO_EXISTS' && go version || (curl -sL 'https://go.dev/dl/go1.22.0.linux-amd64.tar.gz' -o /tmp/go.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz && ln -sf /usr/local/go/bin/go /usr/local/bin/go && rm -f /tmp/go.tar.gz && echo 'GO_INSTALLED')`
+    const goCmd = 'command -v go && echo \'GO_EXISTS\' && go version || (curl -sL \'https://go.dev/dl/go1.22.0.linux-amd64.tar.gz\' -o /tmp/go.tar.gz && rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tar.gz && ln -sf /usr/local/go/bin/go /usr/local/bin/go && rm -f /tmp/go.tar.gz && echo \'GO_INSTALLED\')'
     const r1 = await ssh(bookmark, goCmd, 180000)
     if (!r1?.includes('GO') || r1.includes('Error')) {
       return { success: false, server: name, error: `Go 安装失败:\n${(r1 || '').substring(0, 200)}` }
@@ -50,9 +53,9 @@ export async function deployAgent (bookmark, dashboardUrl, onStepUpdate, agentSe
 
     // Step 2: 查找并编译 Agent
     update(2, 'running')
-    const cloneCmd = `export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone -q --depth 1 --branch v0.20.5 https://github.com/naiba/nezha.git . 2>&1 && echo 'ROOT:' && ls -d */ && echo 'DONE'`
+    const cloneCmd = 'export PATH=$PATH:/usr/local/go/bin && rm -rf /opt/nezha/agent-src && mkdir -p /opt/nezha/agent-src && cd /opt/nezha/agent-src && git clone -q --depth 1 --branch v0.20.5 https://github.com/naiba/nezha.git . 2>&1 && echo \'ROOT:\' && ls -d */ && echo \'DONE\''
     await ssh(bookmark, cloneCmd, 120000)
-    const findAgent = await ssh(bookmark, `find /opt/nezha/agent-src -name 'main.go' 2>/dev/null`, 10000)
+    const findAgent = await ssh(bookmark, 'find /opt/nezha/agent-src -name \'main.go\' 2>/dev/null', 10000)
     if (!findAgent) {
       return { success: false, server: name, error: '未找到 agent 源码' }
     }

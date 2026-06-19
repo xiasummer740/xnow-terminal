@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Tabs, Input, Button, Tag, Collapse, Modal as AntModal, Popconfirm } from 'antd'
 import {
-  SearchOutlined,
   CheckCircleFilled,
   CheckCircleOutlined,
   DownloadOutlined,
@@ -153,60 +152,64 @@ function SkillStoreTab ({ installedIds, refresh }) {
         />
       </div>
 
-      {filtered.length === 0 ? (
-        <div className='empty-state'>未找到匹配的技能</div>
-      ) : (
-        <div className='skill-grid'>
-          {filtered.map(skill => {
-            const installed = installedIds.has(skill.id)
-            return (
-              <div key={skill.id} className='skill-card'>
-                <div className='skill-card-header'>
-                  <span className='skill-card-name'>{skill.name}</span>
-                  <span className='skill-card-rating'>{'⭐⭐⭐'}</span>
+      {filtered.length === 0
+        ? (
+          <div className='empty-state'>未找到匹配的技能</div>
+          )
+        : (
+          <div className='skill-grid'>
+            {filtered.map(skill => {
+              const installed = installedIds.has(skill.id)
+              return (
+                <div key={skill.id} className='skill-card'>
+                  <div className='skill-card-header'>
+                    <span className='skill-card-name'>{skill.name}</span>
+                    <span className='skill-card-rating'>⭐⭐⭐</span>
+                  </div>
+                  <span className='skill-card-category'>{skill.category}</span>
+                  <div className='skill-card-desc'>{skill.description}</div>
+                  <div className='skill-card-version'>v{skill.version}</div>
+                  <div className='skill-card-action'>
+                    {installed
+                      ? (
+                        <div className='skill-installed-tag'>
+                          <CheckCircleFilled />
+                          <span>已安装</span>
+                          <Popconfirm
+                            title={`确定卸载「${skill.name}」？`}
+                            onConfirm={() => {
+                              const r = uninstallSkill(skill.id)
+                              if (r.success) {
+                                message.success(`「${skill.name}」已卸载`)
+                                window.store.triggerResize()
+                              } else {
+                                message.error(r.error || '卸载失败')
+                              }
+                            }}
+                            okText='确定'
+                            cancelText='取消'
+                          >
+                            <span className='skill-uninstall-link'>卸载</span>
+                          </Popconfirm>
+                        </div>
+                        )
+                      : (
+                        <Button
+                          type='primary'
+                          size='small'
+                          className='skill-install-btn'
+                          icon={<DownloadOutlined />}
+                          onClick={() => showInstallConfirm(skill)}
+                        >
+                          安装
+                        </Button>
+                        )}
+                  </div>
                 </div>
-                <span className='skill-card-category'>{skill.category}</span>
-                <div className='skill-card-desc'>{skill.description}</div>
-                <div className='skill-card-version'>v{skill.version}</div>
-                <div className='skill-card-action'>
-                  {installed ? (
-                    <div className='skill-installed-tag'>
-                      <CheckCircleFilled />
-                      <span>已安装</span>
-                      <Popconfirm
-                        title={`确定卸载「${skill.name}」？`}
-                        onConfirm={() => {
-                          const r = uninstallSkill(skill.id)
-                          if (r.success) {
-                            message.success(`「${skill.name}」已卸载`)
-                            window.store.triggerResize()
-                          } else {
-                            message.error(r.error || '卸载失败')
-                          }
-                        }}
-                        okText='确定'
-                        cancelText='取消'
-                      >
-                        <span className='skill-uninstall-link'>卸载</span>
-                      </Popconfirm>
-                    </div>
-                  ) : (
-                    <Button
-                      type='primary'
-                      size='small'
-                      className='skill-install-btn'
-                      icon={<DownloadOutlined />}
-                      onClick={() => showInstallConfirm(skill)}
-                    >
-                      安装
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+          )}
     </div>
   )
 }
@@ -296,12 +299,13 @@ function PendingSkillsTab ({ refresh }) {
     return <div className='empty-state'>没有待审核的技能草案</div>
   }
 
+  // eslint-disable-next-line no-unused-vars
   const categoryColors = {
-    '运维工具': 'blue',
-    '监控工具': 'cyan',
-    '部署工具': 'geekblue',
-    '安全工具': 'red',
-    'AI工具': 'purple'
+    运维工具: 'blue',
+    监控工具: 'cyan',
+    部署工具: 'geekblue',
+    安全工具: 'red',
+    AI工具: 'purple'
   }
 
   return (

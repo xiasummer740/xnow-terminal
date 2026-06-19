@@ -8,8 +8,6 @@ import { CloseOutlined, CopyOutlined, ThunderboltOutlined } from '@ant-design/ic
 import { copy } from '../../common/clipboard'
 import classnames from 'classnames'
 import { auto } from 'manate/react'
-import { t } from './widget-i18n'
-
 const e = window.translate
 
 export default auto(function WidgetInstance ({ item }) {

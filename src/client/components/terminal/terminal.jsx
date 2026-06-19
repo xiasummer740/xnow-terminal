@@ -17,7 +17,7 @@ import {
   rendererTypes,
   isMac,
   isMacJs,
-  connectionMap,
+  connectionMap
 } from '../../common/constants.js'
 import deepCopy from 'json-deep-copy'
 import { readClipboardAsync, readClipboard, copy } from '../../common/clipboard.js'
@@ -54,13 +54,13 @@ import {
   loadSearchAddon,
   loadLigaturesAddon,
   loadUnicode11Addon,
-  loadImageAddon,
+  loadImageAddon
 } from './xterm-loader.js'
 
 const e = window.translate
 
 class Term extends Component {
-  constructor(props) {
+  constructor (props) {
     super(props)
     this.state = {
       loading: false,
@@ -79,7 +79,7 @@ class Term extends Component {
       reconnectCountdown: null,
       terminalError: null,
       dropFileModalVisible: false,
-      droppedFiles: [],
+      droppedFiles: []
     }
     this.id = `term-${this.props.tab.id}`
     refs.add(this.id, this)
@@ -90,7 +90,7 @@ class Term extends Component {
 
   domRef = createRef()
 
-  componentDidMount() {
+  componentDidMount () {
     this.initTerminal()
     window.addEventListener('resize', this.onResize)
     if (this.props.tab.enableSsh === false) {
@@ -98,7 +98,7 @@ class Term extends Component {
     }
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate (prevProps) {
     const shouldChange =
       (prevProps.currentBatchTabId !== this.props.currentBatchTabId &&
         this.props.tab.id === this.props.currentBatchTabId &&
@@ -116,12 +116,12 @@ class Term extends Component {
     if (themeChanged && this.term) {
       this.term.options.theme = {
         ...deepCopy(this.props.themeConfig),
-        background: 'rgba(0,0,0,0)',
+        background: 'rgba(0,0,0,0)'
       }
     }
   }
 
-  componentWillUnmount() {
+  componentWillUnmount () {
     window.removeEventListener('resize', this.onResize)
     refs.remove(this.id)
     if (window.store.activeTerminalId === this.props.tab.id) {
@@ -157,16 +157,16 @@ class Term extends Component {
   terminalConfigProps = [
     {
       name: 'rightClickSelectsWord',
-      type: 'glob',
+      type: 'glob'
     },
     {
       name: 'fontSize',
-      type: 'glob_local',
+      type: 'glob_local'
     },
     {
       name: 'fontFamily',
-      type: 'glob_local',
-    },
+      type: 'glob_local'
+    }
   ]
 
   initAttachAddon = async () => {
@@ -210,7 +210,7 @@ class Term extends Component {
               if (currSftpFollow) {
                 this.attachAddon._sendData('\r')
               }
-            },
+            }
           })
         } else {
           // No active queue, inject directly
@@ -293,7 +293,7 @@ class Term extends Component {
       content: (
         <div>
           <p>{e('paste')}:</p>
-          <div className="paste-text">
+          <div className='paste-text'>
             <pre>
               <code>{readClipboard()}</code>
             </pre>
@@ -302,7 +302,7 @@ class Term extends Component {
       ),
       okText: e('ok'),
       cancelText: e('cancel'),
-      onOk: () => this.onPaste(true),
+      onOk: () => this.onPaste(true)
     })
   }
 
@@ -310,11 +310,11 @@ class Term extends Component {
     message.warning(
       <span>
         Fish shell / Windows shell 不支持 SFTP 跟随 SSH 路径功能。详情见：{' '}
-        <ExternalLink to="https://github.com/xiasummer740/xnow-terminal/wiki/Warning-about-sftp-follow-ssh-path-function">
+        <ExternalLink to='https://github.com/xiasummer740/xnow-terminal/wiki/Warning-about-sftp-follow-ssh-path-function'>
           帮助文档
         </ExternalLink>
       </span>,
-      7,
+      7
     )
   }
 
@@ -376,7 +376,7 @@ class Term extends Component {
           if (behavior === 'ask') {
             this.setState({
               dropFileModalVisible: true,
-              droppedFiles: [{ path: filePath, isRemote: true }],
+              droppedFiles: [{ path: filePath, isRemote: true }]
             })
           } else {
             this.handleDropFileAction(behavior, [{ path: filePath, isRemote: true }])
@@ -386,7 +386,7 @@ class Term extends Component {
         if (isSerialTerminal) {
           this.setState({
             dropFileModalVisible: true,
-            droppedFiles: [{ path: filePath, isRemote: false }],
+            droppedFiles: [{ path: filePath, isRemote: false }]
           })
           return
         }
@@ -413,12 +413,12 @@ class Term extends Component {
         if (behavior === 'ask') {
           this.setState({
             dropFileModalVisible: true,
-            droppedFiles: filePaths.map((path) => ({ path, isRemote: false })),
+            droppedFiles: filePaths.map((path) => ({ path, isRemote: false }))
           })
         } else {
           this.handleDropFileAction(
             behavior,
-            filePaths.map((path) => ({ path, isRemote: false })),
+            filePaths.map((path) => ({ path, isRemote: false }))
           )
         }
         return
@@ -427,7 +427,7 @@ class Term extends Component {
       if (isSerialTerminal) {
         this.setState({
           dropFileModalVisible: true,
-          droppedFiles: filePaths.map((path) => ({ path, isRemote: false })),
+          droppedFiles: filePaths.map((path) => ({ path, isRemote: false }))
         })
         return
       }
@@ -440,7 +440,7 @@ class Term extends Component {
   handleDropFileModalCancel = () => {
     this.setState({
       dropFileModalVisible: false,
-      droppedFiles: [],
+      droppedFiles: []
     })
   }
 
@@ -551,7 +551,7 @@ class Term extends Component {
       { label: '复制', action: () => this.onCopy() },
       { label: '粘贴', action: () => this.onPaste() },
       { label: '全选', action: () => this.term.selectAll() },
-      { label: '清屏', action: () => this.onClear() },
+      { label: '清屏', action: () => this.onClear() }
     ]
     const close = () => {
       menu.remove()
@@ -645,7 +645,7 @@ class Term extends Component {
   onSearchResultsChange = ({ resultIndex, resultCount }) => {
     window.store.storeAssign({
       termSearchMatchCount: resultCount,
-      termSearchMatchIndex: resultIndex,
+      termSearchMatchIndex: resultIndex
     })
 
     this.updateSearchResults(resultIndex)
@@ -659,7 +659,7 @@ class Term extends Component {
     this.setState({
       searchResults: matches,
       matchIndex: resultIndex,
-      totalLines: this.term.buffer.active.length,
+      totalLines: this.term.buffer.active.length
     })
   }
 
@@ -706,7 +706,7 @@ class Term extends Component {
       'saveTerminalLogToFile',
       'addTimeStampToTermLog',
       'logPath',
-      'logFileName',
+      'logFileName'
     ])
     if (Object.keys(infoUpdate).length) {
       refs.get('term-info-' + this.props.tab.id)?.setState(infoUpdate)
@@ -719,7 +719,7 @@ class Term extends Component {
       title: e(titleKey),
       defaultPath: logName + '.log',
       filters: [{ name: 'Log files', extensions: ['log'] }],
-      properties: ['createDirectory', 'showOverwriteConfirmation'],
+      properties: ['createDirectory', 'showOverwriteConfirmation']
     })
     if (result.canceled || !result.filePath) {
       return null
@@ -741,7 +741,7 @@ class Term extends Component {
     notification.success({
       message: e('saveTerminalLogToFile'),
       description: <ShowItem to={filePath}>{filePath}</ShowItem>,
-      duration: 5,
+      duration: 5
     })
   }
 
@@ -758,7 +758,7 @@ class Term extends Component {
     notification.success({
       message: e('record'),
       description: <ShowItem to={filePath}>{filePath}</ShowItem>,
-      duration: 5,
+      duration: 5
     })
   }
 
@@ -769,7 +769,7 @@ class Term extends Component {
     this.setState({ recording: false, recordingFilePath: '' })
     notification.success({
       message: e('stopRecord'),
-      description: <ShowItem to={recordingFilePath}>{recordingFilePath}</ShowItem>,
+      description: <ShowItem to={recordingFilePath}>{recordingFilePath}</ShowItem>
     })
   }
 
@@ -788,71 +788,71 @@ class Term extends Component {
         icon: <iconsMap.CopyOutlined />,
         label: e('copy'),
         disabled: !hasSelection,
-        extra: copyShortcut,
+        extra: copyShortcut
       },
       {
         key: 'onPaste',
         icon: <iconsMap.SwitcherOutlined />,
         label: e('paste'),
         disabled: !copyed,
-        extra: pasteShortcut,
+        extra: pasteShortcut
       },
       {
         key: 'onPasteSelected',
         icon: <iconsMap.SwitcherOutlined />,
         label: e('pasteSelected'),
-        disabled: !hasSelection,
+        disabled: !hasSelection
       },
       {
         key: 'onSelectAll',
         icon: <iconsMap.CheckSquareOutlined />,
         label: e('selectall'),
-        extra: selectAllShortcut,
+        extra: selectAllShortcut
       },
       {
         key: 'explainWithAi',
         icon: <AIIcon />,
         label: e('explainWithAi'),
-        disabled: !hasSelection,
+        disabled: !hasSelection
       },
       {
         key: 'onClear',
         icon: <iconsMap.ReloadOutlined />,
         label: e('clear'),
-        extra: clearShortcut,
+        extra: clearShortcut
       },
       {
         key: 'toggleSearch',
         icon: <iconsMap.SearchOutlined />,
         label: e('search'),
-        extra: searchShortcut,
+        extra: searchShortcut
       },
       {
         key: 'onSaveTerminalLog',
         icon: <iconsMap.SaveOutlined />,
-        label: e('saveTerminalLogToFile'),
+        label: e('saveTerminalLogToFile')
       },
       {
         key: recording ? 'onStopRecord' : 'onRecord',
         icon: recording ? <iconsMap.StopOutlined /> : <iconsMap.PlayCircleFilled />,
-        label: e(recording ? 'stopRecord' : 'record'),
-      },
+        label: e(recording ? 'stopRecord' : 'record')
+      }
     ]
     if (isSerial) {
       items.push(
         {
-          type: 'divider',
+          type: 'divider'
         },
         {
           key: 'onXmodemSend',
           icon: <iconsMap.CloudUploadOutlined />,
-          label: 'XMODEM Send',
+          label: 'XMODEM Send'
         },
         {
           key: 'onXmodemReceive',
           icon: <iconsMap.CloudDownloadOutlined />,
-          label: 'XMODEM Receive',
-        },
+          label: 'XMODEM Receive'
+        }
       )
     }
     return items
@@ -880,7 +880,7 @@ class Term extends Component {
     window.store.notifyTabOnData(this.props.tab.id)
   }, 1000)
 
-  parse(rawText) {
+  parse (rawText) {
     let result = ''
     const len = rawText.length
     for (let i = 0; i < len; i++) {
@@ -941,7 +941,7 @@ class Term extends Component {
       cellWidth,
       cellHeight,
       left,
-      top,
+      top
     }
   }
 
@@ -1084,7 +1084,7 @@ class Term extends Component {
       cursorStyle: config.cursorStyle,
       cursorBlink: config.cursorBlink,
       fontSize: tab.fontSize || config.fontSize,
-      screenReaderMode: config.screenReaderMode,
+      screenReaderMode: config.screenReaderMode
     })
 
     term.parent = this
@@ -1119,7 +1119,7 @@ class Term extends Component {
     if (tab.enableTerminalImage) {
       const ImageAddon = await loadImageAddon()
       this.imageAddon = new ImageAddon({
-        pixelLimit: 33554432,
+        pixelLimit: 33554432
       })
       term.loadAddon(this.imageAddon)
     }
@@ -1168,7 +1168,7 @@ class Term extends Component {
         type: 'shell_integration',
         execute: async () => {
           await this.injectShellIntegration()
-        },
+        }
       })
     }
 
@@ -1182,7 +1182,7 @@ class Term extends Component {
           if (script.script) {
             this.attachAddon._sendData(script.script + '\r')
           }
-        },
+        }
       })
     })
 
@@ -1299,7 +1299,7 @@ class Term extends Component {
   setStatus = (status) => {
     const id = this.props.tab?.id
     this.props.editTab(id, {
-      status,
+      status
     })
     // 连接成功后清除密码（不在内存中保留）
     if (status === 'success') {
@@ -1317,13 +1317,13 @@ class Term extends Component {
       return normal.getLine(i).translateToString(false)
     })
     this.setState({
-      lines,
+      lines
     })
   }
 
   closeNormalBuffer = () => {
     this.setState({
-      lines: [],
+      lines: []
     })
     this.term.focus()
   }
@@ -1344,7 +1344,7 @@ class Term extends Component {
   remoteInit = async (term = this.term) => {
     this.setState({
       loading: true,
-      terminalError: null,
+      terminalError: null
     })
     const { cols, rows } = term
     const { config } = this.props
@@ -1371,13 +1371,13 @@ class Term extends Component {
         // Use bookmark's exec setting directly
         execOpts = {
           [execPropName]: tab[execPropName],
-          [`${execPropName}Args`]: tab[`${execPropName}Args`] || [],
+          [`${execPropName}Args`]: tab[`${execPropName}Args`] || []
         }
       } else if (config[execPropName]) {
         // Use global config exec settings
         execOpts = {
           [execPropName]: config[execPropName],
-          [`${execPropName}Args`]: config[`${execPropName}Args`] || [],
+          [`${execPropName}Args`]: config[`${execPropName}Args`] || []
         }
       }
     }
@@ -1400,7 +1400,7 @@ class Term extends Component {
       termType,
       readyTimeout: config.sshReadyTimeout,
       proxy: getProxy(tab, config),
-      type: tab.host ? typeMap.remote : typeMap.local,
+      type: tab.host ? typeMap.remote : typeMap.local
     })
     const isAutoReconnect = !!(tab.autoReConnect && this.props.config.autoReconnectTerminal)
     const r = await createTerm(opts).catch((err) => {
@@ -1427,7 +1427,7 @@ class Term extends Component {
       window.store.editItem(srcId, extra, from)
     }
     this.setState({
-      loading: false,
+      loading: false
     })
     if (!r) {
       if (isAutoReconnect) {
@@ -1479,8 +1479,8 @@ class Term extends Component {
       terminalError: {
         message: errorMessage || 'Failed to create terminal session',
         from,
-        srcId,
-      },
+        srcId
+      }
     })
   }
 
@@ -1610,7 +1610,7 @@ class Term extends Component {
       id: tab.id,
       pid: tab.id,
       isRemote: this.isRemote(),
-      isActive: this.isActiveTerminal(),
+      isActive: this.isActiveTerminal()
     }
     Object.assign(window.store.terminalInfoProps, infoProps)
   }
@@ -1634,13 +1634,13 @@ class Term extends Component {
     this.attachAddon.decoder = new TextDecoder(encode)
   }
 
-  render() {
+  render () {
     const { loading } = this.state
     const { height, width, left, top, fullscreen } = this.props
     const { id } = this.props.tab
     const isActive = this.isActiveTerminal()
     const cls = classnames('term-wrap', 'tw-' + id, {
-      'terminal-not-active': !isActive,
+      'terminal-not-active': !isActive
     })
     const prps1 = {
       className: cls,
@@ -1649,10 +1649,10 @@ class Term extends Component {
         width,
         left,
         top,
-        zIndex: 10,
+        zIndex: 10
       },
       onDrop: this.onDrop,
-      onContextMenu: this.onContextMenuInner,
+      onContextMenu: this.onContextMenuInner
     }
     // const fileProps = {
     //   type: 'file',
@@ -1668,23 +1668,23 @@ class Term extends Component {
         left: 0,
         top: 0,
         right: 0,
-        bottom: 0,
-      },
+        bottom: 0
+      }
     }
     const dropdownProps = {
       menu: {
         items: this.renderContextMenu(),
-        onClick: this.onContextMenu,
+        onClick: this.onContextMenu
       },
-      trigger: this.props.config.pasteWhenContextMenu ? [] : ['contextMenu'],
+      trigger: this.props.config.pasteWhenContextMenu ? [] : ['contextMenu']
     }
     const barProps = {
       matchIndex: this.state.matchIndex,
       matches: this.state.searchResults,
       totalLines: this.state.totalLines,
-      height,
+      height
     }
-    const spin = loading ? <Spin className="loading-wrapper" spinning={loading} /> : null
+    const spin = loading ? <Spin className='loading-wrapper' spinning={loading} /> : null
     return (
       <Dropdown {...dropdownProps}>
         <div {...prps1}>

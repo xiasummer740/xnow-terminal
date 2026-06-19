@@ -122,7 +122,7 @@ export default auto(function Index (props) {
     uiThemeConfig,
     transferHistory,
     transferToConfirm,
-    openResolutionEdit,
+    openResolutionEdit
   } = store
   const upgradeInfo = deepCopy(store.upgradeInfo)
   const cls = classnames({

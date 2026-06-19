@@ -1,15 +1,15 @@
 import createName from '../../common/create-title'
 
-function isTopLevelGroup(group) {
+function isTopLevelGroup (group) {
   return !group?.level || group.level < 2
 }
 
-export function buildVisibleTreeRows({
+export function buildVisibleTreeRows ({
   bookmarkGroups,
   bookmarkGroupTree,
   bookmarksMap,
   expandedKeys,
-  keyword,
+  keyword
 }) {
   const groupTree = bookmarkGroupTree || {}
   const rows = []
@@ -31,7 +31,7 @@ export function buildVisibleTreeRows({
         (item.description || '').toLowerCase().includes(lowerKeyword) ||
         (item.vpsUrl || '').toLowerCase().includes(lowerKeyword) ||
         (item.vpsExpiry || '').toLowerCase().includes(lowerKeyword) ||
-        (item.vpsXrayPanel || '').toLowerCase().includes(lowerKeyword)),
+        (item.vpsXrayPanel || '').toLowerCase().includes(lowerKeyword))
     )
     bookmarkMatchCache.set(bookmarkId, matched)
     return matched
@@ -66,7 +66,7 @@ export function buildVisibleTreeRows({
       item: group,
       isGroup: true,
       parentId,
-      depth,
+      depth
     })
 
     if (!lowerKeyword && !expandedKeySet.has(group.id)) {
@@ -90,7 +90,7 @@ export function buildVisibleTreeRows({
         item,
         isGroup: false,
         parentId: nextParentId,
-        depth,
+        depth
       })
       if (lowerKeyword) {
         matchedRowKeys.push(rowKey)
@@ -106,6 +106,6 @@ export function buildVisibleTreeRows({
 
   return {
     rows,
-    matchedRowKeys,
+    matchedRowKeys
   }
 }

@@ -11,7 +11,7 @@ import { z } from './zod'
 
 const quickCommandSchema = z.object({
   name: z.string().describe('Quick command name'),
-  command: z.string().describe('Command'),
+  command: z.string().describe('Command')
 })
 
 const sshTunnelSchema = z.object({
@@ -22,7 +22,7 @@ const sshTunnelSchema = z.object({
   sshTunnelLocalPort: z.number().optional().describe('Local port'),
   sshTunnelRemoteHost: z.string().optional().describe('Remote host'),
   sshTunnelRemotePort: z.number().optional().describe('Remote port'),
-  name: z.string().optional().describe('Tunnel name'),
+  name: z.string().optional().describe('Tunnel name')
 })
 
 const connectionHoppingSchema = z.object({
@@ -34,7 +34,7 @@ const connectionHoppingSchema = z.object({
   passphrase: z.string().optional().describe('Passphrase'),
   certificate: z.string().optional().describe('Certificate'),
   authType: z.string().optional().describe('Auth type'),
-  profile: z.string().optional().describe('Profile id'),
+  profile: z.string().optional().describe('Profile id')
 })
 
 const commonNetworkBookmarkProps = {
@@ -53,7 +53,7 @@ const commonNetworkBookmarkProps = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 export const sshBookmarkSchema = {
@@ -86,7 +86,7 @@ export const sshBookmarkSchema = {
   connectionHoppings: z
     .array(connectionHoppingSchema)
     .optional()
-    .describe('Connection hopping definitions'),
+    .describe('Connection hopping definitions')
 }
 
 export const telnetBookmarkSchema = {
@@ -96,7 +96,7 @@ export const telnetBookmarkSchema = {
   username: z.string().optional().describe('Telnet username'),
   password: z.string().optional().describe('Telnet password'),
   loginPrompt: z.string().optional().describe('Login prompt regex'),
-  passwordPrompt: z.string().optional().describe('Password prompt regex'),
+  passwordPrompt: z.string().optional().describe('Password prompt regex')
 }
 
 export const serialBookmarkSchema = {
@@ -117,13 +117,13 @@ export const serialBookmarkSchema = {
     .enum(['\r', '\n', '\r\n'])
     .optional()
     .describe(
-      'TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)',
+      'TX line ending appended on Enter: "\\r" (CR, default), "\\n" (LF), "\\r\\n" (CR+LF)'
     ),
   rxLineEnding: z
     .enum(['none', 'lf_to_crlf', 'cr_to_crlf'])
     .optional()
     .describe(
-      'RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)',
+      'RX line ending conversion: "none" (pass-through, default), "lf_to_crlf" (LF→CRLF for LF-only devices), "cr_to_crlf" (CR→CRLF for CR-only devices)'
     ),
   description: z.string().optional().describe('Bookmark description'),
   vpsUrl: z.string().optional().describe('VPS management panel URL'),
@@ -131,7 +131,7 @@ export const serialBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 export const vncBookmarkSchema = {
@@ -146,14 +146,14 @@ export const vncBookmarkSchema = {
     .number()
     .optional()
     .describe('VNC compression level 0-9, lower is faster, default 1'),
-  shared: z.boolean().optional().describe('Shared session, default is true'),
+  shared: z.boolean().optional().describe('Shared session, default is true')
 }
 
 export const rdpBookmarkSchema = {
   ...commonNetworkBookmarkProps,
   host: z.string().describe('RDP host address'),
   port: z.number().optional().describe('RDP port (default 3389)'),
-  domain: z.string().optional().describe('Login domain'),
+  domain: z.string().optional().describe('Login domain')
 }
 
 export const ftpBookmarkSchema = {
@@ -171,7 +171,7 @@ export const ftpBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 export const webBookmarkSchema = {
@@ -184,7 +184,7 @@ export const webBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 export const localBookmarkSchema = {
@@ -196,7 +196,7 @@ export const localBookmarkSchema = {
   vpsPrice: z.string().optional().describe('VPS purchase price'),
   vpsTraffic: z.string().optional().describe('VPS traffic/bandwidth'),
   vpsRecharge: z.string().optional().describe('VPS recharge/auto-renew info'),
-  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL'),
+  vpsXrayPanel: z.string().optional().describe('XX-UI panel URL')
 }
 
 export const spiceBookmarkSchema = {
@@ -204,7 +204,7 @@ export const spiceBookmarkSchema = {
   host: z.string().describe('Spice host address'),
   port: z.number().optional().describe('Spice port (default 5900)'),
   viewOnly: z.boolean().optional().describe('View only mode'),
-  scaleViewport: z.boolean().optional().describe('Scale viewport to window, default is true'),
+  scaleViewport: z.boolean().optional().describe('Scale viewport to window, default is true')
 }
 
 export const bookmarkSchemas = {
@@ -216,5 +216,5 @@ export const bookmarkSchemas = {
   ftp: ftpBookmarkSchema,
   web: webBookmarkSchema,
   local: localBookmarkSchema,
-  spice: spiceBookmarkSchema,
+  spice: spiceBookmarkSchema
 }

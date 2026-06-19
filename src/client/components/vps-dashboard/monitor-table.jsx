@@ -7,7 +7,7 @@ import { Table, Tag, Tooltip, Input } from 'antd'
 import { SearchOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { getServerList, connectServerWs } from '../../common/nezha-api'
 
-function fmtSpeed(bytesPerSec) {
+function fmtSpeed (bytesPerSec) {
   if (!bytesPerSec && bytesPerSec !== 0) return '--'
   const bps = parseInt(bytesPerSec)
   if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' GB/s'
@@ -16,7 +16,7 @@ function fmtSpeed(bytesPerSec) {
   return bps + ' B/s'
 }
 
-export default function MonitorTable({ onSshConnect }) {
+export default function MonitorTable ({ onSshConnect }) {
   const [servers, setServers] = useState([])
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
@@ -74,16 +74,16 @@ export default function MonitorTable({ onSshConnect }) {
             height: 8,
             borderRadius: '50%',
             background: online ? '#52c41a' : '#ff4d4f',
-            boxShadow: online ? '0 0 6px #52c41a' : '0 0 6px #ff4d4f',
+            boxShadow: online ? '0 0 6px #52c41a' : '0 0 6px #ff4d4f'
           }}
         />
-      ),
+      )
     },
     {
       title: '服务器',
       dataIndex: 'name',
       width: 140,
-      render: (name) => <span style={{ color: '#e0e0e0', fontWeight: 500 }}>{name || '--'}</span>,
+      render: (name) => <span style={{ color: '#e0e0e0', fontWeight: 500 }}>{name || '--'}</span>
     },
     {
       title: 'IP',
@@ -91,7 +91,7 @@ export default function MonitorTable({ onSshConnect }) {
       width: 130,
       render: (_, r) => (
         <code style={{ color: '#999', fontSize: 11 }}>{r.ipv4 || r.host || '--'}</code>
-      ),
+      )
     },
     {
       title: 'CPU',
@@ -101,7 +101,7 @@ export default function MonitorTable({ onSshConnect }) {
         if (v == null) return '--'
         const pct = typeof v === 'number' ? v : parseFloat(v)
         return <Tag color={pct > 80 ? 'red' : pct > 50 ? 'orange' : 'green'}>{pct.toFixed(1)}%</Tag>
-      },
+      }
     },
     {
       title: '内存',
@@ -112,7 +112,7 @@ export default function MonitorTable({ onSshConnect }) {
         if (used == null || !total) return '--'
         const pct = (used / total) * 100
         return <Tag color={pct > 80 ? 'red' : pct > 50 ? 'orange' : 'green'}>{pct.toFixed(0)}%</Tag>
-      },
+      }
     },
     {
       title: '磁盘',
@@ -123,17 +123,17 @@ export default function MonitorTable({ onSshConnect }) {
         if (used == null || !total) return '--'
         const pct = (used / total) * 100
         return <Tag color={pct > 80 ? 'red' : pct > 50 ? 'orange' : 'green'}>{pct.toFixed(0)}%</Tag>
-      },
+      }
     },
     {
       title: '上行',
       width: 90,
-      render: (_, r) => fmtSpeed(r.state?.net_out_speed),
+      render: (_, r) => fmtSpeed(r.state?.net_out_speed)
     },
     {
       title: '下行',
       width: 90,
-      render: (_, r) => fmtSpeed(r.state?.net_in_speed),
+      render: (_, r) => fmtSpeed(r.state?.net_in_speed)
     },
     {
       title: '运行时间',
@@ -144,13 +144,13 @@ export default function MonitorTable({ onSshConnect }) {
         const d = Math.floor(up / 86400)
         const h = Math.floor((up % 86400) / 3600)
         return d > 0 ? `${d}d${h}h` : `${h}h`
-      },
+      }
     },
     {
       title: '操作',
       width: 60,
       render: (_, r) => (
-        <Tooltip title="SSH 连接">
+        <Tooltip title='SSH 连接'>
           <ThunderboltOutlined
             style={{ color: '#888', cursor: 'pointer', fontSize: 14 }}
             onClick={(e) => {
@@ -159,8 +159,8 @@ export default function MonitorTable({ onSshConnect }) {
             }}
           />
         </Tooltip>
-      ),
-    },
+      )
+    }
   ]
 
   return (
@@ -168,7 +168,7 @@ export default function MonitorTable({ onSshConnect }) {
       <div style={{ marginBottom: 12 }}>
         <Input
           prefix={<SearchOutlined style={{ color: '#888' }} />}
-          placeholder="搜索服务器名称或 IP..."
+          placeholder='搜索服务器名称或 IP...'
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           allowClear
@@ -178,9 +178,9 @@ export default function MonitorTable({ onSshConnect }) {
       <Table
         dataSource={filtered}
         columns={columns}
-        rowKey="id"
+        rowKey='id'
         loading={loading}
-        size="small"
+        size='small'
         pagination={{ pageSize: 20, size: 'small' }}
         style={{ background: 'transparent' }}
         locale={{ emptyText: '暂无监控数据\n请确保已部署 Agent 且配置正确' }}

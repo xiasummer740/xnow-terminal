@@ -6,7 +6,7 @@ import {
   commonStopBits,
   commonParities,
   commonTxLineEndings,
-  commonRxLineEndings,
+  commonRxLineEndings
 } from '../../../common/constants.js'
 import defaultSettings from '../../../common/default-setting.js'
 import { createBaseInitValues, getTerminalBackgroundDefaults } from '../common/init-values.js'
@@ -32,7 +32,7 @@ const serialConfig = {
       displayRaw: false,
       runScripts: [{}],
       ignoreKeyboardInteractive: false,
-      ...getTerminalBackgroundDefaults(defaultSettings),
+      ...getTerminalBackgroundDefaults(defaultSettings)
     })
   },
   layout: formItemLayout,
@@ -47,7 +47,7 @@ const serialConfig = {
           type: 'serialPathSelector',
           name: 'path',
           label: 'path',
-          rules: [{ required: true, message: 'path required' }],
+          rules: [{ required: true, message: 'path required' }]
         },
         {
           type: 'autocomplete',
@@ -60,25 +60,25 @@ const serialConfig = {
             }
             const numValue = Number(value)
             return isNaN(numValue) ? undefined : numValue
-          },
+          }
         },
         {
           type: 'select',
           name: 'dataBits',
           label: 'dataBits',
-          options: commonDataBits.map((d) => ({ value: d, label: d })),
+          options: commonDataBits.map((d) => ({ value: d, label: d }))
         },
         {
           type: 'select',
           name: 'stopBits',
           label: 'stopBits',
-          options: commonStopBits.map((d) => ({ value: d, label: d })),
+          options: commonStopBits.map((d) => ({ value: d, label: d }))
         },
         {
           type: 'select',
           name: 'parity',
           label: 'parity',
-          options: commonParities.map((d) => ({ value: d, label: d })),
+          options: commonParities.map((d) => ({ value: d, label: d }))
         },
         { type: 'switch', name: 'lock', label: 'lock', valuePropName: 'checked' },
         { type: 'switch', name: 'rtscts', label: 'rtscts', valuePropName: 'checked' },
@@ -89,18 +89,18 @@ const serialConfig = {
           type: 'select',
           name: 'txLineEnding',
           label: 'txLineEnding',
-          options: commonTxLineEndings.map((d) => ({ value: d.value, label: d.label })),
+          options: commonTxLineEndings.map((d) => ({ value: d.value, label: d.label }))
         },
         {
           type: 'select',
           name: 'rxLineEnding',
           label: 'rxLineEnding',
-          options: commonRxLineEndings.map((d) => ({ value: d.value, label: d.label })),
+          options: commonRxLineEndings.map((d) => ({ value: d.value, label: d.label }))
         },
         commonFields.runScripts,
         commonFields.description,
-        { type: 'input', name: 'type', label: 'type', hidden: true },
-      ],
+        { type: 'input', name: 'type', label: 'type', hidden: true }
+      ]
     },
     {
       key: 'settings',
@@ -109,17 +109,17 @@ const serialConfig = {
         {
           type: 'terminalBackground',
           name: 'terminalBackground',
-          label: () => e('terminalBackgroundImage'),
-        },
-      ],
+          label: () => e('terminalBackgroundImage')
+        }
+      ]
     },
     {
       key: 'quickCommands',
       label: e('quickCommands'),
-      fields: [{ type: 'quickCommands', name: '__quick__', label: '' }],
+      fields: [{ type: 'quickCommands', name: '__quick__', label: '' }]
     },
-    vpsInfoTab(),
-  ],
+    vpsInfoTab()
+  ]
 }
 
 export default serialConfig

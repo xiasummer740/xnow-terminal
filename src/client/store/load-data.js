@@ -15,7 +15,7 @@ import safeParse from '../common/parse-json-safe'
 import initWatch from './watch'
 import { parseQuickConnect } from '../common/parse-quick-connect'
 
-function getHost(argv, opts) {
+function getHost (argv, opts) {
   const arr = argv
   let i = arr.length - 1
   const reg = /^(?:([\w\d-_]+)@)?([\w\d-_]+\.[\w\d-_.]+)(?::([\d]+))?$/
@@ -28,14 +28,14 @@ function getHost(argv, opts) {
       return {
         host: mt[2],
         username: user,
-        port: port ? parseInt10(port) : 22,
+        port: port ? parseInt10(port) : 22
       }
     }
   }
   return {}
 }
 
-export async function addTabFromCommandLine(store, opts) {
+export async function addTabFromCommandLine (store, opts) {
   console.debug('command line params', opts)
   if (!opts) {
     return false
@@ -61,7 +61,7 @@ export async function addTabFromCommandLine(store, opts) {
     authType: 'password',
     pane: options.type || 'terminal',
     term: defaultSettings.terminalType,
-    startDirectoryLocal: options.initFolder,
+    startDirectoryLocal: options.initFolder
   }
   if (options.setEnv) {
     update.setEnv = options.setEnv
@@ -164,7 +164,7 @@ export default (Store) => {
       const data = await fetchInitData(name)
       return {
         name,
-        data,
+        data
       }
     })
     await Promise.all(all).then((arr) => {

@@ -2,8 +2,8 @@
  * 网络延迟历史弹窗 — 含图表 + 丢包率 + 时间选择
  */
 import { useState, useEffect, useRef } from 'react'
-import { Modal, Segmented, Tag, Space, Switch, message } from 'antd'
-import { getAggregatedHistory, addPing } from '../../common/ping-history'
+import { Modal, Segmented, Tag, Space } from 'antd'
+import { getAggregatedHistory } from '../../common/ping-history'
 
 const RANGES = [
   { label: '1小时', value: '1h' },
@@ -135,8 +135,10 @@ export default function PingHistoryModal ({ open, host, onClose }) {
     >
       {/* 工具条 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Segmented value={range} onChange={v => setRange(v)} options={RANGES}
-          style={{ background: '#1a1a1a' }} />
+        <Segmented
+          value={range} onChange={v => setRange(v)} options={RANGES}
+          style={{ background: '#1a1a1a' }}
+        />
         <Space size={16}>
           <span style={{ fontSize: 12, color: '#888' }}>
             {bgOn ? '🟢 后台监控中' : '⚪ 后台监控未开启'}

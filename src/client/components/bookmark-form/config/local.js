@@ -4,7 +4,7 @@ import {
   createBaseInitValues,
   getTerminalDefaults,
   getSshDefaults,
-  getTerminalBackgroundDefaults,
+  getTerminalBackgroundDefaults
 } from '../common/init-values.js'
 import defaultSettings from '../../../common/default-setting.js'
 import { commonFields, vpsInfoTab } from './common-fields.js'
@@ -19,7 +19,7 @@ const localConfig = {
     return createBaseInitValues(props, terminalLocalType, {
       ...getTerminalDefaults(store),
       ...getSshDefaults(),
-      ...getTerminalBackgroundDefaults(defaultSettings),
+      ...getTerminalBackgroundDefaults(defaultSettings)
     })
   },
   layout: formItemLayout,
@@ -33,8 +33,8 @@ const localConfig = {
         commonFields.description,
         commonFields.enableTerminalImage,
         commonFields.runScripts,
-        { type: 'input', name: 'type', label: 'type', hidden: true },
-      ],
+        { type: 'input', name: 'type', label: 'type', hidden: true }
+      ]
     },
     {
       key: 'settings',
@@ -47,16 +47,16 @@ const localConfig = {
         commonFields.keepaliveInterval,
         commonFields.terminalBackground,
         // Exec settings - stored as flat properties on bookmark
-        { type: 'execSettings' },
-      ],
+        { type: 'execSettings' }
+      ]
     },
     {
       key: 'quickCommands',
       label: e('quickCommands'),
-      fields: [commonFields.quickCommands],
+      fields: [commonFields.quickCommands]
     },
-    vpsInfoTab(),
-  ],
+    vpsInfoTab()
+  ]
 }
 
 export default localConfig

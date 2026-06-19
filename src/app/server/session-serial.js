@@ -8,7 +8,7 @@ const globalState = require('./global-state')
 // MockBinding.createPort('/dev/ROBOT', { echo: true, record: true })
 
 class TerminalSerial extends TerminalBase {
-  async init() {
+  async init () {
     const { SerialPort } = require('serialport')
     // https://serialport.io/docs/api-stream
     const {
@@ -24,7 +24,7 @@ class TerminalSerial extends TerminalBase {
       xany = false,
       txLineEnding = '\r',
       rxLineEnding = 'none',
-      path,
+      path
     } = this.initOptions
     this.txLineEnding = txLineEnding
     this.rxLineEnding = rxLineEnding
@@ -42,7 +42,7 @@ class TerminalSerial extends TerminalBase {
           rtscts,
           xon,
           xoff,
-          xany,
+          xany
         },
         (err) => {
           if (err) {
@@ -50,7 +50,7 @@ class TerminalSerial extends TerminalBase {
           } else {
             resolve('ok')
           }
-        },
+        }
       )
     })
     if (this.isTest) {
@@ -61,9 +61,9 @@ class TerminalSerial extends TerminalBase {
     return Promise.resolve(this)
   }
 
-  resize() {}
+  resize () {}
 
-  on(event, cb) {
+  on (event, cb) {
     if (event === 'data' && this.rxLineEnding && this.rxLineEnding !== 'none') {
       this.port.on('data', (data) => {
         const str = Buffer.isBuffer(data) ? data.toString('latin1') : String(data)
@@ -82,7 +82,7 @@ class TerminalSerial extends TerminalBase {
     }
   }
 
-  write(data) {
+  write (data) {
     try {
       const str = Buffer.isBuffer(data) ? data.toString('latin1') : String(data)
       let out = str
@@ -99,7 +99,7 @@ class TerminalSerial extends TerminalBase {
    * Write raw bytes directly to the serial port, bypassing txLineEnding transformation.
    * Used by binary protocols (XMODEM) to avoid corruption of protocol bytes.
    */
-  writeRaw(data) {
+  writeRaw (data) {
     try {
       this.port.write(data)
     } catch (e) {
@@ -107,7 +107,7 @@ class TerminalSerial extends TerminalBase {
     }
   }
 
-  kill() {
+  kill () {
     if (this.sessionLogger) {
       this.sessionLogger.destroy()
     }

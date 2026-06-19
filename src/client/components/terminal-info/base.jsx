@@ -4,7 +4,6 @@
 import { Component } from 'react'
 import {
   Switch,
-  Space,
   Button
 } from 'antd'
 import defaults from '../../common/default-setting'

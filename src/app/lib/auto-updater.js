@@ -4,7 +4,6 @@
  */
 
 const { autoUpdater } = require('electron-updater')
-const { BrowserWindow } = require('electron')
 
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = false

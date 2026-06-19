@@ -17,51 +17,67 @@ export default auto(function RightPanelContainer (props) {
   const aiPanelRef = useRef(null)
   const vpsPanelRef = useRef(null)
 
-  // 拖拽中直接适配终端（绕过 React 渲染链）
+  // 拖拽中适配终端：用 rAF 确保在 React 提交 DOM 后执行
+  const rafQueued = useRef(false)
   const fitTerminals = useCallback(() => {
     for (const [key, termRef] of window.refs) {
       if (key.startsWith('term-') && termRef?.fitAddon) {
-        try { termRef.fitAddon.fit() } catch (_) {}
+        try {
+          termRef.fitAddon.fit()
+        } catch (_) {}
       }
     }
   }, [])
+
+  const fitTerminalsAfterRender = useCallback(() => {
+    if (!rafQueued.current) {
+      rafQueued.current = true
+      requestAnimationFrame(() => {
+        rafQueued.current = false
+        fitTerminals()
+      })
+    }
+  }, [fitTerminals])
 
   // ── AI 面板拖拽调宽 ──
   const aiResizing = useRef(false)
   const aiStartX = useRef(0)
   const aiStartW = useRef(0)
 
-  const handleAIResizeStart = useCallback((e) => {
-    e.preventDefault()
-    aiResizing.current = true
-    aiStartX.current = e.clientX
-    aiStartW.current = store.rightPanelAIWidth
-  }, [store])
+  const handleAIResizeStart = useCallback(
+    (e) => {
+      e.preventDefault()
+      aiResizing.current = true
+      aiStartX.current = e.clientX
+      aiStartW.current = store.rightPanelAIWidth
+    },
+    [store]
+  )
 
-  const handleAIResizeMove = useCallback((e) => {
-    if (!aiResizing.current) return
-    const dx = e.clientX - aiStartX.current
-    const newW = Math.max(300, Math.min(1000, aiStartW.current - dx))
-    if (aiPanelRef.current) {
-      aiPanelRef.current.style.width = newW + 'px'
-    }
-    // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
-    store.rightPanelAIWidth = newW
-    store.triggerResize()
-    fitTerminals()
-    // 暴力：直接修改 sessions 容器宽度（绕过 React）
-    const sessions = document.querySelector('.sessions')
-    if (sessions) {
-      const rightTotal = (store.rightPanelVPSVisible ? store.rightPanelVPSWidth : 0) + newW
-      const left = store.pinned ? (store.sidebarWidth + store.leftSidebarWidth) : store.sidebarWidth
-      sessions.style.width = Math.max(0, window.innerWidth - left - rightTotal) + 'px'
-    }
-  }, [store])
+  const handleAIResizeMove = useCallback(
+    (e) => {
+      if (!aiResizing.current) return
+      const dx = e.clientX - aiStartX.current
+      const newW = Math.max(300, Math.min(1000, aiStartW.current - dx))
+      if (aiPanelRef.current) {
+        aiPanelRef.current.style.width = newW + 'px'
+      }
+      // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
+      // 更新 store → auto() 触发 Layout 重渲染 → 终端容器宽度变化
+      // 用 rAF 确保 fitTerminals 在 React 提交 DOM 后执行，避免拿到旧尺寸
+      store.rightPanelAIWidth = newW
+      store.triggerResize()
+      fitTerminalsAfterRender()
+    },
+    [store, fitTerminalsAfterRender]
+  )
 
   const handleAIResizeEnd = useCallback(() => {
     if (aiResizing.current) {
       aiResizing.current = false
-      const w = aiPanelRef.current ? parseInt(aiPanelRef.current.style.width) : store.rightPanelAIWidth
+      const w = aiPanelRef.current
+        ? parseInt(aiPanelRef.current.style.width)
+        : store.rightPanelAIWidth
       const delta = w - aiStartW.current
       store.setRightPanelAIWidth(w)
       if (delta !== 0) {
@@ -80,30 +96,38 @@ export default auto(function RightPanelContainer (props) {
   const vpsStartX = useRef(0)
   const vpsStartW = useRef(0)
 
-  const handleVPSResizeStart = useCallback((e) => {
-    e.preventDefault()
-    vpsResizing.current = true
-    vpsStartX.current = e.clientX
-    vpsStartW.current = store.rightPanelVPSWidth
-  }, [store])
+  const handleVPSResizeStart = useCallback(
+    (e) => {
+      e.preventDefault()
+      vpsResizing.current = true
+      vpsStartX.current = e.clientX
+      vpsStartW.current = store.rightPanelVPSWidth
+    },
+    [store]
+  )
 
-  const handleVPSResizeMove = useCallback((e) => {
-    if (!vpsResizing.current) return
-    const dx = e.clientX - vpsStartX.current
-    const newW = Math.max(280, Math.min(800, vpsStartW.current - dx))
-    if (vpsPanelRef.current) {
-      vpsPanelRef.current.style.width = newW + 'px'
-    }
-    // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
-    store.rightPanelVPSWidth = newW
-    store.triggerResize()
-    fitTerminals()
-  }, [store])
+  const handleVPSResizeMove = useCallback(
+    (e) => {
+      if (!vpsResizing.current) return
+      const dx = e.clientX - vpsStartX.current
+      const newW = Math.max(280, Math.min(800, vpsStartW.current - dx))
+      if (vpsPanelRef.current) {
+        vpsPanelRef.current.style.width = newW + 'px'
+      }
+      // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
+      store.rightPanelVPSWidth = newW
+      store.triggerResize()
+      fitTerminalsAfterRender()
+    },
+    [store, fitTerminalsAfterRender]
+  )
 
   const handleVPSResizeEnd = useCallback(() => {
     if (vpsResizing.current) {
       vpsResizing.current = false
-      const w = vpsPanelRef.current ? parseInt(vpsPanelRef.current.style.width) : store.rightPanelVPSWidth
+      const w = vpsPanelRef.current
+        ? parseInt(vpsPanelRef.current.style.width)
+        : store.rightPanelVPSWidth
       const delta = w - vpsStartW.current
       store.setRightPanelVPSWidth(w)
       if (delta !== 0) {
@@ -153,23 +177,38 @@ export default auto(function RightPanelContainer (props) {
     }
   }, [_vpsVisible])
 
-  const rightTotalWidth = (_vpsVisible ? store.rightPanelVPSWidth : 0) + (_aiVisible ? store.rightPanelAIWidth : 0)
-  const topDragStyle = _vpsVisible || _aiVisible ? {
-    position: 'absolute', top: -36, right: 0,
-    width: rightTotalWidth, height: 36,
-    WebkitAppRegion: 'drag', zIndex: 300
-  } : {}
+  const rightTotalWidth =
+    (_vpsVisible ? store.rightPanelVPSWidth : 0) + (_aiVisible ? store.rightPanelAIWidth : 0)
+  const topDragStyle =
+    _vpsVisible || _aiVisible
+      ? {
+          position: 'absolute',
+          top: -36,
+          right: 0,
+          width: rightTotalWidth,
+          height: 36,
+          WebkitAppRegion: 'drag',
+          zIndex: 300
+        }
+      : {}
 
   return (
-    <div className='right-panel-overlay-container' ref={containerRef}
-      style={{ display: (_aiVisible || _vpsVisible) ? 'flex' : 'none' }}>
+    <div
+      className='right-panel-overlay-container'
+      ref={containerRef}
+      style={{ display: _aiVisible || _vpsVisible ? 'flex' : 'none' }}
+    >
       {/* 面板上方拖条 */}
       <div style={topDragStyle} />
       {/* VPS 面板 */}
       {_vpsVisible && (
         <>
           <div className='rp-drag-handle' onMouseDown={handleVPSResizeStart} />
-          <div className='rp-panel rp-panel-vps' ref={vpsPanelRef} style={{ width: store.rightPanelVPSWidth + 'px' }}>
+          <div
+            className='rp-panel rp-panel-vps'
+            ref={vpsPanelRef}
+            style={{ width: store.rightPanelVPSWidth + 'px' }}
+          >
             <VpsPanel store={store} />
           </div>
         </>
@@ -179,7 +218,11 @@ export default auto(function RightPanelContainer (props) {
       {_aiVisible && (
         <>
           <div className='rp-drag-handle' onMouseDown={handleAIResizeStart} />
-          <div className='rp-panel rp-panel-ai' ref={aiPanelRef} style={{ width: store.rightPanelAIWidth + 'px' }}>
+          <div
+            className='rp-panel rp-panel-ai'
+            ref={aiPanelRef}
+            style={{ width: store.rightPanelAIWidth + 'px' }}
+          >
             <AIPanel store={store} />
           </div>
         </>

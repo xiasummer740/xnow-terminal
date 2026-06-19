@@ -110,6 +110,7 @@ export default function QuickSearch () {
           dataSource={results}
           renderItem={item => (
             <List.Item
+              // eslint-disable-next-line react/jsx-handler-names
               onClick={item.action}
               className='quick-search-item'
             >

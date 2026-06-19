@@ -9,6 +9,8 @@ import {
 import { action } from 'manate'
 import { getRandomDefaultColor } from '../common/rand-hex-color'
 
+const e = window.translate
+
 export default Store => {
   Store.prototype.getBookmarkGroupsTotal = function () {
     return window.store.bookmarkGroups

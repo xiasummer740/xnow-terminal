@@ -1,3 +1,4 @@
+/* global localStorage */
 import { agentTools, executeToolCall } from './agent-tools'
 import { getInstalledSkills, saveDraft, hasSimilarSkill } from '../../common/skill-manager'
 

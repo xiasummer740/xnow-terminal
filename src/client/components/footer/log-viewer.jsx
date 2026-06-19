@@ -2,7 +2,7 @@
  * 日志查看器（仅开发版）
  * 点击 Footer 日志按钮弹出，显示系统临时目录下的 xnow-debug.log
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Modal, Button } from 'antd'
 import { FileTextOutlined, ReloadOutlined } from '@ant-design/icons'
 

@@ -4,7 +4,7 @@
 
 self.insts = {}
 
-function createWs(type, id, sftpId = '', config) {
+function createWs (type, id, sftpId = '', config) {
   // init gloabl ws
   const { host, port, tokenElecterm } = config
   const wsUrl = `ws://${host}:${port}/${type}/${id}?&sftpId=${sftpId}&token=${tokenElecterm}`
@@ -38,7 +38,7 @@ function createWs(type, id, sftpId = '', config) {
     }
     send({
       id: ws.id,
-      action: 'close',
+      action: 'close'
     })
     delete self.insts[ws.id]
   }
@@ -55,11 +55,11 @@ function createWs(type, id, sftpId = '', config) {
   })
 }
 
-function send(data) {
+function send (data) {
   self.postMessage(data)
 }
 
-async function onMsg(e) {
+async function onMsg (e) {
   const { id, wsId, args, action, type, persist } = e.data
   if (action === 'create') {
     const inst = self.insts[id]
@@ -68,9 +68,9 @@ async function onMsg(e) {
         {
           action,
           id,
-          persist,
+          persist
         },
-        '*',
+        '*'
       )
     } else if (inst) {
       return false
@@ -84,9 +84,9 @@ async function onMsg(e) {
       {
         action,
         persist,
-        id,
+        id
       },
-      '*',
+      '*'
     )
   } else if (action === 'once') {
     const ws = self.insts[wsId]
@@ -95,7 +95,7 @@ async function onMsg(e) {
         send({
           id,
           wsId,
-          data,
+          data
         })
       }
       ws.once(cb, id)
@@ -121,8 +121,8 @@ async function onMsg(e) {
           wsId,
           id,
           data: {
-            data: e.data,
-          },
+            data: e.data
+          }
         })
       }
       ws.cbs[id] = cb
@@ -140,6 +140,6 @@ async function onMsg(e) {
 self.addEventListener('message', onMsg)
 setTimeout(() => {
   send({
-    action: 'worker-init',
+    action: 'worker-init'
   })
 }, 10)
