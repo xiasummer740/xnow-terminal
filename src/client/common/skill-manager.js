@@ -108,6 +108,60 @@ const BUILTIN_SKILLS = [
 4. 给出具体的修复建议和示例代码`,
     tools: [],
     source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-health-check',
+    name: '系统体检',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '运维工具',
+    description: '一键检查服务器 CPU/内存/磁盘/网络/进程状态',
+    prompt: `## 系统体检技能
+当你被要求检查服务器状态时：
+1. 执行 \`uptime\` 查看负载和运行时间
+2. 执行 \`free -h\` 查看内存使用
+3. 执行 \`df -h\` 查看磁盘使用
+4. 执行 \`top -bn1 | head -10\` 查看进程 TOP
+5. 执行 \`ss -tlnp\` 查看监听端口
+6. 汇总输出，标注异常项（如磁盘>80%、内存不足等）`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-perf-diagnose',
+    name: '性能诊断',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '运维工具',
+    description: '分析 CPU/内存/磁盘 IO 瓶颈，定位性能问题',
+    prompt: `## 性能诊断技能
+当你被要求排查性能问题时：
+1. 执行 \`top -bn1\` 看 CPU 占用 TOP 进程
+2. 执行 \`vmstat 1 3\` 看 CPU 队列和 IO 等待
+3. 如果 IO 高，执行 \`iostat -x 1 3\` 看磁盘 IO
+4. 执行 \`free -h\` 检查内存是否不足
+5. 执行 \`dmesg | tail -20\` 检查内核错误
+6. 汇总定位到瓶颈（CPU/内存/IO/网络）`,
+    tools: [],
+    source: 'builtin'
+  },
+  {
+    id: 'xnow-skill-security-audit',
+    name: '安全巡检',
+    version: '1.0.0',
+    author: 'xnow-team',
+    category: '安全工具',
+    description: '检查常见安全配置问题：SSH/防火墙/权限/漏洞',
+    prompt: `## 安全巡检技能
+当你被要求安全检查时：
+1. 检查 SSH 配置：\`grep -E "PermitRootLogin|PasswordAuthentication" /etc/ssh/sshd_config\`
+2. 检查防火墙：\`iptables -L -n\` 或 \`ufw status\`
+3. 检查可疑登录：\`last -10\` 和 \`lastb -10\`
+4. 检查 SUID 文件：\`find / -perm -4000 2>/dev/null\`
+5. 检查监听端口：\`ss -tlnp\`
+6. 标记每项的风险等级并给出加固建议`,
+    tools: [],
+    source: 'builtin'
   }
 ]
 

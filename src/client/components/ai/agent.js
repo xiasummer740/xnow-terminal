@@ -119,6 +119,8 @@ function updateChatEntry (chatEntry, updates) {
 }
 
 async function callBackendAIchatWithTools (messages, config) {
+  // 合并硬编码工具 + 已安装技能的自定义工具
+  const tools = agentTools.concat(getSkillTools())
   return window.pre.runGlobalAsync(
     'AIchatWithTools',
     messages,
@@ -127,7 +129,7 @@ async function callBackendAIchatWithTools (messages, config) {
     config.apiPathAI,
     config.apiKeyAI,
     config.proxyAI,
-    agentTools
+    tools
   )
 }
 

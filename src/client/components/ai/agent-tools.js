@@ -1,6 +1,7 @@
 import { Modal } from 'antd'
 import { z } from '../../common/zod'
 import { bookmarkSchemas } from '../../common/bookmark-schemas'
+import { getInstalledSkills } from '../../common/skill-manager'
 
 function buildAddBookmarkParameters () {
   const typeProperties = {}
@@ -506,7 +507,16 @@ export async function executeToolCall (toolName, args) {
       return await window.pre.runGlobalAsync('grepFiles', args.rootPath, args.pattern, args.glob || '*')
     case 'web_fetch_page':
       return await window.pre.runGlobalAsync('webFetchPage', args.url)
-    default:
+    default: {
+      // 检查是否是已安装技能的自定义工具
+      const allSkills = getInstalledSkills()
+      for (const skill of allSkills) {
+        const match = (skill.tools || []).find(t => t.name === toolName || t.function?.name === toolName)
+        if (match) {
+          return JSON.stringify({ info: `工具 ${toolName} 属于技能「${skill.name}」，请参考技能说明使用`, skill: skill.name })
+        }
+      }
       throw new Error(`Unknown agent tool: ${toolName}`)
+    }
   }
 }
