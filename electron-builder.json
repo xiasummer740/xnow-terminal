@@ -9,12 +9,19 @@
   "files": [
     "**/*"
   ],
+  "npmRebuild": false,
   "win": {
     "target": "nsis",
-    "icon": "xnow-logo.png"
+    "icon": "xnow-logo.png",
+    "publish": {
+      "provider": "github",
+      "owner": "xiasummer740",
+      "repo": "xnow-terminal"
+    }
   },
   "nsis": {
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
+    "allowToChangeInstallationDirectory": true,
+    "artifactName": "XNOW-Terminal-${version}-win-x64-installer.${ext}"
   }
 }
