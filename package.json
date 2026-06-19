@@ -26,6 +26,7 @@
     "test3": "npx playwright test test/e2e/02*.js --workers=1 && npm run test-unit-ci",
     "b": "npm run clean && npm run compile && npm run prepare-file",
     "r": "./build/bin/release",
+    "rx": "node build/bin/release-xnow.js",
     "w": "./build/bin/web-release",
     "t": "npx electron work/app/app.js",
     "lock": "npm i --package-lock-only",
