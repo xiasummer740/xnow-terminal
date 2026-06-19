@@ -65,7 +65,7 @@ jobs:
 
       - name: 创建 Issue（合并冲突需手动处理）
         if: steps.merge.outputs.conflict == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.issues.create({
