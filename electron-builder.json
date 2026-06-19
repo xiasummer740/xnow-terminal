@@ -23,6 +23,7 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "artifactName": "XNOW-Terminal-${version}-win-x64-installer.${ext}",
-    "deleteAppDataOnUninstall": false
+    "deleteAppDataOnUninstall": false,
+    "include": "build/nsis-custom.nsh"
   }
 }
