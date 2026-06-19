@@ -54,7 +54,7 @@ execSync('npx electron-builder --config electron-builder.json --win --x64 --publ
 // electron-builder 有时上传不全（latest.yml / .exe 被吞），兜底补传
 console.log('\n🔍 检查 Release 文件完整性...')
 const installerName = `XNOW-Terminal-${newVer}-win-x64-installer.exe`
-const uploadedFiles = execSync(`gh release view v${newVer} --json assets -q '.assets[].name'`, {
+const uploadedFiles = execSync(`gh release view v${newVer} --json assets --jq ".assets[].name"`, {
   cwd: ROOT, encoding: 'utf8'
 }).trim().split('\n')
 if (!uploadedFiles.includes(installerName)) {
