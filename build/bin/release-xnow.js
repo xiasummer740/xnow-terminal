@@ -51,6 +51,21 @@ execSync('npx electron-builder --config electron-builder.json --win --x64 --publ
   env: { ...process.env, GH_TOKEN: ghToken }
 })
 
+// electron-builder 有时上传不全（latest.yml / .exe 被吞），兜底补传
+console.log('\n🔍 检查 Release 文件完整性...')
+const installerName = `XNOW-Terminal-${newVer}-win-x64-installer.exe`
+const uploadedFiles = execSync(`gh release view v${newVer} --json assets -q '.assets[].name'`, {
+  cwd: ROOT, encoding: 'utf8'
+}).trim().split('\n')
+if (!uploadedFiles.includes(installerName)) {
+  console.log('  ⬆️  补传安装包...')
+  execSync(`gh release upload v${newVer} "dist/${installerName}" --clobber`, { cwd: ROOT, stdio: 'inherit' })
+}
+if (!uploadedFiles.includes('latest.yml')) {
+  console.log('  ⬆️  补传 latest.yml...')
+  execSync(`gh release upload v${newVer} dist/latest.yml --clobber`, { cwd: ROOT, stdio: 'inherit' })
+}
+
 // 发布 draft release
 console.log('\n🚀 发布 GitHub Release...')
 execSync(`gh release edit v${newVer} --draft=false`, { cwd: ROOT, stdio: 'inherit' })
