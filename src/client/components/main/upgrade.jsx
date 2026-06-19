@@ -315,7 +315,11 @@ export default class Upgrade extends PureComponent {
   }
 
   renderUpgradePanel = () => {
-    const { remoteVersion, releaseInfo, showUpgradeModal } = this.props.upgradeInfo
+    const info = this.props.upgradeInfo
+    const { showUpgradeModal } = info
+    // electron-updater 路径走 latestVersion，手动检查路径走 remoteVersion + releaseInfo
+    const remoteVersion = info.remoteVersion || info.latestVersion || ''
+    const releaseDate = info.releaseInfo?.date ? ` [${info.releaseInfo.date}]` : ''
     const cls = showUpgradeModal
       ? 'animate upgrade-panel'
       : 'animate upgrade-panel upgrade-panel-hide'
@@ -325,7 +329,7 @@ export default class Upgrade extends PureComponent {
           <span className='fleft'>
             {e('newVersion')}{' '}
             <b>
-              {remoteVersion} [{releaseInfo.date}]
+              {remoteVersion}{releaseDate}
             </b>
           </span>
           <span className='fright'>
