@@ -20,6 +20,7 @@ export default Store => {
       case 'available':
         info.checking = false
         info.shouldUpgrade = true
+        info.showUpgradeModal = true
         info.latestVersion = version
         info.releaseNotes = releaseNotes
         break
