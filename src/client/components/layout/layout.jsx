@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { auto } from 'manate/react'
 import Layouts from './layouts'
 import TabsWrap from '../tabs/index'
@@ -23,6 +24,17 @@ export default auto(function Layout (props) {
     layout, config, currentTab
   } = store
   const conf = splitConfig[layout]
+
+  // 非 debounce 的窗口 resize 监听：实时更新 resizeTrigger 强制重渲染
+  // （使 calcLayoutStyle 中的 window.innerWidth 及时跟上实际窗口宽度，
+  //   避免拖拽缩小窗口时右侧面板覆盖终端）
+  useEffect(() => {
+    const onResize = () => {
+      store.resizeTrigger = (store.resizeTrigger || 0) + 1
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [store])
 
   const handleMousedown = (e) => {
 
