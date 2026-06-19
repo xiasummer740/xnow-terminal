@@ -3,6 +3,9 @@ import 'antd/dist/reset.css'
 import '@fontsource/maple-mono/index.css'
 import Main from '../components/main/index.jsx'
 
+// 渲染进程全局异常捕获（自动设 window.onerror + unhandledrejection）
+import '../common/client-logger.js'
+
 // 全局字体回退：中英文混排时使用优雅的 Fallback
 const style = document.createElement('style')
 style.textContent = `

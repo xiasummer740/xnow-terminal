@@ -48,6 +48,7 @@ const { loadFontList } = require('./font-list')
 const { checkDbUpgrade, doUpgrade } = require('../upgrade')
 const { listSerialPorts } = require('./serial-port')
 const initApp = require('./init-app')
+const logger = require('./logger')
 const { encryptAsync, decryptAsync } = require('./enc')
 const { safeEncrypt, safeDecrypt } = require('./safe-storage')
 const { initCommandLine } = require('./command-line')
@@ -296,15 +297,23 @@ function initIpc() {
     setWindowSize: (update) => {
       lastStateManager.set('windowSize', update)
     },
-    // 动态增加/减少窗口宽度（右侧面板展开/收起），不改变终端区域大小
-    // 文件日志（排查用）：echo 写入系统临时目录
+    // 文件日志（排查用）：写入系统临时目录
     writeLog: (msg) => {
+      logger.info('[renderer] ' + msg)
+    },
+    // 操作时间线（仅开发版，正式版 logger.timeline 内部跳过）
+    writeTimeline: ({ action, detail }) => {
+      logger.timeline(action, detail)
+    },
+    // 读取日志文件（供日志查看器使用）
+    readLog: async () => {
       try {
         const fs = require('fs')
-        const p = require('path')
-        const logFile = p.join(require('os').tmpdir(), 'xnow-debug.log')
-        fs.appendFileSync(logFile, new Date().toISOString() + ' ' + msg + '\n')
-      } catch (_) {}
+        const content = fs.readFileSync(logger.getLogPath(), 'utf-8')
+        return content
+      } catch (e) {
+        return '(日志文件不可用: ' + e.message + ')'
+      }
     },
     resizeWindow: ({ width, height }) => {
       const win = globalState.get('win')

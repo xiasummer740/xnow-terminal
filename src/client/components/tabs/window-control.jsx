@@ -3,6 +3,7 @@
  */
 
 import { CloseOutlined, MinusOutlined, BorderOutlined, SwitcherOutlined } from '@ant-design/icons'
+import { Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import {
   isMacJs
@@ -41,21 +42,27 @@ export default function WindowControl (props) {
   }
   return (
     <div className='window-controls'>
-      <div className='window-control-box window-control-minimize' onClick={minimize}>
-        <MinusOutlined title={e('minimize')} className='iblock font14 widnow-control-icon' />
-      </div>
-      <div
-        className='window-control-box window-control-maximize'
-        onClick={maximized ? unmaximize : maximize}
-      >
-        {maximized
-          ? <SwitcherOutlined title={e('unmaximize')} className='iblock font14 widnow-control-icon icon-maximize is-max' />
-          : <BorderOutlined title={e('maximize')} className='iblock font14 widnow-control-icon icon-maximize' />
-        }
-      </div>
-      <div className='window-control-box window-control-close' onClick={closeApp}>
-        <CloseOutlined title={e('close')} className='iblock font14 widnow-control-icon' />
-      </div>
+      <Tooltip title={e('minimize')} placement='bottom'>
+        <div className='window-control-box window-control-minimize' onClick={minimize}>
+          <MinusOutlined className='iblock font14 widnow-control-icon' />
+        </div>
+      </Tooltip>
+      <Tooltip title={maximized ? e('unmaximize') : e('maximize')} placement='bottom'>
+        <div
+          className='window-control-box window-control-maximize'
+          onClick={maximized ? unmaximize : maximize}
+        >
+          {maximized
+            ? <SwitcherOutlined className='iblock font14 widnow-control-icon icon-maximize is-max' />
+            : <BorderOutlined className='iblock font14 widnow-control-icon icon-maximize' />
+          }
+        </div>
+      </Tooltip>
+      <Tooltip title={e('close')} placement='bottom'>
+        <div className='window-control-box window-control-close' onClick={closeApp}>
+          <CloseOutlined className='iblock font14 widnow-control-icon' />
+        </div>
+      </Tooltip>
     </div>
   )
 }

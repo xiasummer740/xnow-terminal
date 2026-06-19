@@ -12,6 +12,7 @@ import Qm from '../quick-commands/quick-commands-select'
 import AIIcon from '../icons/ai-icon'
 import CmdHistory from './cmd-history'
 import FooterPing from './footer-ping'
+import LogViewer from './log-viewer'
 
 const {
   Option
@@ -168,6 +169,7 @@ export default auto(function FooterEntry (props) {
     <div {...sideProps}>
       <div className='terminal-footer-flex'>
         <FooterPing store={props.store} />
+        <LogViewer />
         {renderAIIcon()}
         {renderCmdHistory()}
         {renderQuickCommands()}

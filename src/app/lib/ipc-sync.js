@@ -20,6 +20,7 @@ const {
 } = require('./window-control')
 const _ = require('./lodash.js')
 const { getStorageKey } = require('./storage-key')
+const logger = require('./logger')
 
 const isMaximized = () => {
   const {
@@ -78,6 +79,14 @@ module.exports = {
     return globalState.get('initTime')
   },
   isMaximized,
+  // 同步 resizeWindow：先扩展窗口再更新 UI，避免终端宽度计算错误
+  resizeWindowSync: ({ width, height }) => {
+    const win = globalState.get('win')
+    if (win && !win.isMaximized()) {
+      win.setBounds({ width, height })
+      logger.timeline('窗口resize', `width=${width} height=${height}`)
+    }
+  },
   isSecondInstance: () => {
     return isTest ? false : globalState.get('isSecondInstance')
   },

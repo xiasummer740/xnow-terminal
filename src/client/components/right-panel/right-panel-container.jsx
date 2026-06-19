@@ -8,6 +8,7 @@ import { useCallback, useRef, useEffect } from 'react'
 import { auto } from 'manate/react'
 import AIPanel from '../ai/ai-panel'
 import VpsPanel from '../vps-panel/vps-panel'
+import tl from '../../common/timeline'
 import './right-panel-container.styl'
 
 export default auto(function RightPanelContainer (props) {
@@ -15,6 +16,15 @@ export default auto(function RightPanelContainer (props) {
   const containerRef = useRef(null)
   const aiPanelRef = useRef(null)
   const vpsPanelRef = useRef(null)
+
+  // 拖拽中直接适配终端（绕过 React 渲染链）
+  const fitTerminals = useCallback(() => {
+    for (const [key, termRef] of window.refs) {
+      if (key.startsWith('term-') && termRef?.fitAddon) {
+        try { termRef.fitAddon.fit() } catch (_) {}
+      }
+    }
+  }, [])
 
   // ── AI 面板拖拽调宽 ──
   const aiResizing = useRef(false)
@@ -35,16 +45,33 @@ export default auto(function RightPanelContainer (props) {
     if (aiPanelRef.current) {
       aiPanelRef.current.style.width = newW + 'px'
     }
-    // 实时同步 store + 触发强制布局刷新
+    // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
     store.rightPanelAIWidth = newW
     store.triggerResize()
+    fitTerminals()
+    // 暴力：直接修改 sessions 容器宽度（绕过 React）
+    const sessions = document.querySelector('.sessions')
+    if (sessions) {
+      const rightTotal = (store.rightPanelVPSVisible ? store.rightPanelVPSWidth : 0) + newW
+      const left = store.pinned ? (store.sidebarWidth + store.leftSidebarWidth) : store.sidebarWidth
+      sessions.style.width = Math.max(0, window.innerWidth - left - rightTotal) + 'px'
+    }
   }, [store])
 
   const handleAIResizeEnd = useCallback(() => {
     if (aiResizing.current) {
       aiResizing.current = false
       const w = aiPanelRef.current ? parseInt(aiPanelRef.current.style.width) : store.rightPanelAIWidth
+      const delta = w - aiStartW.current
       store.setRightPanelAIWidth(w)
+      if (delta !== 0) {
+        // 拖拽结束，扩展窗口匹配面板宽度
+        window.pre.runGlobalAsync('resizeWindow', {
+          width: window.outerWidth + delta,
+          height: window.outerHeight
+        })
+      }
+      tl('AI面板', `resize 结束 width=${w} delta=${delta}`)
     }
   }, [store])
 
@@ -67,14 +94,26 @@ export default auto(function RightPanelContainer (props) {
     if (vpsPanelRef.current) {
       vpsPanelRef.current.style.width = newW + 'px'
     }
+    // 面板变宽 → 终端自动挤窄（布局扣除 rightTotal）
     store.rightPanelVPSWidth = newW
+    store.triggerResize()
+    fitTerminals()
   }, [store])
 
   const handleVPSResizeEnd = useCallback(() => {
     if (vpsResizing.current) {
       vpsResizing.current = false
       const w = vpsPanelRef.current ? parseInt(vpsPanelRef.current.style.width) : store.rightPanelVPSWidth
+      const delta = w - vpsStartW.current
       store.setRightPanelVPSWidth(w)
+      if (delta !== 0) {
+        // 拖拽结束，扩展窗口匹配面板宽度
+        window.pre.runGlobalAsync('resizeWindow', {
+          width: window.outerWidth + delta,
+          height: window.outerHeight
+        })
+      }
+      tl('VPS面板', `resize 结束 width=${w} delta=${delta}`)
     }
   }, [store])
 

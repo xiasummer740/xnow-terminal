@@ -18,6 +18,7 @@ import { debounce, isEmpty } from 'lodash-es'
 import deepCopy from 'json-deep-copy'
 import { refsStatic } from '../components/common/ref'
 import dataCompare from '../common/data-compare'
+import tl from '../common/timeline'
 
 export default store => {
   for (const name of dbNamesForWatch) {
@@ -141,6 +142,7 @@ export default store => {
     // 切换标签时重置 VPS 强制关闭（新标签有 host 则自动弹出）
     // 不直接读 _vpsForceClosed 避免 manate 将其加入依赖导致循环重置
     if (_vpsLastTabId !== activeTabId) {
+      tl('标签切换', tab ? tab.title || tab.host || tab.id : '(无)')
       _vpsLastTabId = activeTabId
       if (tab && tab.host) store._vpsForceClosed = false
     }

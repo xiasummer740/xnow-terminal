@@ -42,7 +42,7 @@ exports.createWindow = async function (userConfig) {
       enableRemoteModule: false,
       preload: resolve(__dirname, '../preload/preload.js'),
       webviewTag: true,
-      devTools: !userConfig.disableDeveloperTool,
+      devTools: isDev ? true : !userConfig.disableDeveloperTool,
       spellcheck: false
     },
     titleBarStyle: useSystemTitleBar ? 'default' : 'hidden',
@@ -93,10 +93,10 @@ exports.createWindow = async function (userConfig) {
   })
   win.loadURL(opts)
   win.webContents.once('dom-ready', function () {
-    // 已禁用开发者工具自动打开
-    // if (isDev && !userConfig.disableDeveloperTool) {
-    //   win.webContents.openDevTools()
-    // }
+    // 开发版自动打开开发者工具（方便调试）
+    if (isDev) {
+      setTimeout(() => win.webContents.openDevTools({ mode: 'detach' }), 1000)
+    }
     win.on('unmaximize', function () {
       var bounds = win.getBounds()
       if (bounds.width < minWindowWidth || bounds.height < minWindowHeight) {
@@ -112,7 +112,6 @@ exports.createWindow = async function (userConfig) {
     })
     win.on('maximize', function () {
       try { win.webContents.send('window-state-change', { isMaximized: true }) } catch {}
-    })
     })
     win.on('resize', _.debounce(function () {
       if (!win.isMaximized()) {

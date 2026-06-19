@@ -8,9 +8,10 @@
     width 0
     display none
 
-// 顶部拖条吸顶
+// 顶部拖条吸整条标签栏可拖动（标签按钮保留点击）
 .app-drag
   position relative
+  -webkit-app-region drag
 .not-system-ui.is-mac .layout-item.v1 .tabs-inner
   margin-left 42px
 .not-system-ui.is-mac.not-webapp .layout-item.v1
@@ -47,6 +48,7 @@
   white-space nowrap
   align-items center
   cursor pointer
+  -webkit-app-region no-drag
   position relative
   padding 0 4px
   line-height 34px
@@ -173,9 +175,10 @@
   position absolute
   height 40px
   top 0
-  right 0
+  right 100px  // 给 position:fixed 的窗口控制按钮留空间
   line-height 40px
   z-index 20
+  -webkit-app-region no-drag
 
   .tabs-dd-icon
     font-size 12px
@@ -183,10 +186,10 @@
     margin-top 0
 
 .window-controls
-  position absolute
+  position fixed
   right 0
   top 0
-  z-index 900
+  z-index 9999
   border-radius 0 0 3px 3px
   padding 0
   background var(--main)

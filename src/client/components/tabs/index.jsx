@@ -332,11 +332,8 @@ export default class Tabs extends Component {
     return batch === batchToRender[layout]
   }
 
-  getExtraTabWidth = () => {
-    return this.shouldRenderWindowControl()
-      ? windowControlWidth
-      : 0
-  }
+  // window-controls 使用 position:fixed 固定在窗口右上角，不再占用布局空间
+  getExtraTabWidth = () => 0
 
   renderWindowControl = () => {
     if (this.shouldRenderWindowControl()) {
@@ -354,9 +351,6 @@ export default class Tabs extends Component {
     return (
       <div className='tabs' ref={this.tabsRef}>
         {this.renderContent()}
-        {
-          this.renderWindowControl()
-        }
         {
           overflow
             ? this.renderExtra()

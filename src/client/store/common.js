@@ -5,6 +5,7 @@
 import handleError from '../common/error-handler'
 import Modal from '../components/common/modal'
 import { debounce, some, get, pickBy } from 'lodash-es'
+import tl from '../common/timeline'
 import {
   leftSidebarWidthKey,
   rightSidebarWidthKey,
@@ -43,7 +44,8 @@ export default Store => {
     if (!hasHost) return // 无 host 时 VPS 面板不会渲染，不做任何操作
     const currentlyVisible = !store._vpsForceClosed
     if (currentlyVisible) {
-      // 当前可见 → 关闭
+      // 当前可见 → 关闭：先隐藏面板，再缩回窗口
+      tl('VPS面板', '关闭')
       store._vpsForceOpen = false
       store._vpsForceClosed = true
       store.innerWidth = window.innerWidth - store.rightPanelVPSWidth
@@ -52,15 +54,18 @@ export default Store => {
         height: window.outerHeight
       })
     } else {
-      // 当前隐藏 → 打开
-      store._vpsForceOpen = true
-      store._vpsForceClosed = false
-      store.innerWidth = window.innerWidth + store.rightPanelVPSWidth
+      // 当前隐藏 → 打开：先扩展窗口，下一帧再显示面板
+      tl('VPS面板', '打开')
       window.pre.runGlobalAsync('resizeWindow', {
         width: window.outerWidth + store.rightPanelVPSWidth,
         height: window.outerHeight
       })
-      store.openInfoPanelAction()
+      requestAnimationFrame(() => {
+        store._vpsForceOpen = true
+        store._vpsForceClosed = false
+        store.innerWidth = window.innerWidth
+        store.openInfoPanelAction()
+      })
     }
   })
 
@@ -270,26 +275,44 @@ export default Store => {
   Store.prototype.handleOpenAIPanel = function () {
     const { store } = window
     const opening = !store.rightPanelAIVisible
+    tl('AI面板', opening ? '打开' : '关闭')
     const delta = opening ? store.rightPanelAIWidth : -store.rightPanelAIWidth
-    store.rightPanelAIVisible = opening
-    store.innerWidth = window.innerWidth + delta
-    window.pre.runGlobalAsync('resizeWindow', {
-      width: window.outerWidth + delta,
-      height: window.outerHeight
-    })
+    if (opening) {
+      // 打开：先扩展窗口，等浏览器 resize 事件处理完再显示面板
+      // （直接设置 visible 会导致 window.innerWidth 还是旧值，终端被压缩）
+      window.pre.runGlobalAsync('resizeWindow', {
+        width: window.outerWidth + delta,
+        height: window.outerHeight
+      })
+      requestAnimationFrame(() => {
+        store.rightPanelAIVisible = true
+        store.innerWidth = window.innerWidth
+      })
+    } else {
+      // 关闭：先隐藏面板，再缩回窗口
+      store.rightPanelAIVisible = false
+      window.pre.runGlobalAsync('resizeWindow', {
+        width: window.outerWidth + delta,
+        height: window.outerHeight
+      })
+      store.innerWidth = window.innerWidth + delta
+    }
   }
 
   Store.prototype.explainWithAi = function (txt) {
     const { store } = window
     const wasVisible = store.rightPanelAIVisible
-    store.rightPanelAIVisible = true
-    store.innerWidth = window.innerWidth + store.rightPanelAIWidth
+    const delta = store.rightPanelAIWidth
     if (!wasVisible) {
       window.pre.runGlobalAsync('resizeWindow', {
-        width: window.outerWidth + store.rightPanelAIWidth,
+        width: window.outerWidth + delta,
         height: window.outerHeight
       })
+      requestAnimationFrame(() => {
+        store.rightPanelAIVisible = true
+      })
     }
+    store.innerWidth = window.innerWidth + delta
     setTimeout(() => {
       refsStatic.get('AIChat')?.setPrompt(`explain terminal output: ${txt}`)
     }, 500)

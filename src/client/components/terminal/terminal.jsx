@@ -92,6 +92,7 @@ class Term extends Component {
 
   componentDidMount() {
     this.initTerminal()
+    window.addEventListener('resize', this.onResize)
     if (this.props.tab.enableSsh === false) {
       this.props.tab.pane = paneMap.fileManager
     }
@@ -121,6 +122,7 @@ class Term extends Component {
   }
 
   componentWillUnmount() {
+    window.removeEventListener('resize', this.onResize)
     refs.remove(this.id)
     if (window.store.activeTerminalId === this.props.tab.id) {
       window.store.activeTerminalId = ''

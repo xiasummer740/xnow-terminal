@@ -23,6 +23,7 @@ import { ConfigProvider } from 'antd'
 import { NotificationContainer } from '../common/notification'
 import InfoModal from '../sidebar/info-modal.jsx'
 import RightPanelContainer from '../right-panel/right-panel-container'
+import WindowControl from '../tabs/window-control'
 import ConnectionHoppingWarning from './connection-hopping-warnning'
 import QuickSearch from '../quick-search/quick-search'
 import SshConfigLoadNotify from '../ssh-config/ssh-config-load-notify'
@@ -38,6 +39,7 @@ import BatchOpRunner from '../batch-op/batch-op-runner'
 import UnixTimestampTooltip from '../terminal/unix-timestamp-tooltip'
 import { pick } from 'lodash-es'
 import deepCopy from 'json-deep-copy'
+import tl from '../../common/timeline'
 import './wrapper.styl'
 import './term-fullscreen.styl'
 
@@ -58,7 +60,7 @@ export default auto(function Index (props) {
     })
     // 窗口最大化/还原状态同步（OS 事件 → store）
     ipcOnEvent('window-state-change', (e, { isMaximized }) => {
-      window.pre.runGlobalAsync('writeLog', `[window] OS event: isMaximized=${isMaximized}`)
+      tl('窗口状态', isMaximized ? '最大化' : '还原')
       store.isMaximized = isMaximized
       store.resizeTrigger = (store.resizeTrigger || 0) + 1
     })
@@ -275,6 +277,7 @@ export default auto(function Index (props) {
         <Resolutions {...resProps} />
         <InfoModal {...infoModalProps} />
         <RightPanelContainer store={store} />
+        <WindowControl store={store} />
         <SshConfigLoadNotify {...sshConfigProps} />
         <LoadSshConfigs
           showSshConfigModal={store.showSshConfigModal}

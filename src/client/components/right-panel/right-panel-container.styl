@@ -17,14 +17,17 @@
   border-left 1px solid var(--main-darker)
 
 .rp-drag-handle
-  width 4px
+  width 10px
   cursor col-resize
   background transparent
   flex-shrink 0
   transition background 0.15s
+  position relative
+  z-index 10
+  -webkit-app-region no-drag
   &:hover
     background var(--primary)
-    opacity 0.6
+    opacity 0.4
 
 /* 面板内部布局 */
 .right-panel

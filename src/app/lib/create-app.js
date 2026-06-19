@@ -7,6 +7,7 @@ const { getUserConfigNoEnc, getDbConfig } = require('./get-config')
 const { setupDeepLinkHandlers } = require('./deep-link')
 const { handleSingleInstance } = require('./single-instance')
 const log = require('../common/log')
+const logger = require('./logger')
 
 let conf = {}
 
@@ -47,10 +48,10 @@ app.on('render-process-gone', (event, webContents, details) => {
   }
 })
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  const errorMsg = error?.message || ''
-  // Check if it's GPU related
+// Handle uncaught exceptions（崩溃日志 + 正式版也保留）
+process.on('uncaughtException', (err) => {
+  logger.error(err, 'uncaughtException')
+  const errorMsg = err?.message || ''
   if (
     errorMsg.includes('GPU') ||
     errorMsg.includes('gpu') ||
@@ -60,6 +61,11 @@ process.on('uncaughtException', (error) => {
   ) {
     log.error(GPU_ERROR_SUGGESTION)
   }
+})
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason) => {
+  logger.error(reason instanceof Error ? reason : new Error(String(reason)), 'unhandledRejection')
 })
 
 exports.createApp = async function () {

@@ -216,6 +216,9 @@ export default () => {
     // move item
     openMoveModal: false,
     moveItem: null,
-    moveItemIsGroup: false
+    moveItemIsGroup: false,
+
+    // 面板拖拽虚拟窗口宽度（同步 resize 后 window.innerWidth 来不及更新）
+    _dragWindowWidth: 0
   }
 }
