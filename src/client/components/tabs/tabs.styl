@@ -7,6 +7,10 @@
   ::-webkit-scrollbar
     width 0
     display none
+
+// 顶部拖条吸顶
+.app-drag
+  position relative
 .not-system-ui.is-mac .layout-item.v1 .tabs-inner
   margin-left 42px
 .not-system-ui.is-mac.not-webapp .layout-item.v1
@@ -198,23 +202,9 @@
     .icon-maximize
       border-color var(--primary)
 .icon-maximize
-  width 10px
-  height 7px
-  border 1px solid var(--text)
-  cursor pointer
-  &.is-max
-    height 6px
-    position relative
-    &:before
-      position absolute
-      content ''
-      left -3px
-      top 3px
-      width 8px
-      height 4px
-      border 1px solid text
-      border-top none
-      border-right none
+  font-size 14px
+  line-height 1
+  color var(--text)
 
 .control-icon:hover
   color var(--text-light)

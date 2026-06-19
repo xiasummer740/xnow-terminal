@@ -91,9 +91,8 @@ class Store {
   }
 
   get shouldSendWindowMove () {
-    return isWin &&
-        !window.et.isWebApp &&
-        !window.store.config.useSystemTitleBar
+    // 新版 Electron 支持 -webkit-app-region: drag，不再需要 JS 模拟拖动
+    return false
   }
 
   get batchInputSelectedTabIds () {

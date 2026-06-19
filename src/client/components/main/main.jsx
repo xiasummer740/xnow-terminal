@@ -58,7 +58,9 @@ export default auto(function Index (props) {
     })
     // 窗口最大化/还原状态同步（OS 事件 → store）
     ipcOnEvent('window-state-change', (e, { isMaximized }) => {
+      window.pre.runGlobalAsync('writeLog', `[window] OS event: isMaximized=${isMaximized}`)
       store.isMaximized = isMaximized
+      store.resizeTrigger = (store.resizeTrigger || 0) + 1
     })
     // 启动后自动检查更新（延迟5秒，避免启动卡顿）
     setTimeout(() => store.onCheckUpdate(false), 5000)

@@ -59,8 +59,16 @@
   color var(--text-dark)
   cursor pointer
   padding 4px
+  -webkit-app-region no-drag
   &:hover
     color var(--error)
+
+// 面板标题栏可拖动窗口（app-drag class 由 React 组件添加）
+.app-drag
+  -webkit-app-region drag
+
+.no-drag
+  -webkit-app-region no-drag
 
 .right-panel-content
   flex 1

@@ -46,7 +46,7 @@ export default auto(function VpsPanel (props) {
 
   return (
     <div className='right-panel right-panel-vps'>
-      <div className='right-panel-titlebar app-drag'>
+      <div className='right-panel-titlebar app-drag' style={{ WebkitAppRegion: 'drag' }}>
         <span className='right-panel-title'>VPS 信息{host ? <span className='vps-host-badge no-drag' onClick={handleCopyIp} title='点击复制 IP'>{host}</span> : null}</span>
         <div className='right-panel-controls'>
           <CloseOutlined className='right-panel-close-btn' onClick={handleClose} title='关闭' />

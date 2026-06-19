@@ -36,7 +36,7 @@ export default auto(function AIPanel (props) {
 
   return (
     <div className='right-panel right-panel-ai'>
-      <div className='right-panel-titlebar app-drag'>
+      <div className='right-panel-titlebar app-drag' style={{ WebkitAppRegion: 'drag' }}>
         <span className='right-panel-title' title={title}>{title}</span>
         <div className='right-panel-controls'>
           <CloseOutlined className='right-panel-close-btn' onClick={handleClose} title='关闭' />

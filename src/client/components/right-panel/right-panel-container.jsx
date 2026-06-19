@@ -35,7 +35,10 @@ export default auto(function RightPanelContainer (props) {
     if (aiPanelRef.current) {
       aiPanelRef.current.style.width = newW + 'px'
     }
-  }, [])
+    // 实时同步 store + 触发强制布局刷新
+    store.rightPanelAIWidth = newW
+    store.triggerResize()
+  }, [store])
 
   const handleAIResizeEnd = useCallback(() => {
     if (aiResizing.current) {
@@ -64,7 +67,8 @@ export default auto(function RightPanelContainer (props) {
     if (vpsPanelRef.current) {
       vpsPanelRef.current.style.width = newW + 'px'
     }
-  }, [])
+    store.rightPanelVPSWidth = newW
+  }, [store])
 
   const handleVPSResizeEnd = useCallback(() => {
     if (vpsResizing.current) {
@@ -110,9 +114,18 @@ export default auto(function RightPanelContainer (props) {
     }
   }, [_vpsVisible])
 
+  const rightTotalWidth = (_vpsVisible ? store.rightPanelVPSWidth : 0) + (_aiVisible ? store.rightPanelAIWidth : 0)
+  const topDragStyle = _vpsVisible || _aiVisible ? {
+    position: 'absolute', top: -36, right: 0,
+    width: rightTotalWidth, height: 36,
+    WebkitAppRegion: 'drag', zIndex: 300
+  } : {}
+
   return (
     <div className='right-panel-overlay-container' ref={containerRef}
       style={{ display: (_aiVisible || _vpsVisible) ? 'flex' : 'none' }}>
+      {/* 面板上方拖条 */}
+      <div style={topDragStyle} />
       {/* VPS 面板 */}
       {_vpsVisible && (
         <>

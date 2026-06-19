@@ -2,19 +2,26 @@
  * btns
  */
 
-import { CloseOutlined, MinusOutlined } from '@ant-design/icons'
-import { auto } from 'manate/react'
+import { CloseOutlined, MinusOutlined, BorderOutlined, SwitcherOutlined } from '@ant-design/icons'
+import { useEffect, useState } from 'react'
 import {
   isMacJs
 } from '../../common/constants'
 
 const e = window.translate
 
-export default auto(function WindowControl (props) {
-  const {
-    isMaximized,
-    config
-  } = props.store
+export default function WindowControl (props) {
+  const { config } = props.store
+  const [maximized, setMaximized] = useState(false)
+
+  useEffect(() => {
+    const { ipcOnEvent } = window.pre
+    setMaximized(!!window.store.isMaximized)
+    ipcOnEvent('window-state-change', (e, { isMaximized }) => {
+      setMaximized(isMaximized)
+    })
+  }, [])
+
   if (config.useSystemTitleBar || isMacJs) {
     return null
   }
@@ -23,11 +30,11 @@ export default auto(function WindowControl (props) {
   }
   const maximize = () => {
     window.pre.runGlobalAsync('maximize')
-    window.store.isMaximized = true
+    setMaximized(true)
   }
   const unmaximize = () => {
     window.pre.runGlobalAsync('unmaximize')
-    window.store.isMaximized = false
+    setMaximized(false)
   }
   const closeApp = () => {
     window.store.exit()
@@ -35,27 +42,20 @@ export default auto(function WindowControl (props) {
   return (
     <div className='window-controls'>
       <div className='window-control-box window-control-minimize' onClick={minimize}>
-        <MinusOutlined title={e('minimize')} className='iblock font12 widnow-control-icon' />
+        <MinusOutlined title={e('minimize')} className='iblock font14 widnow-control-icon' />
       </div>
       <div
         className='window-control-box window-control-maximize'
-        onClick={
-          isMaximized ? unmaximize : maximize
-        }
+        onClick={maximized ? unmaximize : maximize}
       >
-        <span
-          title={
-            isMaximized ? e('unmaximize') : e('maximize')
-          }
-          className={
-            'iblock font12 icon-maximize widnow-control-icon ' +
-              (isMaximized ? 'is-max' : 'not-max')
-          }
-        />
+        {maximized
+          ? <SwitcherOutlined title={e('unmaximize')} className='iblock font14 widnow-control-icon icon-maximize is-max' />
+          : <BorderOutlined title={e('maximize')} className='iblock font14 widnow-control-icon icon-maximize' />
+        }
       </div>
       <div className='window-control-box window-control-close' onClick={closeApp}>
-        <CloseOutlined title={e('close')} className='iblock font12 widnow-control-icon' />
+        <CloseOutlined title={e('close')} className='iblock font14 widnow-control-icon' />
       </div>
     </div>
   )
-})
+}
