@@ -32,8 +32,9 @@ workPkg.version = newVer
 writeFileSync(resolve(ROOT, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n')
 writeFileSync(resolve(ROOT, 'work/app/package.json'), JSON.stringify(workPkg, null, 2) + '\n')
 
-// Git 提交
-execSync('git add package.json work/app/package.json', { cwd: ROOT, stdio: 'inherit' })
+// Git 提交（work/app/package.json 在 .gitignore 中，需要用 -f 强制添加）
+execSync('git add package.json', { cwd: ROOT, stdio: 'inherit' })
+execSync('git add -f work/app/package.json', { cwd: ROOT, stdio: 'inherit' })
 execSync(`git commit -m "release: v${newVer}"`, { cwd: ROOT, stdio: 'inherit' })
 execSync('git push', { cwd: ROOT, stdio: 'inherit' })
 
