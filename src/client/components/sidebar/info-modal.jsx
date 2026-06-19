@@ -12,7 +12,8 @@ import {
   ExportOutlined,
   ImportOutlined,
   CloudDownloadOutlined,
-  ArrowUpOutlined
+  ArrowUpOutlined,
+  DownloadOutlined
 } from '@ant-design/icons'
 import { Tabs, Button, message, Upload, Space, Modal as AntModal } from 'antd'
 import Modal from '../common/modal'
@@ -20,7 +21,7 @@ import Link from '../common/external-link'
 import LogoElem from '../common/logo-elem'
 import RunningTime from './app-running-time'
 import { auto } from 'manate/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import copy from 'json-deep-copy'
 import time from '../../common/time'
 import download from '../../common/download'
@@ -31,12 +32,15 @@ import {
   infoTabs
 } from '../../common/constants'
 import { checkSkipSrc } from '../../common/check-skip-src'
+import { getLatestReleaseInfo } from '../../common/update-check'
+import Markdown from '../common/markdown'
 import './info.styl'
 
 const e = window.translate
 
 export default auto(function InfoModal (props) {
   const [runtimeEnv, setRuntimeEnv] = useState(null)
+  const [releaseInfo, setReleaseInfo] = useState(null)
 
   const handleChangeTab = key => {
     window.store.infoModalTab = key
@@ -45,70 +49,153 @@ export default auto(function InfoModal (props) {
     }
   }
 
+  // 检测到新版本时自动获取更新日志
+  const { upgradeInfo } = props
+  const { shouldUpgrade } = upgradeInfo
+  useEffect(() => {
+    if (shouldUpgrade && !releaseInfo) {
+      getLatestReleaseInfo().then(setReleaseInfo)
+    }
+  }, [shouldUpgrade, releaseInfo])
+
   const renderCheckUpdate = () => {
     if (window.et.isWebApp || checkSkipSrc(props.installSrc)) {
       return null
     }
+    const { onCheckUpdate } = window.store
     const {
-      onCheckUpdate
-    } = window.store
-    const {
-      upgradeInfo
-    } = props
-    const onCheckUpdating = upgradeInfo.checkingRemoteVersion || upgradeInfo.upgrading
-    const { noUpdateMessage, noUpdateMessageExpires, shouldUpgrade, remoteVersion, upgrading } = upgradeInfo
+      shouldUpgrade,
+      latestVersion,
+      remoteVersion,
+      downloading,
+      percent,
+      readyToInstall,
+      checking,
+      error,
+      noUpdateMessage,
+      noUpdateMessageExpires
+    } = props.upgradeInfo
     const showMessage = noUpdateMessage && noUpdateMessageExpires && Date.now() < noUpdateMessageExpires
+    const newVer = remoteVersion || latestVersion || ''
 
     const handleUpgrade = () => {
       refsStatic.get('upgrade')?.doUpgrade()
     }
 
-    return (
-      <div className='mg1b mg2t'>
-        {shouldUpgrade && remoteVersion
-          ? (
-            <div style={{
-              background: 'var(--primary, #1890ff)',
-              borderRadius: 8,
-              padding: '12px 16px',
-              marginBottom: 12,
-              color: '#fff'
+    const handleInstall = () => {
+      window.pre.runGlobalAsync('autoUpdaterInstall')
+    }
+
+    // 有新版本可用
+    if (shouldUpgrade) {
+      return (
+        <div className='mg1b mg2t'>
+          {/* 版本对比 */}
+          <div style={{
+            background: 'var(--primary, #1890ff)',
+            borderRadius: 8,
+            padding: '12px 16px',
+            marginBottom: 12,
+            color: '#fff'
+          }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>
+              <ArrowUpOutlined style={{ marginRight: 6 }} />发现新版本
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>
+              当前版本 v{packInfo.version} → <b>v{newVer}</b>
+            </div>
+          </div>
+
+          {/* 更新日志 */}
+          {releaseInfo?.body
+            ? (
+              <div
+                className='pd1b'
+                style={{
+                  background: 'var(--bg, #1a1a2e)',
+                  borderRadius: 8,
+                  padding: '12px 16px',
+                  marginBottom: 12,
+                  maxHeight: 200,
+                  overflow: 'auto'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: 8 }}>更新日志</div>
+                <Markdown text={releaseInfo.body} />
+              </div>
+              )
+            : null}
+
+          {/* 操作按钮 */}
+          <Space>
+            {readyToInstall
+              ? (
+                <Button type='primary' onClick={handleInstall} icon={<ArrowUpOutlined />}>
+                  立即重启安装
+                </Button>
+                )
+              : downloading
+                ? (
+                  <div style={{ width: 200 }}>
+                    <div style={{ marginBottom: 4, fontSize: 12, color: '#888' }}>正在下载 {percent || 0}%</div>
+                    <div style={{
+                      width: '100%', height: 6, background: '#333', borderRadius: 3, overflow: 'hidden'
+                    }}
+                    >
+                      <div style={{
+                        width: (percent || 0) + '%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #52c41a, #73d13d)',
+                        borderRadius: 3,
+                        transition: 'width 0.3s'
+                      }}
+                      />
+                    </div>
+                  </div>
+                  )
+                : (
+                  <Button type='primary' onClick={handleUpgrade} icon={<DownloadOutlined />}>
+                    立即更新
+                  </Button>
+                  )}
+            <Button onClick={() => {
+              setReleaseInfo(null)
+              onCheckUpdate(true)
             }}
             >
-              <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
-                <ArrowUpOutlined style={{ marginRight: 6 }} />发现新版本 {remoteVersion}
+              重新检查
+            </Button>
+          </Space>
+
+          {/* 手动下载链接 */}
+          {releaseInfo?.html_url
+            ? (
+              <div className='pd1t' style={{ fontSize: 12 }}>
+                <Link to={releaseInfo.html_url}>从 GitHub 下载</Link>
               </div>
-              <Space>
-                <Button
-                  type='default'
-                  ghost
-                  loading={upgrading}
-                  onClick={handleUpgrade}
-                  icon={<ArrowUpOutlined />}
-                >
-                  一键升级
-                </Button>
-                <Button
-                  type='link'
-                  style={{ color: 'rgba(255,255,255,0.8)' }}
-                  onClick={() => onCheckUpdate(true)}
-                >
-                  查看详情
-                </Button>
-              </Space>
-            </div>
-            )
-          : null}
+              )
+            : null}
+
+          {error ? <div style={{ color: '#ff4d4f', marginTop: 8 }}>{error}</div> : null}
+        </div>
+      )
+    }
+
+    // 无新版本
+    return (
+      <div className='mg1b mg2t'>
         <Button
-          type={shouldUpgrade ? 'default' : 'primary'}
-          loading={onCheckUpdating}
-          onClick={() => onCheckUpdate(true)}
+          type='primary'
+          loading={checking}
+          onClick={() => {
+            setReleaseInfo(null)
+            onCheckUpdate(true)
+          }}
         >
           {e('checkForUpdate')}
         </Button>
-        {showMessage && (
-          <span className='mg1l update-msg'>{noUpdateMessage}</span>
-        )}
+        {showMessage ? <span className='mg1l update-msg'>{noUpdateMessage}</span> : null}
       </div>
     )
   }

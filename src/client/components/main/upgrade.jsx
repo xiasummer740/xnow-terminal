@@ -379,19 +379,6 @@ export default class Upgrade extends PureComponent {
   }
 
   render () {
-    const { shouldUpgrade, checking, error, showManualDownload } = this.props.upgradeInfo
-    if (showManualDownload) {
-      return this.renderManualDownload()
-    }
-    if (error) {
-      return this.renderError(error)
-    }
-    if (checking) {
-      return null
-    }
-    if (!shouldUpgrade) {
-      return null
-    }
-    return this.renderUpgradePanel()
+    return null
   }
 }

@@ -6,13 +6,12 @@ import {
   PictureOutlined,
   PlusCircleOutlined,
   SettingOutlined,
-  UpCircleOutlined,
   AppstoreOutlined,
   ThunderboltOutlined,
   DashboardOutlined,
   BulbOutlined
 } from '@ant-design/icons'
-import { Tooltip, Popover } from 'antd'
+import { Popover, Badge } from 'antd'
 import { useState, useEffect } from 'react'
 import SideBarPanel from './sidebar-panel'
 import TransferList from './transfer-list'
@@ -103,10 +102,6 @@ export default function Sidebar (props) {
     }
   }
 
-  const handleShowUpgrade = () => {
-    window.store.upgradeInfo.showUpgradeModal = true
-  }
-
   const {
     onNewSsh,
     openSetting,
@@ -115,7 +110,7 @@ export default function Sidebar (props) {
     openTerminalThemes,
     setLeftSidePanelWidth
   } = store
-  const { showUpgradeModal, upgradePercent, checkingRemoteVersion, shouldUpgrade } = upgradeInfo
+  const { shouldUpgrade } = upgradeInfo
   const showSetting = showModal === modals.setting
   const settingActive =
     showSetting && settingTab === settingMap.setting && settingItem.id === 'setting-common'
@@ -185,19 +180,20 @@ export default function Sidebar (props) {
         </SideIcon>
 
         <SideIcon title={e('about')} active={showInfoModal} onClick={openAbout}>
-          <InfoCircleOutlined
-            className='iblock font16 control-icon open-about-icon'
-          />
+          {shouldUpgrade
+            ? (
+              <Badge dot offset={[-2, 4]}>
+                <InfoCircleOutlined
+                  className='iblock font16 control-icon open-about-icon'
+                />
+              </Badge>
+              )
+            : (
+              <InfoCircleOutlined
+                className='iblock font16 control-icon open-about-icon'
+              />
+              )}
         </SideIcon>
-        {!checkingRemoteVersion && !showUpgradeModal && shouldUpgrade
-          ? (
-            <Tooltip title={`${e('upgrading')} ${upgradePercent || 0}%`} placement='right'>
-              <div className='control-icon-wrap' onClick={handleShowUpgrade}>
-                <UpCircleOutlined className='iblock font18 control-icon upgrade-icon' />
-              </div>
-            </Tooltip>
-            )
-          : null}
         <div className='control-icon-wrap' title={lightTheme ? '切换暗色主题' : '切换浅色主题'} onClick={toggleTheme}>
           <BulbOutlined
             className='font18 iblock control-icon'
