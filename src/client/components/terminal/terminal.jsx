@@ -1125,6 +1125,13 @@ class Term extends Component {
     }
     term.onData(this.onData)
     this.term = term
+    // 保护 AI 输入框焦点：AI 对话框有焦点时，终端不夺焦
+    const origFocus = term.focus.bind(term)
+    term.focus = () => {
+      const activeEl = document.activeElement
+      if (activeEl && activeEl.closest('.ai-chat-container')) return
+      origFocus()
+    }
     term.onSelectionChange(this.onSelectionChange)
     term.attachCustomKeyEventHandler(this.handleKeyboardEvent.bind(this))
     this.fitAddon.fit()

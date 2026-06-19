@@ -85,7 +85,17 @@ You are operating inside XNOW, a terminal/SSH/SFTP client with AI superpowers. Y
 
 Reply in ${lang} language.`
 
-  return basePrompt + memoryText + skillsText
+  // 注入当前 tab 上下文
+  const currentTab = window.store.currentTab
+  let tabContext = ''
+  if (currentTab) {
+    tabContext = `
+## 当前连接
+- 标签名: ${currentTab.title || ''}
+- 主机: ${currentTab.host || '本地终端'}
+- 类型: ${currentTab.type || 'local'}`
+  }
+  return basePrompt + memoryText + skillsText + tabContext
 }
 
 function updateChatEntry (chatEntry, updates) {
@@ -262,6 +272,8 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming,
   let accumulatedContent = ''
 
   setIsStreaming(true)
+  // 锁定当前 tab：对话期间所有命令默认发到开始时的活跃标签
+  const lockedTabId = window.store.activeTabId
   updateChatEntry(chatEntry, {
     toolCalls: [],
     response: ''
@@ -323,6 +335,11 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming,
 
       let args
       try { args = JSON.parse(toolCall.function.arguments) } catch { args = {} }
+
+      // 自动补 tabId：AI 未指定时使用锁定时的活跃标签
+      if (toolCall.function.name === 'send_terminal_command' && !args.tabId) {
+        if (lockedTabId) args.tabId = lockedTabId
+      }
 
       const toolEntry = {
         id: toolCall.id,

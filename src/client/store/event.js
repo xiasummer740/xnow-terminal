@@ -7,6 +7,11 @@ import { refs } from '../components/common/ref'
 export default Store => {
   Store.prototype.focus = function () {
     window.focused = true
+    // 如果 AI 输入框有焦点，不抢焦（用户正在跟 AI 对话）
+    const activeEl = document.activeElement
+    if (activeEl && activeEl.closest('.ai-chat-container')) {
+      return
+    }
     refs.get('term-' + window.store.activeTabId)?.term?.focus()
   }
 

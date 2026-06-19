@@ -1,3 +1,4 @@
+import { Modal } from 'antd'
 import { z } from '../../common/zod'
 import { bookmarkSchemas } from '../../common/bookmark-schemas'
 
@@ -24,6 +25,24 @@ function buildAddBookmarkParameters () {
     },
     required: ['type']
   }
+}
+
+// 高危命令检测 — 只拦跑路级操作
+const DANGEROUS_PATTERNS = [
+  /^rm\s+(-rf\s+)?\/$/,
+  /^rm\s+(-rf\s+)?\/\*/,
+  /^mkfs/,
+  /^dd\s+if=.*of=\/dev\//,
+  /^>\s*\/dev\//,
+  /^\s*reboot\s*$/,
+  /^\s*shutdown\s/,
+  /^\s*poweroff\s*$/,
+  /^\s*halt\s*$/
+]
+
+function isDangerousCommand (cmd) {
+  const trimmed = cmd.trim().toLowerCase()
+  return DANGEROUS_PATTERNS.some(p => p.test(trimmed))
 }
 
 export const agentTools = [
@@ -408,6 +427,24 @@ export async function executeToolCall (toolName, args) {
   const store = window.store
   switch (toolName) {
     case 'send_terminal_command': {
+      // 高危命令弹窗确认
+      const cmd = (args.command || '').trim()
+      if (isDangerousCommand(cmd)) {
+        const confirmed = await new Promise(resolve => {
+          Modal.confirm({
+            title: '⚠️ 危险操作确认',
+            content: `AI 请求执行高危命令：\n\n\`${cmd}\`\n\n确认执行吗？`,
+            okText: '确认执行',
+            cancelText: '取消',
+            okButtonProps: { danger: true },
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false)
+          })
+        })
+        if (!confirmed) {
+          return JSON.stringify({ blocked: true, reason: '用户取消了危险操作', command: cmd })
+        }
+      }
       store.mcpSendTerminalCommand(args)
       const idleResult = await store.mcpWaitForTerminalIdle({
         tabId: args.tabId || store.activeTabId,
