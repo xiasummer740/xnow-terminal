@@ -1,0 +1,63 @@
+# XNOW Terminal
+
+> 基于 electerm 深度定制的终端/SSH/SFTP 客户端，为运维工程师打造。
+> 集 AI 助手、VPS 监控看板、实时延迟检测于一体。
+> 支持 Windows/Mac/Linux。
+
+## Docs
+
+- [README](README.md) — 完整功能说明
+- [README_cn.md](README_cn.md) — 中文功能说明
+- [CONTEXT.md](CONTEXT.md) — 项目领域语言、ADR、文件索引
+- [CHANGELOG.md](CHANGELOG.md) — 版本变更记录
+- [CLAUDE.md](CLAUDE.md) — Claude Code 项目配置
+
+## Key Features
+
+- **AI Agent** — AI 助手 + Agent 模式，Tab 上下文感知，技能商店
+- **VPS 作战看板** — 到期倒计时、月付价格、流量使用、过期告警
+- **实时延迟监测** — SSH 协议层 TCP Ping，毫秒级 RTT + 历史图表
+- **SSH+SFTP 分屏** — 终端和文件管理器同时操作，垂直/水平分栏
+- **三网路由检测** — 去程 + 回程路由自动识别（CN2/4837/CMIN2）
+- **自动重连** — SSH 断线自动恢复
+- **一键更新** — 内置 electron-updater，启动自动检测
+
+## Install
+
+```bash
+# 从 GitHub Releases 下载安装包
+https://github.com/xiasummer740/xnow-terminal/releases
+```
+
+## Dev
+
+```bash
+git clone https://github.com/xiasummer740/xnow-terminal.git
+cd xnow-terminal
+npm install
+npm run vite-build   # 前端构建
+npm start            # 开发模式
+```
+
+## 项目结构
+
+```
+src/          — 前端源码（React）
+build/        — 构建脚本
+npm/          — CLI 入口
+test/         — 测试（e2e + unit + integration）
+docs/         — 文档
+work/         — Electron 主进程
+```
+
+## Requirements
+
+- Node.js >= 16
+- npm
+- Windows/Mac/Linux
+
+## Related
+
+- [GitHub](https://github.com/xiasummer740/xnow-terminal)
+- [Issues](https://github.com/xiasummer740/xnow-terminal/issues)
+- [基于 electerm](https://github.com/electerm/electerm) (MIT License)

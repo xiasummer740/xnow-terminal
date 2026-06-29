@@ -21,6 +21,7 @@
     "fix": "npx standard --fix",
     "test": "npm run test1 && npm run test2",
     "test-unit-ci": "node --test test/unit-ci/*.spec.js",
+    "test:coverage": "c8 --reporter=text --reporter=html node --test test/unit-ci/*.spec.js",
     "test1": "npx playwright test test/e2e/00*.js --workers=1",
     "test2": "npx playwright test test/e2e/01*.js --workers=1",
     "test3": "npx playwright test test/e2e/02*.js --workers=1 && npm run test-unit-ci",
