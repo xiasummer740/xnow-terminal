@@ -17,6 +17,21 @@ import { copy } from '../../common/clipboard'
 
 const e = window.translate
 
+// 请求失败时把原因写在记录上，而不是删掉记录本身
+// —— AI 失败多为网络/额度这类临时问题，删记录会把用户刚打的字一起抹掉且毫无提示（ISSUES #5）
+function markItemError (item, msg) {
+  const list = window.store.aiChatHistory
+  const index = list.findIndex(i => i.id === item.id)
+  if (index === -1) {
+    return
+  }
+  const target = list[index]
+  target.error = typeof msg === 'string' ? msg : String(msg || '')
+  target.pending = false
+  // 换新数组引用，触发重渲染（沿用本文件既有做法）
+  window.store.aiChatHistory = [...list]
+}
+
 export default function AIChatHistoryItem ({ item }) {
   const [showOutput, setShowOutput] = useState(true)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -52,9 +67,8 @@ export default function AIChatHistoryItem ({ item }) {
         if (streamResponse.error === 'Session not found') {
           return
         }
-        if (typeof item.id === 'string') {
-          window.store.removeAiHistory(item.id)
-        }
+        markItemError(item, streamResponse.error)
+        setIsStreaming(false)
         console.warn('[AI Stream] error:', streamResponse.error)
         return
       }
@@ -69,11 +83,8 @@ export default function AIChatHistoryItem ({ item }) {
         setTimeout(() => pollStreamContent(sid), 200)
       }
     } catch (error) {
-      try {
-        if (typeof item.id === 'string') {
-          window.store.removeAiHistory(item.id)
-        }
-      } catch (_) { /* 静默 */ }
+      markItemError(item, error?.message || error)
+      setIsStreaming(false)
       console.warn('[AI Stream] poll error:', error?.message || error)
     }
   }, [item.id])
@@ -99,7 +110,7 @@ export default function AIChatHistoryItem ({ item }) {
       )
 
       if (aiResponse && aiResponse.error) {
-        window.store.removeAiHistory(item.id)
+        markItemError(item, aiResponse.error)
         console.warn('[AI] response error:', aiResponse.error)
         return
       }
@@ -119,11 +130,7 @@ export default function AIChatHistoryItem ({ item }) {
         }
       }
     } catch (error) {
-      try {
-        if (typeof item.id === 'string') {
-          window.store.removeAiHistory(item.id)
-        }
-      } catch (_) { /* 静默 */ }
+      markItemError(item, error?.message || error)
       console.warn('[AI] request error:', error?.message || error)
     }
   }, [prompt, modelAI, baseURLAI, apiPathAI, apiKeyAI, proxyAI, item.id, pollStreamContent])
@@ -253,6 +260,22 @@ export default function AIChatHistoryItem ({ item }) {
     )
   }
 
+  function renderError () {
+    if (!item.error) {
+      return null
+    }
+    return (
+      <div className='mg1y'>
+        <Alert
+          type='error'
+          showIcon
+          title={e('AI request failed')}
+          description={item.error}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className='chat-history-item'>
       <div className='mg1y'>
@@ -260,6 +283,7 @@ export default function AIChatHistoryItem ({ item }) {
           <Alert {...alertProps} />
         </Tooltip>
       </div>
+      {renderError()}
       {renderToolCalls()}
       {showOutput && <AIOutput item={item} />}
     </div>

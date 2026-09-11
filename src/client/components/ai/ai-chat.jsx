@@ -72,8 +72,13 @@ export default function AIChat (props) {
     window.store.aiChatHistory.push(chatEntry)
     setPrompt('')
 
+    // 数组是旧→新（push 到末尾，取最近记录用 slice(-10)），
+    // 所以淘汰要从头部删最旧的；原来的 splice(MAX_HISTORY) 删的是末尾，等于刚发就丢（ISSUES #6）
     if (window.store.aiChatHistory.length > MAX_HISTORY) {
-      window.store.aiChatHistory.splice(MAX_HISTORY)
+      window.store.aiChatHistory.splice(
+        0,
+        window.store.aiChatHistory.length - MAX_HISTORY
+      )
     }
   }, [prompt, mode])
 

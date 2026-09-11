@@ -104,6 +104,7 @@ const localKeys = {
   'Enter to send, Shift+Enter for new line': '回车发送，Shift+回车换行',
   'Stop this AI request': '停止本次 AI 请求',
   'Clear AI chat history': '清空 AI 对话记录',
+  'AI request failed': 'AI 请求失败',
   'Model:': '模型：',
   'Role:': '角色：',
   'Base URL:': '接口地址：',
@@ -158,6 +159,8 @@ const localKeys = {
   'Database Migrated': '数据库迁移完成',
   'Upgrading database': '正在升级数据库',
   'Database Upgraded': '数据库升级完成',
+  'Database error': '数据库出错',
+  'Database operation failed': '数据库操作失败',
   'Choose files to upload to remote desktop': '选择要上传到远程桌面的文件',
 
   // 设置面板左侧页签名（上游语言包缺这两个 key → 界面显示 BookmarkGroups / Widgets）

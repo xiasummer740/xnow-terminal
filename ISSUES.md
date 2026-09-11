@@ -16,10 +16,10 @@
 | 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/ipc.js:142-158` | 待修 |
 | 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:25-35`、`common/uid.js:3`、`server/fs.js:7-10` | 待修 |
 | 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-197` | 待修 |
-| 5 | AI 对话**请求失败即删记录**（`removeAiHistory` → 落库 DELETE），用户刚打的字一起消失且无提示 | `ai/ai-chat-history-item.jsx:99`、`store/common.js:342-349` | 待修 |
-| 6 | AI 历史超 100 条淘汰**方向反了**：数组旧→新，`splice(100)` 砍掉的是**刚 push 的最新那条** | `ai/ai-chat.jsx:25,68-75` | 待修 |
-| 7 | 同步为全量覆盖、零冲突处理（冲突逻辑已被注释）。**一端为空即清空另一端**：新设备空书签上传 → 服务端被写成 `[]` → 老设备下载 → watch 逐条删库 | `store/sync.js:250-510`、`watch.js:34-42` | 待修 |
-| 8 | 解密失败时**静默清空整条记录**（`safeDecrypt` 返回原文 → JSON.parse 失败 → `r = {}`），表现为"书签/密码全没了"且无告警 | `lib/sqlite.js:143-153`、`lib/nedb.js:92-109`、`lib/safe-storage.js:165-203` | 待修 |
+| 5 | AI 对话**请求失败即删记录**（`removeAiHistory` → 落库 DELETE），用户刚打的字一起消失且无提示 | `ai/ai-chat-history-item.jsx:99`、`store/common.js:342-349` | 已修已验 |
+| 6 | AI 历史超 100 条淘汰**方向反了**：数组旧→新，`splice(100)` 砍掉的是**刚 push 的最新那条** | `ai/ai-chat.jsx:25,68-75` | 已修已验 |
+| 7 | 同步为全量覆盖、零冲突处理（冲突逻辑已被注释）。**一端为空即清空另一端**：新设备空书签上传 → 服务端被写成 `[]` → 老设备下载 → watch 逐条删库 | `store/sync.js:250-510`、`watch.js:34-42` | 待修（**第 1 批唯一未完成项**，改动面大、需单独一轮 + 专门验证） |
+| 8 | 解密失败时**静默清空整条记录**（`safeDecrypt` 返回原文 → JSON.parse 失败 → `r = {}`），表现为"书签/密码全没了"且无告警 | `lib/sqlite.js:143-153`、`lib/nedb.js:92-109`、`lib/safe-storage.js:165-203` | 已修已验 |
 
 ---
 
@@ -28,13 +28,13 @@
 | # | 问题 | 证据 | 状态 |
 |---|---|---|---|
 | 9 | 3 个 mac 测试 workflow **已手工禁用 3 个月**；历史 **246 次运行 / 246 次失败 / 0 成功**，失败点在 `test` 步骤本身（非环境） | `gh workflow list --all`、`gh run list` | 待修 |
-| 10 | `npm test` 在 Windows 上**找不到测试**：`test/e2e/00*.js` 作为 Playwright 位置参数是**正则不是 glob**（CI 是 sh 会先展开，本地 cmd.exe 不展开）→ `No tests found`，`test2/test3` 永不执行 | `package.json:25-27` | 待修 |
+| 10 | `npm test` 在 Windows 上**找不到测试**：`test/e2e/00*.js` 作为 Playwright 位置参数是**正则不是 glob**（CI 是 sh 会先展开，本地 cmd.exe 不展开）→ `No tests found`，`test2/test3` 永不执行 | `package.json:25-27` | 已修已验 |
 | 11 | `test/unit/` **21 个 spec（约 5984 行）从未被任何脚本执行**（`test-unit-ci` 指向的是 `test/unit-ci/`）；其中 `zod.spec.js` 依赖根本不存在的 zod 包 | `package.json:23` | 待修 |
 | 12 | Playwright `1.28.1` 与 Electron `41.2.0` **结构性不兼容**（已实测）：1.28.1 在 Electron 主进程执行 `process.mainModule.require('electron')`，该 API 在 Node 22+/Electron 30+ 已移除 → `electron.launch` 必失败 | `playwright-core/lib/server/electron/electron.js:67` | 待修 |
-| 13 | `npm run prepare-test` 在 Windows 上**静默失败却返回 0**（`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` 是 bash 语法，cmd.exe 不认）→ 永远装不上 Playwright 却无人察觉 | `package.json:18` 实测输出 | 待修 |
-| 14 | `.claude/tasks.json` 的 `test` 字段为**空字符串** —— 声称 build/start/test 自动化验证，测试环节空转 | `.claude/tasks.json` | 待修 |
-| 15 | pre-push 钩子只跑 `npm run lint`，不跑测试；配合 #9 形成完整漏洞链：本地不拦 → CI 不跑 → 坏代码直达主干 | `build/bin/pre-push` | 待修 |
-| 16 | `test3`（14 个 e2e + 全部 unit-ci）不在 `npm test` 里；项目 CLAUDE.md 写「`npm test` # E2E + 单元测试」与事实不符 | `package.json:22` vs `:27` | 待修 |
+| 13 | `npm run prepare-test` 在 Windows 上**静默失败却返回 0**（`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` 是 bash 语法，cmd.exe 不认）→ 永远装不上 Playwright 却无人察觉 | `package.json:18` 实测输出 | 待修（2026-09-11 现场复现：`node_modules` 下无 `@playwright`，npx 只得从 `G:\npm-cache\_npx` 拉临时副本，故所有 spec `Cannot find module '@playwright/test'`） |
+| 14 | `.claude/tasks.json` 的 `test` 字段为**空字符串** —— 声称 build/start/test 自动化验证，测试环节空转 | `.claude/tasks.json` | 已修已验 |
+| 15 | pre-push 钩子只跑 `npm run lint`，不跑测试；配合 #9 形成完整漏洞链：本地不拦 → CI 不跑 → 坏代码直达主干 | `build/bin/pre-push` | 已修已验 |
+| 16 | `test3`（14 个 e2e + 全部 unit-ci）不在 `npm test` 里；项目 CLAUDE.md 写「`npm test` # E2E + 单元测试」与事实不符 | `package.json:22` vs `:27` | 已修已验 |
 | 17 | 无 `playwright.config.js` → Playwright 默认扫描整个仓库，把 `test/unit/*` 全部误收集 | 项目根 | 待修 |
 
 ---
@@ -53,7 +53,7 @@
 | 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把 CI 版覆盖到根目录 → 之后本地发版带 `channel: win-nsis`，而 release 里只有 `latest.yml` → **一键更新链路当场断掉** | `build/bin/prepare-electron-build.js:3`、两处 `electron-builder.json` | 待修 |
 | 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | 待修 |
 | 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身） | `build/bin/release-xnow.js:41-52` | 待修 |
-| 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 待修 |
+| 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
 | 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
 | 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | 待修 |
 | 31 | `httpFetch` 无任何 SSRF 校验（连 `isPrivateHost` 都没调）；`isPrivateHost` 只识别点分十进制，实测 `127.0.0.1.nip.io`、`[::ffff:127.0.0.1]`、`169.254.169.254` **全部放行** | `lib/ipc.js:632-649`、`:161-176` | 待修 |
@@ -107,11 +107,17 @@
 
 ## 建议的修复顺序
 
-**第 0 批（今天，成本 < 30 分钟，把防线从 0 变成 1）**
-1. `.claude/tasks.json` 填 `"test": "npm run test-unit-ci"`（#14）
-2. `build/bin/pre-push` 追加 `npm run test-unit-ci`（#15）
-3. `package.json` 的 `test` 串上 `test3`（#16）
-4. 修 e2e glob 为正则/子串（#10）
+**第 0 批（今天，成本 < 30 分钟，把防线从 0 变成 1）— ✅ 已完成 @ `0d2ba4b3`**
+
+1. `.claude/tasks.json` 填 `"test": "npm run test-unit-ci"`（#14）✅
+2. `build/bin/pre-push` 追加 `npm run test-unit-ci`（#15）✅
+3. `package.json` 的 `test` 串上 `test3`（#16）✅
+4. 修 e2e glob 为正则/子串（#10）✅
+
+> ⚠️ **第 0 批只补齐了「单元测试」半条防线**（`test-unit-ci` 19/19 通过，已接入 `npm test` + pre-push）。
+> **「e2e」半条仍然是死的**：`test/e2e/00` 过滤本身已修好（实测匹配到 25 个 spec 文件，Playwright 确实在加载它们），
+> 但 ① `@playwright/test` 从未装上（#13 现场复现）② 即便装上，1.28.1 与 Electron 41.2.0 结构性不兼容（#12）。
+> **e2e 真正跑起来的前置条件 = 升级 Playwright（#12）+ 修 prepare-test（#13）+ 恢复 3 个 mac workflow（#9），属独立工作流。**
 
 **第 1 批（本周，止血用户数据）**
 #5 #6 #7 #8（AI 删记录 / 淘汰方向 / 同步覆盖 / 解密静默清空）+ #28（升级弹窗死锁）

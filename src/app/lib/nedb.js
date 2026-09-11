@@ -16,6 +16,10 @@ const DATA_ENC_ID = 'userConfig'
 // Prefix added to stored strings to mark them as encrypted
 const ENC_PREFIX = 'enc:'
 
+// 解密失败的记录：暂存其原始密文，写回时原样恢复，避免用空对象覆盖造成永久丢失
+// key = `${dbName} ${_id}`
+const decryptFailedRaw = new Map()
+
 function createDb (appPath, defaultUserName, { enc, dec } = {}) {
   const db = {}
 
@@ -98,9 +102,14 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
       const { _encdata: _, ...rest } = doc
       return { ...rest, ...parsed }
     } catch (e) {
-      // 当 safeStorage 解密失败时，加密原文 (v2:safe:...) 无法 JSON.parse
-      // 静默忽略，当该字段不存在处理
+      // 解密失败（safeDecrypt 解不开时原样返回密文 v2:safe:...，无法 JSON.parse）
+      // 只能当空记录返回，但必须留住原始密文，否则写回时会把密文覆盖成 {}（ISSUES #8）
       if (typeof doc._encdata === 'string' && doc._encdata.includes('v2:safe:')) {
+        decryptFailedRaw.set(`${dbName} ${doc._id}`, doc._encdata)
+        console.error(
+          `[db] 记录 ${dbName}/${doc._id} 解密失败（系统加密密钥已变？），` +
+          '本次读为空，但已保留原始密文，写回时会原样恢复'
+        )
         const { _encdata: _, ...rest } = doc
         return rest
       }
@@ -114,6 +123,11 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
   function encryptDoc (dbName, doc) {
     if (!needsEnc(dbName, doc._id)) return doc
     const { _id, ...payload } = doc
+    // 解密失败的记录：原样写回密文，绝不用空对象覆盖（ISSUES #8）
+    const savedRaw = decryptFailedRaw.get(`${dbName} ${_id}`)
+    if (savedRaw !== undefined) {
+      return _id !== undefined ? { _id, _encdata: savedRaw } : { _encdata: savedRaw }
+    }
     const jsonStr = JSON.stringify(payload)
     const encrypted = encryptData(jsonStr)
     return _id !== undefined ? { _id, _encdata: encrypted } : { _encdata: encrypted }
