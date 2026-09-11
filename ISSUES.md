@@ -12,7 +12,7 @@
 
 | # | 问题 | 位置 | 状态 |
 |---|---|---|---|
-| 1 | IPC 桥 `runGlobalAsync(name,...)` 无白名单：渲染进程任意 JS 可按名字调主进程**全部**能力（文件读写、进程启动、数据库、已存凭据）。且全应用无 `will-navigate`/`setWindowOpenHandler`，AI 输出里的外链一点即导航 → preload 重新注入 → 直达 RCE | `preload/preload.js:31-42`、`lib/ipc.js:746-748`、`lib/create-window.js:39-45` | 待修 |
+| 1 | IPC 桥 `runGlobalAsync(name,...)` 无白名单：渲染进程任意 JS 可按名字调主进程**全部**能力（文件读写、进程启动、数据库、已存凭据）。且全应用无 `will-navigate`/`setWindowOpenHandler`，AI 输出里的外链一点即导航 → preload 重新注入 → 直达 RCE | `preload/preload.js:31-42`、`lib/ipc.js:247-252,700-712`、`lib/create-window.js:90-119`、`lib/safe-open-external.js`、`components/ai/ai-output.jsx:97-101` | 已修已验 |
 | 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/ipc.js:142-158` | 待修 |
 | 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:25-35`、`common/uid.js:3`、`server/fs.js:7-10` | 待修 |
 | 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-197` | 待修 |
@@ -145,8 +145,35 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 - 选「删除指令」→ 维持现状（上传空表照写，靠下载端守卫兜住数据）
 这是产品语义选择，改动小但影响所有同步行为，**不擅自决定**。
 
+### #1 修复说明（IPC 桥白名单 + 导航闸门）
+
+原报告把这条记为「一触即发」，所以按完整攻击链验，不只验单点。
+
+**改法**（四层，缺一层链子就断不干净）：
+1. `lib/ipc.js` —— `async` / `sync-func` 两条通道都加 **own-property 白名单**（`hasOwnProperty`）。
+   原先 `asyncGlobals[name]` 直接取值，`name` 传 `constructor` / `__proto__` / `toString` 会落到 `Object.prototype` 上，
+   等于把原型链成员也当能力暴露出去。
+2. `lib/create-window.js` —— 主窗口导航闸门。`will-navigate`（点击链接）、`will-redirect`（服务端 302）、
+   `setWindowOpenHandler`（`window.open` / `target=_blank`）**三条路各接一次**，只接 `will-navigate` 会漏后两条。
+3. `components/ai/ai-output.jsx` —— AI 输出的 markdown 链接改走 `ExternalLink`，
+   不再用 ReactMarkdown 默认的裸 `<a href>`（默认渲染一点就把整个窗口导航走）。
+4. `lib/safe-open-external.js`（新增）—— `openExternal` 协议白名单。
+   闸门把外链"交给系统浏览器"时，若协议是 `file:` / `javascript:` / `ms-msdt:` 之类，
+   等于换个入口执行本地代码，所以递出去之前先过白名单，只放 http/https/ftp/ftps/mailto/tel。
+
+**证据**（`temp/verify-issue1.js`，真启动 Electron + 隔离 profile）：**19/19 通过**
+- 原型链成员被拒：`runGlobalAsync('constructor' / '__proto__' / 未知名)` 全部 `REJECTED: 未知的 IPC 调用`；`runSync('constructor')` 返回 `undefined`
+- **零误伤**：客户端实际用到的 **84 个 IPC 名字**（async 63 + sync 21）逐个比对已登记键，**0 个未登记**
+- 导航闸门：`location.href = file:///C:/Windows/System32/calc.exe` 后 origin 仍是 `http://127.0.0.1:5570`；`window.open(...)` 返回 `null`
+- 端到端点击：**真点**渲染出来的 markdown 链接 → origin 不变 + 捕获到 `openExternal('http://example.com/page')`
+- `openExternal('file://...')` 被静默拒绝，主进程日志确认
+
+**盲点已排除**：`store.beforeExitApp` 里有一处**变量调用** `runGlobalAsync(name)`（全项目唯一非字面量调用点）。
+追到源头：`name` 取自 `closeAction`，只可能是 `'closeApp'`（`create-window.js:24` 初值）或 `'exit'`（`system-menu.js:109`），
+两者都已登记 → 白名单不会卡住退出 app。
+
 **第 2 批（安全闸门 —— 决定风险是"理论"还是"一触即发"）**
-#1 #2 #3 #4
+#1 ✅ #2 #3 #4
 
 **第 3 批（发版链路）**
 #25 #24 #27 #26
