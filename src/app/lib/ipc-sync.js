@@ -21,6 +21,7 @@ const {
 const _ = require('./lodash.js')
 const { getStorageKey } = require('./storage-key')
 const logger = require('./logger')
+const { safeOpenExternal } = require('./safe-open-external')
 
 const isMaximized = () => {
   const {
@@ -61,7 +62,7 @@ module.exports = {
     shell.showItemInFolder(href)
   },
   openExternal: (url) => {
-    shell.openExternal(url)
+    safeOpenExternal(url)
   },
   getArgs: () => {
     return globalState.get('rawArgs')

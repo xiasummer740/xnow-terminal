@@ -225,7 +225,17 @@ function initIpc () {
     return globs
   }
 
+  // 只认对象自己身上的函数。
+  // 不校验的话 `name` 可以是 constructor / __proto__ / toString 这类原型链成员，
+  // 等于把 Object 上的东西也暴露出去（ISSUES #1）
+  const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
+
   ipcMain.on('sync-func', (event, { name, args }) => {
+    if (!hasOwn(ipcSyncFuncs, name)) {
+      console.warn('[安全] 拒绝未登记的同步 IPC 调用:', name)
+      event.returnValue = undefined
+      return
+    }
     event.returnValue = ipcSyncFuncs[name](...args)
   })
   const asyncGlobals = {
@@ -744,6 +754,10 @@ function initIpc () {
   module.exports._bgPingTimer = null
   module.exports._bgPingHosts = []
   ipcMain.handle('async', (event, { name, args }) => {
+    // 同上：只认 asyncGlobals 自己身上的函数（ISSUES #1）
+    if (!hasOwn(asyncGlobals, name)) {
+      throw new Error(`未知的 IPC 调用: ${name}`)
+    }
     return asyncGlobals[name](...args)
   })
   ipcMain.handle('show-open-dialog-sync', async (event, ...args) => {

@@ -91,10 +91,20 @@ export default function AIOutput ({ item }) {
     )
   }
 
+  // AI 输出里的链接必须走 ExternalLink（= 系统浏览器），不能用 ReactMarkdown 的
+  // 默认渲染。默认渲染是裸 <a href>，在主窗口里一点就把整个窗口导航到对方站点，
+  // preload 随之重新注入 → 那个页面的 JS 能通过 IPC 桥读写本机文件（ISSUES #1）。
+  const renderLink = ({ node, href, children, ...rest }) => {
+    return (
+      <Link to={href} {...rest}>{children}</Link>
+    )
+  }
+
   const mdProps = {
     children: response,
     components: {
-      code: renderCode
+      code: renderCode,
+      a: renderLink
     }
   }
 

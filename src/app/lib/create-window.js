@@ -18,6 +18,7 @@ const _ = require('./lodash.js')
 const getPort = require('./get-port')
 const globalState = require('./glob-state')
 const webviewHandler = require('./webview-handler')
+const { safeOpenExternal } = require('./safe-open-external')
 
 exports.createWindow = async function (userConfig) {
   globalState.set('closeAction', 'closeApp')
@@ -85,6 +86,38 @@ exports.createWindow = async function (userConfig) {
     ? process.env.devPort || 5570
     : await getPort()
   const opts = `http://127.0.0.1:${port}/index.html?v=${packInfo.version}`
+
+  // ===== 导航闸门（ISSUES #1）=====
+  // 主窗口只允许停在应用自身页面，其余一律拦下并交给系统浏览器。
+  // 不拦的后果：AI 输出里的外链是裸 <a href>（ReactMarkdown 默认渲染），
+  // 用户一点整个窗口就导航到对方站点，而 preload 会重新注入到那个页面 ——
+  // 对方页面的 JS 即可通过 IPC 桥（window.api.runGlobalAsync）读写本机文件、起进程 → RCE。
+  const appOrigin = new URL(opts).origin
+  const isAppUrl = (url) => {
+    try {
+      return new URL(url).origin === appOrigin
+    } catch (e) {
+      return false
+    }
+  }
+  const guardNavigation = (event, url) => {
+    if (isAppUrl(url)) {
+      return
+    }
+    event.preventDefault()
+    safeOpenExternal(url)
+  }
+  win.webContents.on('will-navigate', guardNavigation)
+  // will-navigate 不覆盖服务端重定向，这条要单独接
+  win.webContents.on('will-redirect', guardNavigation)
+  // window.open / target=_blank 走的是另一条路，不是 will-navigate
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (!isAppUrl(url)) {
+      safeOpenExternal(url)
+    }
+    return { action: 'deny' }
+  })
+
   // If loading the URL fails (e.g. proxy/firewall interference), show error page
   win.webContents.once('did-fail-load', function (event, errorCode, errorDescription) {
     console.error('加载应用页面失败:', errorCode, errorDescription)
