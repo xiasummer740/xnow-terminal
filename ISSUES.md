@@ -13,7 +13,7 @@
 | # | 问题 | 位置 | 状态 |
 |---|---|---|---|
 | 1 | IPC 桥 `runGlobalAsync(name,...)` 无白名单：渲染进程任意 JS 可按名字调主进程**全部**能力（文件读写、进程启动、数据库、已存凭据）。且全应用无 `will-navigate`/`setWindowOpenHandler`，AI 输出里的外链一点即导航 → preload 重新注入 → 直达 RCE | `preload/preload.js:31-42`、`lib/ipc.js:247-252,700-712`、`lib/create-window.js:90-119`、`lib/safe-open-external.js`、`components/ai/ai-output.jsx:97-101` | 已修已验 |
-| 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/ipc.js:142-158` | 待修 |
+| 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/path-safe.js`（原 `lib/ipc.js:142-158`） | 已修已验 |
 | 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:25-35`、`common/uid.js:3`、`server/fs.js:7-10` | 待修 |
 | 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-197` | 待修 |
 | 5 | AI 对话**请求失败即删记录**（`removeAiHistory` → 落库 DELETE），用户刚打的字一起消失且无提示 | `ai/ai-chat-history-item.jsx:99`、`store/common.js:342-349` | 已修已验 |
@@ -172,8 +172,31 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 追到源头：`name` 取自 `closeAction`，只可能是 `'closeApp'`（`create-window.js:24` 初值）或 `'exit'`（`system-menu.js:109`），
 两者都已登记 → 白名单不会卡住退出 app。
 
+### #2 修复说明（路径闸门）
+
+**先复现再修**（`temp/probe-pathsafe.js` 最初逐字照抄旧实现）：实测 6 个口子**全部放行**。
+其中最要命的是 `\\?\C:\Windows\...` —— `path.resolve` 会把 `\\?\` 前缀**原样带过去**（实测确认），
+所以 resolve 结果永远匹配不上 `c:\windows\` 前缀，等于系统目录对 AI 文件工具全开放。
+
+**改法**：抽成独立模块 `lib/path-safe.js`（与 `safe-open-external.js` 同一套路，纯函数、无 electron 依赖，可单元测试）
+- 剥掉 `\\?\` / `\\.\` / `\\?\UNC\` 设备前缀再比对
+- 用 realpath 按**真实落点**判，目录联接指向敏感目录也挡得住；目标不存在时向上找最近已存在祖先并接回剩余段
+- 系统目录改从 `%SystemRoot%` / `%ProgramFiles%` / `%ProgramFiles(x86)%` / `%ProgramData%` 推导，不再写死 `C:`
+- 补用户级敏感目录：`.ssh` / `.gnupg` / `.aws` / **`.xnow-terminal`（本应用自己的降级加密密钥）** / Windows Startup
+- 前缀比对补分隔符边界，`C:\WindowsX` 不再被当成 `C:\Windows` 的子路径
+
+**过程中自己踩的坑（已记，防重犯）**：realpath 回退最初写成「只取父目录真实落点」，
+于是**不存在的** `~/.gnupg` 被收敛成 `~`，家目录整个进黑名单 —— 用户自己的项目全被拦。
+是「正常业务路径必须放行」那条用例当场抓出来的。修法：向上找到已存在祖先后再把剩余段接回去。
+
+**证据**：
+- 单元测试 `test/unit-ci/path-safe.spec.js` **9/9**（全量 36/36）
+- 实机 CDP `temp/verify-issue2.js` **11/11**：`\\?\` 读 SAM/hosts 被拦、`~/.ssh` 与密钥文件被拦、
+  写 Startup 被拦**且确认文件未落盘**、`\\?\` 形式写 Startup 同样被拦、正经临时目录读写未被误伤
+- 反向对照：修之前同一组用例实测全部放行（上面的 probe）
+
 **第 2 批（安全闸门 —— 决定风险是"理论"还是"一触即发"）**
-#1 ✅ #2 #3 #4
+#1 ✅ #2 ✅ #3 #4
 
 **第 3 批（发版链路）**
 #25 #24 #27 #26
