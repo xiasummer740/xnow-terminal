@@ -6,7 +6,10 @@
 const { autoUpdater } = require('electron-updater')
 
 autoUpdater.autoDownload = false
-autoUpdater.autoInstallOnAppQuit = false
+// 下载完成的更新在用户退出应用时静默装上，下次启动就是新版（ISSUES #24）。
+// 这不等于"强制重启"：用户点了退出才生效，不会打断正在做的事，
+// 只是省掉"必须记得点一次立即重启"这一步 —— 即「像微信一样静默」的既定偏好。
+autoUpdater.autoInstallOnAppQuit = true
 
 autoUpdater.logger = {
   info (msg) { console.log('[autoUpdater]', msg) },
@@ -75,8 +78,16 @@ function downloadUpdate () {
   autoUpdater.downloadUpdate()
 }
 
+/**
+ * 用户点了「立即安装并重启」→ 静默安装，不要再弹安装向导（ISSUES #24）
+ *
+ * electron-updater 的签名是 quitAndInstall(isSilent = false, isForceRunAfter = false)，
+ * 而 NsisUpdater.doInstall 里 `if (isSilent) args.push('/S')` ——
+ * 不给参数就**不会**追加 `/S`，用户会看到 NSIS 向导，得自己一路点下去。
+ * 两个参数都给 true：静默安装 + 装完自动把应用拉起来，与按钮文案一致。
+ */
 function quitAndInstall () {
-  autoUpdater.quitAndInstall()
+  autoUpdater.quitAndInstall(true, true)
 }
 
 module.exports = { checkForUpdates, downloadUpdate, quitAndInstall }

@@ -14,9 +14,18 @@ const { readFileSync, writeFileSync } = require('fs')
 const { resolve } = require('path')
 const { inc } = require('semver')
 const { checkMainProcessFresh } = require('./check-src-fresh')
+const { checkBuilderConfig } = require('./check-builder-config')
 
 const ROOT = resolve(__dirname, '../..')
 const bumpType = process.argv[2] || 'patch'
+
+// 打包配置先认一遍（ISSUES #25）：`npm run pb` 会把上游 electerm 的配置拷到根目录，
+// 那份带 channel，产出的清单不叫 latest.yml，客户端永远收不到更新 ——
+// 而打包和发 release 都不会报错。所以连版本号都还没改之前就先拦。
+checkBuilderConfig(
+  JSON.parse(readFileSync(resolve(ROOT, 'electron-builder.json'), 'utf8'))
+)
+console.log('  ✔ electron-builder.json 是本 fork 的配置')
 
 // 读取版本，只改根 package.json
 // work/app/package.json 不用在这里写：下面的 `npm run b` 会先 clean 掉整个 work，

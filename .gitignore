@@ -119,6 +119,7 @@ dist
 ftp-root
 *.asc
 /electron-builder.json
+/electron-builder.json.bak
 
 /dist-loong64
 /work-loong64

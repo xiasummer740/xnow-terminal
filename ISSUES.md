@@ -49,8 +49,8 @@
 | 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
 | 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 待修 |
 | 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 待修 |
-| 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 待修 |
-| 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把 CI 版覆盖到根目录 → 之后本地发版带 `channel: win-nsis`，而 release 里只有 `latest.yml` → **一键更新链路当场断掉** | `build/bin/prepare-electron-build.js:3`、两处 `electron-builder.json` | 待修 |
+| 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 已修已验 |
+| 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把上游配置覆盖到根目录 → 之后本地发版带 `channel: ${env.WORKFLOW_NAME}`，产出的清单不叫 `latest.yml`，而客户端只认 `latest.yml` → **一键更新链路当场断掉**（且打包、发 release 全程不报错） | `build/bin/prepare-electron-build.js`、`build/bin/check-builder-config.js`、两处 `electron-builder.json` | 已修已验 |
 | 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | 待修 |
 | 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身）。实测：148 个文件里 83 个不一致，5 个文件整个缺失（第 1/2 批安全修复全部进不了包） | `build/bin/release-xnow.js:41-52`、`build/bin/check-src-fresh.js` | 已修已验 |
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
@@ -353,7 +353,75 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 而不是像以前那样静默发出一个旧主进程的包。
 
 **第 3 批（发版链路）**
-#27 ✅ #24 #25 #26（#26 待祥哥定方向 —— 是否投入恢复 mac/linux CI，它决定 #25 的修法）
+#27 ✅ #24 ✅ #25 ✅ #26（#26 待祥哥定方向 —— 是否投入恢复 mac/linux CI）
+
+### #24 修复说明（安装要静默）
+
+`electron-updater` 的签名是 `quitAndInstall(isSilent = false, isForceRunAfter = false)`，
+而 `NsisUpdater.doInstall` 里是 `if (options.isSilent) args.push('/S')` ——
+**不给参数就永远不追加 `/S`**，用户点了「立即安装并重启」，看到的是 NSIS 安装向导，
+得自己一路点下去。改成 `quitAndInstall(true, true)`：静默安装 + 装完自动拉起应用，
+跟按钮文案一致，也符合「像微信一样」的既定偏好。
+
+同时把 `autoInstallOnAppQuit` 从 `false` 改成 `true`：下载好的更新在用户退出应用时装上，
+下次启动就是新版。这**不是**"强制重启"——用户点了退出才生效，不打断正在做的事，
+只是省掉"必须记得点一次立即重启"。
+
+**代价/副作用**（必须记）：`autoInstallOnAppQuit = true` 之后，**一旦下载完成，
+用户就没有"这次先不装"的余地了** —— 下次退出应用必定安装。风险不高（下载已完成
+sha512 校验），但如果哪天想留个"我不想现在装"的口子，就把这一行改回 `false`（一行的事）。
+另外界面上的"立即重启安装"按钮只在 `readyToInstall` 时才出现，所以参数不会出现
+"还没下载就点安装"的情形。
+
+**证据**：
+- 单元测试 `test/unit-ci/auto-updater.spec.js` **5/5**（全量 **66/66**）：
+  把 `electron-updater` 换成记录器、加载**真的** `auto-updater.js`，断言实际传出的参数
+- 实机 `temp/verify-issue24.js` **10/10**：启动真 Electron，连**主进程** Node inspector，
+  在运行中的进程里读实参 —— `autoInstallOnAppQuit === true`、`autoDownload === false`；
+  把库里的 `quitAndInstall` 换成记录器后调我们模块，**真的传出 `[true, true]`**
+  （替换成记录器所以没有真的退出安装，验证完应用仍在运行）；
+  并核对 electron-updater 源码里两个参数的落点（`/S`、`--force-run`），证明参数不是形同虚设
+
+### #25 修复说明（打包配置被上游覆盖）
+
+**先说根因，比这条 issue 本身更值得记**：根目录 `electron-builder.json` 在**上游 electerm
+是生成物**（`.gitignore:121` 就有 `/electron-builder.json`，那是上游的痕迹），
+由 `npm run pb` 从 `build/electron-builder.json` 生成；而本 fork 把它当**手写配置**提交了。
+同一个路径既是"上游生成物"又是"fork 的手写配置"，19 个上游 workflow 又都调 `npm run pb`
+—— 误跑一次就静默把发版配置换成上游的。
+
+**改了三个地方**：
+1. `build/bin/check-builder-config.js`（新）：认这份配置是不是本 fork 的，
+   逐条检查都对应一个具体后果 —— `appId`（安装身份，换了老用户更新装不上去）、
+   `productName` / `nsis.artifactName`（发版脚本按名找产物）、`nsis.include`
+   （丢了就没有「升级静默保留用户数据、手动卸载才询问清除」的卸载逻辑）、
+   `win.publish.owner/repo`（发到哪）、以及 **`channel` 必须不存在**
+   （有 channel 时不产出 `latest.yml`，客户端只认 `latest.yml` → 更新永远收不到）
+2. `release-xnow.js`：**在改版本号之前**先校验这份配置 —— 校验放在最前面，
+   因为构建要跑几分钟，等构建完再拦就白跑了
+3. `prepare-electron-build.js`：覆盖前备份成 `.bak`（已存在就不覆盖，留住最早那份）、
+   覆盖后明确喊话"你刚把本 fork 的配置换掉了"+ 恢复命令。
+   备份是为了救**未提交的本地改动** —— 那种情况 `git checkout` 是救不回来的
+
+**代价/副作用**：`npm run pb` 之后根目录配置确实是错的，`npm run rx` 会拒绝执行，
+必须 `git checkout -- electron-builder.json` 才能发版。这是有意的（宁可拦下来），
+但如果不小心在发版前跑了 pb，会多一步恢复动作。
+
+**更彻底的做法（未做，留作候选）**：把 fork 的配置挪到别的路径（如
+`build/electron-builder.xnow.json`），`rx` 用 `--config` 指过去，pb 就永远碰不到它 ——
+从根上消掉这类事故。没做的原因：配置里的相对路径（`icon`、`nsis.include`）
+是相对**项目根**还是**配置文件所在目录**解析的会影响打包结果，必须真打一次包才能验证，
+而真打包要动原生模块目录、还得发一次 release 才能确认更新链路通 —— 不适合顺手做。
+
+**证据**（真跑出来的，不是推演）：
+- 单元测试 `test/unit-ci/release-chain.spec.js` +6 条（全量 **66/66**）：
+  用**真文件**当正反样本 —— 本 fork 那份必须零问题、`build/electron-builder.json`
+  必须被判不可用且点出 `appId` 与 `channel`；另测"只多一个 channel 也要拦"、
+  "channel 是空串不算问题"（防误报）、"配置读不出来判不可用"（不误放行）
+- 端到端实测（真跑了 `npm run pb` 复现事故）：跑 pb → 根配置 `appId` 变成
+  `org.electerm.electerm`、`.bak` 已生成、警告已打印 → 校验器对这份配置
+  **退出码 1** 并列出 7 个问题（含断更新链路的 `channel`）→ `git checkout` 恢复 →
+  校验器**退出码 0** → 工作区干净、`.bak` 被 gitignore 忽略
 #25 #24 #27 #26
 
 **第 4 批（架构债）**
