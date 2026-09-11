@@ -13,6 +13,7 @@ import download from '../common/download'
 import { fixBookmarks } from '../common/db-fix'
 import dayjs from 'dayjs'
 import parseJsonSafe from '../common/parse-json-safe'
+import { notification } from '../components/common/notification'
 
 const {
   version: packVer
@@ -20,6 +21,38 @@ const {
 
 function isJSON (str = '') {
   return str.startsWith('[')
+}
+
+/**
+ * 同步是"全量覆盖"语义：外部给什么，本地就整体替换成什么，
+ * 随后 watch 会把"本地有、外部没有"的记录逐条删库（见 store/watch.js）。
+ * 于是外部的一个空数组 = 删光这一整张表。
+ *
+ * 真实后果：新设备上数据还没上传，一次同步先把服务端写成 []，
+ * 另一台有数据的设备再同步就把自己的书签/配置全删了（ISSUES #7）。
+ *
+ * 注意这条规则只放在"外部数据"入口（同步下载 / 导入），不能放进 watch：
+ * 用户自己多选删光整表是合法操作，在 watch 拦截会让删除不落库、重启复活。
+ */
+function isEmptyOverwrite (name, arr) {
+  if (!Array.isArray(arr) || arr.length) {
+    return false
+  }
+  const local = window.store.getItems(name)
+  return Array.isArray(local) && local.length > 0
+}
+
+// 跳过空数据时给用户一个明确提示，不能静默不同步
+function notifySkippedEmpty (skipped) {
+  if (!skipped.length) {
+    return
+  }
+  const e = window.translate
+  notification.warning({
+    message: e('Skipped empty data sync'),
+    description: `${e('These data are empty on the remote side, keeping local data instead of overwriting')}：${skipped.map(n => e(n)).join('、')}`,
+    duration: 30
+  })
 }
 
 async function fetchData (type, func, args, token, proxy) {
@@ -384,11 +417,12 @@ export default (Store) => {
         store.syncServerStatus[type] = status
 
         const { names, syncConfig } = store.getDataSyncNames()
+        const skipped = []
         for (const n of names) {
           let str = get(gist, `files["${n}.json"].content`)
           if (!str) {
             if (n === settingMap.bookmarks) {
-              throw new Error(('Seems you have a empty WebDAV folder, you can try upload first'))
+              throw new Error(window.translate('Seems you have a empty WebDAV folder, you can try upload first'))
             } else {
               continue
             }
@@ -402,6 +436,10 @@ export default (Store) => {
           } else if (n === settingMap.bookmarks) {
             arr = fixBookmarks(arr)
           }
+          if (isEmptyOverwrite(n, arr)) {
+            skipped.push(n)
+            continue
+          }
           let strOrder = get(gist, `files["${n}.order.json"].content`)
           if (isJSON(strOrder)) {
             strOrder = JSON.parse(strOrder)
@@ -413,6 +451,7 @@ export default (Store) => {
           }
           store.setItems(n, arr)
         }
+        notifySkippedEmpty(skipped)
         if (syncConfig) {
           const userConfig = parseJsonSafe(
             get(gist, 'files["userConfig.json"].content')
@@ -449,11 +488,12 @@ export default (Store) => {
       updateSyncServerStatusFromGist(store, gist, type)
     }
     const { names, syncConfig } = store.getDataSyncNames()
+    const skipped = []
     for (const n of names) {
       let str = get(gist, `files["${n}.json"].content`)
       if (!str) {
         if (n === settingMap.bookmarks) {
-          throw new Error(('Seems you have a empty gist, you can try use existing gist ID or upload first'))
+          throw new Error(window.translate('Seems you have a empty gist, you can try use existing gist ID or upload first'))
         } else {
           continue
         }
@@ -469,6 +509,10 @@ export default (Store) => {
       } else if (n === settingMap.bookmarks) {
         arr = fixBookmarks(arr)
       }
+      if (isEmptyOverwrite(n, arr)) {
+        skipped.push(n)
+        continue
+      }
       let strOrder = get(gist, `files["${n}.order.json"].content`)
       if (isJSON(strOrder)) {
         strOrder = JSON.parse(strOrder)
@@ -480,6 +524,7 @@ export default (Store) => {
       }
       store.setItems(n, arr)
     }
+    notifySkippedEmpty(skipped)
     if (syncConfig) {
       const userConfig = parseJsonSafe(
         get(gist, 'files["userConfig.json"].content')
@@ -571,15 +616,25 @@ export default (Store) => {
     const { store } = window
     const objs = JSON.parse(txt)
     const { names } = store.getDataSyncNames(true)
+    const skipped = []
     for (const n of names) {
+      // 导入文件里根本没有这张表 = 外部没表态，不能拿它清空本地（ISSUES #7 同类）
+      if (!Array.isArray(objs[n])) {
+        continue
+      }
       let arr = objs[n]
       if (n === settingMap.terminalThemes) {
         arr = store.fixThemes(arr)
       } else if (n === settingMap.bookmarks) {
         arr = fixBookmarks(arr)
       }
+      if (isEmptyOverwrite(n, arr)) {
+        skipped.push(n)
+        continue
+      }
       store.setItems(n, arr)
     }
+    notifySkippedEmpty(skipped)
     if (objs.config) {
       store.updateConfig(objs.config)
       store.setTheme(objs.config.theme)

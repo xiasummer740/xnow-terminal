@@ -200,6 +200,12 @@ const localKeys = {
   'User ID': '用户编号',
   'Skip SSL verify': '跳过 SSL 证书校验',
 
+  // 同步/导入时拒绝用空数据覆盖本地（ISSUES #7）
+  'Skipped empty data sync': '已跳过空数据同步',
+  'These data are empty on the remote side, keeping local data instead of overwriting': '服务端这些数据是空的，为避免清空本地数据已跳过',
+  'Seems you have a empty gist, you can try use existing gist ID or upload first': '服务端的 Gist 是空的，请先上传，或改用有数据的 Gist 编号',
+  'Seems you have a empty WebDAV folder, you can try upload first': '服务端的 WebDAV 文件夹是空的，请先上传',
+
   // UI 主题编辑器里的色位名（展示用标签，改的只是显示，取值仍用原 key）
   main: '主色',
   'main-dark': '主色（深）',
