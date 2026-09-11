@@ -50,6 +50,9 @@ async function load () {
     return _get(window.langMap, `[${lang}].lang`)
   }
   window.translate = txt => {
+    // 传空值直接返回：否则 str 为 undefined 时 capitalizeFirstLetter 里的
+    // charAt 会抛 TypeError，把整个界面搞崩（e(某个可能不存在的映射) 很容易踩到）
+    if (txt === undefined || txt === null || txt === '') return txt
     const lang = window.getLang()
     const str = _get(lang, `[${txt}]`) || txt
     return window.capitalizeFirstLetter(str)

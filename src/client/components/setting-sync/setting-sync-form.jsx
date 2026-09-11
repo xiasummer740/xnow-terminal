@@ -148,16 +148,16 @@ export default function SyncForm (props) {
   function createLabel (name, text) {
     return (
       <span>
-        {isCustom ? (customNameMapper[name] || name) : name}
+        {e(isCustom ? (customNameMapper[name] || name) : name)}
         <HelpIcon link={getTokenCreateGuideUrl()} />
       </span>
     )
   }
   function createPlaceHolder (name) {
     if (syncType === syncTypes.custom) {
-      return customNameMapper[name]
+      return e(customNameMapper[name])
     }
-    return syncType + ' ' + otherNameMapper[name]
+    return e(syncType + ' ' + otherNameMapper[name])
   }
   function createId (name) {
     return 'sync-input-' + name + '-' + syncType
@@ -362,7 +362,7 @@ export default function SyncForm (props) {
         rules={[{
           max: 1100, message: '1100 chars max'
         }, {
-          required: true, message: createPlaceHolder('token') + ' required'
+          required: true, message: createPlaceHolder('token') + e('required')
         }]}
       >
         <Password

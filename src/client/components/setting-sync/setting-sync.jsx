@@ -11,6 +11,8 @@ import { pick } from 'lodash-es'
 import { auto } from 'manate/react'
 import deepCopy from 'json-deep-copy'
 
+const e = window.translate
+
 export default auto(function SyncSettingEntry (props) {
   const handleChange = (key) => {
     window.store.syncType = key
@@ -63,7 +65,7 @@ export default auto(function SyncSettingEntry (props) {
   const syncItems = Object.keys(syncTypes).map(type => {
     return {
       key: type,
-      label: type,
+      label: e(type),
       children: null
     }
   })

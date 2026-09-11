@@ -1,5 +1,8 @@
 import { ColorPicker } from '../bookmark-form/common/color-picker'
 
+// 色位名（main / terminal:red 之类）是主题配置里的 key，这里只翻显示，取值仍用原 key
+const e = window.translate
+
 export default function ThemeEditSlot (props) {
   const {
     name,
@@ -17,7 +20,7 @@ export default function ThemeEditSlot (props) {
   }
   return (
     <div className='theme-edit-slot'>
-      <span className='iblock mg1r'>{name}</span>
+      <span className='iblock mg1r'>{e(name)}</span>
       <span className='iblock'>
         <ColorPicker
           {...pickerProps}
