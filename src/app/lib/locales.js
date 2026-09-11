@@ -3,6 +3,7 @@
  */
 
 const { isDev, defaultLang } = require('../common/runtime-constants')
+const { applyZhPatch } = require('../common/locale-zh-patch')
 const { resolve } = require('path')
 
 function getOsLocale () {
@@ -22,10 +23,12 @@ async function loadLocales () {
   const langs = require(resolve(localeFolder, 'list.json'))
     .map(fileName => {
       const filePath = resolve(localeFolder, fileName)
-      const lang = require(filePath)
+      const id = fileName.replace('.js', '')
+      // 补上上游缺失的中文词条，避免界面回退显示英文
+      const lang = applyZhPatch(id, require(filePath))
       return {
         path: filePath,
-        id: fileName.replace('.js', ''),
+        id,
         name: lang.name,
         reg: lang.match,
         lang: lang.lang

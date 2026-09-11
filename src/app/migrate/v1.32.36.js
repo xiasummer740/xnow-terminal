@@ -8,13 +8,13 @@ const log = require('../common/log')
 const { buildSshTunnels } = require('../common/build-ssh-tunnel')
 
 async function fixBookmarks () {
-  log.info('Start update bookmark Ssh Tunnels config')
+  log.info('开始更新书签 SSH 隧道配置')
   const arr = await dbAction('bookmarks', 'find', {})
   const len = arr.length
   let i = 0
-  log.info('bookmarks count:', len)
+  log.info('书签数量：', len)
   for (const b of arr) {
-    log.info(i + 1, b._id, b.sshTunnel ? 'has sshTunnel' : 'no sshTunnel')
+    log.info(i + 1, b._id, b.sshTunnel ? '有 sshTunnel' : '无 sshTunnel')
     if (b.sshTunnel) {
       const sshTunnels = buildSshTunnels(b)
       delete b.sshTunnel
@@ -37,8 +37,8 @@ async function fixAll () {
 
 module.exports = async () => {
   const versionTo = '1.32.36'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

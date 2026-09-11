@@ -15,7 +15,7 @@ async function updateDBVersion (toVersion) {
   const versionQuery = {
     _id: 'version'
   }
-  log.info('upgrade db version to', toVersion)
+  log.info('将数据库版本升级到', toVersion)
   await dbAction('data', 'update', versionQuery, {
     ...versionQuery,
     value: toVersion
@@ -24,7 +24,7 @@ async function updateDBVersion (toVersion) {
   })
     .catch(e => {
       log.error(e)
-      log.error('upgrade db version error', toVersion)
+      log.error('升级数据库版本出错', toVersion)
     })
   await dbAction('dbUpgradeLog', 'insert', {
     time: Date.now(),
@@ -32,7 +32,7 @@ async function updateDBVersion (toVersion) {
   })
     .catch(e => {
       log.error(e)
-      log.error('insert dbUpgradeLog error', toVersion)
+      log.error('插入 dbUpgradeLog 出错', toVersion)
     })
 }
 

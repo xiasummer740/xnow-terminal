@@ -46,7 +46,7 @@ function checkMigrate () {
  * Migrate all data from NeDB to SQLite and backup NeDB files
  */
 async function migrate () {
-  log.info('Starting migration from NeDB (v1) to SQLite (v2)...')
+  log.info('开始从 NeDB (v1) 迁移到 SQLite (v2)...')
   // nedb-instance: raw nedb without enc/dec (legacy data was never encrypted)
   const { dbAction: nedbDbAction } = require('./nedb-instance')
   // Use plain sqlite (no enc/dec) for migration writes: safeStorage encryption
@@ -68,20 +68,20 @@ async function migrate () {
     const nedbPath = reso(table)
 
     if (existsSync(nedbPath)) {
-      log.info(`Migrating table: ${table}`)
+      log.info(`正在迁移表：${table}`)
 
       // Read all data from NeDB (unencrypted legacy data)
       const nedbData = await nedbDbAction(table, 'find', {})
 
       if (nedbData && nedbData.length > 0) {
-        log.info(`Found ${nedbData.length} records in ${table}`)
+        log.info(`在 ${table} 中找到 ${nedbData.length} 条记录`)
 
         // Insert/update data into SQLite via db.js so enc/dec is applied
         for (const record of nedbData) {
           // Ensure record has an _id field
           const recordId = record._id || record.id
           if (!recordId) {
-            log.warn(`Record in ${table} has no _id or id field, skipping:`, record)
+            log.warn(`表 ${table} 中的记录没有 _id 或 id 字段，已跳过：`, record)
             continue
           }
           // Use update with upsert option to handle existing records gracefully
@@ -92,25 +92,25 @@ async function migrate () {
           )
         }
 
-        log.info(`Successfully migrated ${nedbData.length} records from ${table}`)
+        log.info(`已成功从 ${table} 迁移 ${nedbData.length} 条记录`)
       } else {
-        log.info(`Table ${table} is empty, nothing to migrate`)
+        log.info(`表 ${table} 为空，无需迁移`)
       }
 
       // Rename NeDB file to .bak
       const backupPath = nedbPath + '.bak'
       try {
         renameSync(nedbPath, backupPath)
-        log.info(`Backed up ${nedbPath} to ${backupPath}`)
+        log.info(`已将 ${nedbPath} 备份为 ${backupPath}`)
       } catch (renameError) {
-        log.error(`Error backing up ${nedbPath}:`, renameError)
+        log.error(`备份 ${nedbPath} 出错：`, renameError)
       }
     } else {
-      log.info(`NeDB file for ${table} does not exist, skipping`)
+      log.info(`表 ${table} 对应的 NeDB 文件不存在，已跳过`)
     }
   }
 
-  log.info('Migration from NeDB to SQLite completed successfully')
+  log.info('已成功完成从 NeDB 到 SQLite 的迁移')
   return true
 }
 

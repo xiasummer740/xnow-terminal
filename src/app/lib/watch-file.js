@@ -11,11 +11,11 @@ const onWatch = _.debounce(
         const text = fs.readFileSync(filePath, 'utf8')
         globalState.get('win').webContents.send('file-change', text)
       } else {
-        log.info('Watched file no longer exists')
+        log.info('监视的文件已不存在')
         globalState.get('win').webContents.send('file-deleted')
       }
     } catch (e) {
-      log.error('Error reading file:', e)
+      log.error('读取文件出错：', e)
       globalState.get('win').webContents.send('file-read-error', e.message)
     }
   },

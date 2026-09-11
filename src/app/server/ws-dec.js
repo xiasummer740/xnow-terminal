@@ -10,7 +10,7 @@ const wsDec = (ws) => {
     try {
       ws.send(JSON.stringify(msg))
     } catch (e) {
-      log.error('ws send error')
+      log.error('WS 发送出错')
       log.error(e)
     }
   }

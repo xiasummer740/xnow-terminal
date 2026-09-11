@@ -17,6 +17,9 @@ import generate from '../../common/uid'
 import fs from '../../common/fs'
 import { safeGetItem, safeSetItem } from '../../common/safe-local-storage'
 
+// 本文件内 e 已被用作事件参数名，这里显式调用避免遮蔽
+const t = window.translate
+
 const batchOpEditorKey = 'batch-op-editor-content'
 const workflowExample = `[
   {
@@ -169,7 +172,7 @@ export default function BatchOpEditor ({ widget }) {
       <BatchOpAlert />
       <Flex className='mg2y' gap='small'>
         <Button onClick={handleTemplate} type='dashed'>
-          Load Template
+          {t('Load Template')}
         </Button>
         <Button
           onClick={handleExecute}
@@ -178,7 +181,7 @@ export default function BatchOpEditor ({ widget }) {
           disabled={executing}
           icon={<PlayCircleOutlined />}
         >
-          Execute Workflow
+          {t('Execute Workflow')}
         </Button>
       </Flex>
       <SimpleEditor

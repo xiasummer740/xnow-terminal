@@ -9,7 +9,7 @@ const log = require('../common/log')
 const { buildProxyString } = require('../lib/build-proxy')
 
 async function fixConf () {
-  log.info('Start update global proxy config')
+  log.info('开始更新全局代理配置')
   const q = {
     _id: userConfigId
   }
@@ -34,11 +34,11 @@ async function fixConf () {
 }
 
 async function fixBookmarks () {
-  log.info('Start update bookmark proxy config')
+  log.info('开始更新书签代理配置')
   const arr = await dbAction('bookmarks', 'find', {})
   const len = arr.length
   let i = 0
-  log.info('bookmarks count:', len)
+  log.info('书签数量：', len)
   for (const b of arr) {
     const proxy = buildProxyString(b.proxy || {})
     log.info(i + 1, b._id, proxy)
@@ -59,8 +59,8 @@ async function fixAll () {
 
 module.exports = async () => {
   const versionTo = '1.27.17'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：已升级到 v${versionTo}`)
 }

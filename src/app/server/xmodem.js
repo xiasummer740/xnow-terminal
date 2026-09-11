@@ -323,7 +323,7 @@ class XmodemSession {
 
     // Validate block number complement
     if ((blockNum ^ blockNumInv) !== 0xFF) {
-      log.warn('XMODEM: block number complement mismatch')
+      log.warn('XMODEM：块编号反码不匹配')
       this.sendNak()
       return
     }
@@ -333,7 +333,7 @@ class XmodemSession {
       const receivedCrc = (packet[dataEnd] << 8) | packet[dataEnd + 1]
       const calculatedCrc = crc16Xmodem(data)
       if (receivedCrc !== calculatedCrc) {
-        log.warn('XMODEM: CRC mismatch')
+        log.warn('XMODEM：CRC 不匹配')
         this.sendNak()
         return
       }
@@ -343,7 +343,7 @@ class XmodemSession {
         checksum = (checksum + data[i]) & 0xFF
       }
       if (checksum !== packet[dataEnd]) {
-        log.warn('XMODEM: checksum mismatch')
+        log.warn('XMODEM：校验和不匹配')
         this.sendNak()
         return
       }
@@ -357,7 +357,7 @@ class XmodemSession {
         this.sendAck()
         return
       }
-      log.warn(`XMODEM: expected block ${this.expectedBlock & 0xFF}, got ${blockNum}`)
+      log.warn(`XMODEM：期望块号 ${this.expectedBlock & 0xFF}，实际收到 ${blockNum}`)
       this.sendCan()
       this.endSession()
       return
@@ -447,7 +447,7 @@ class XmodemSession {
   sendNak () {
     this.retries++
     if (this.retries > MAX_RETRIES) {
-      log.error('XMODEM: max retries exceeded')
+      log.error('XMODEM：超过最大重试次数')
       this.sendCan()
       this.endSession()
       return
@@ -574,7 +574,7 @@ class XmodemSession {
           size: file.size
         })
       } catch (e) {
-        log.error('XMODEM: failed to open file', e)
+        log.error('XMODEM：打开文件失败', e)
         this.sendCan()
         this.endSession()
         return
@@ -600,7 +600,7 @@ class XmodemSession {
     try {
       fs.readSync(this.uploadFd, buf, 0, readSize, this.sentBytes)
     } catch (e) {
-      log.error('XMODEM: failed to read file', e)
+      log.error('XMODEM：读取文件失败', e)
       this.sendCan()
       this.endSession()
       return
@@ -663,7 +663,7 @@ class XmodemSession {
         // Retransmit current block
         this.retries++
         if (this.retries > MAX_RETRIES) {
-          log.error('XMODEM: max retries exceeded during send')
+          log.error('XMODEM：发送过程中超过最大重试次数')
           this.sendCan()
           this.endSession()
           return
@@ -796,12 +796,12 @@ class XmodemSession {
     this.clearSendTimeout()
 
     if (this.downloadStream) {
-      try { this.downloadStream.end() } catch (e) { log.error('Error closing download stream', e) }
+      try { this.downloadStream.end() } catch (e) { log.error('关闭下载流出错', e) }
       this.downloadStream = null
     }
 
     if (this.uploadFd) {
-      try { fs.closeSync(this.uploadFd) } catch (e) { log.error('Error closing upload file', e) }
+      try { fs.closeSync(this.uploadFd) } catch (e) { log.error('关闭上传文件出错', e) }
       this.uploadFd = null
     }
 

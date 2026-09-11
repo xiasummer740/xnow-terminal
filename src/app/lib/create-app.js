@@ -14,36 +14,36 @@ let conf = {}
 // GPU error suggestion message
 const GPU_ERROR_SUGGESTION = `
 ================================================================================
-⚠️  GPU Process Error Detected
+⚠️  检测到 GPU 进程错误
 ================================================================================
-If you encounter GPU process crashes (exit_code=-2147483645 or similar),
-try running xnow-terminal with one of these flags:
+如果遇到 GPU 进程崩溃（exit_code=-2147483645 或类似值），
+请尝试用以下任一参数启动 xnow-terminal：
 
-  1. --no-sandbox          (Recommended - run without sandbox)
-  2. --disable-gpu        (Disable GPU rendering)
-  3. --disable-gpu-sandbox (Disable GPU sandbox)
-  4. --disable-hardware-acceleration
+  1. --no-sandbox          （推荐 —— 不使用沙箱运行）
+  2. --disable-gpu        （禁用 GPU 渲染）
+  3. --disable-gpu-sandbox （禁用 GPU 沙箱）
+  4. --disable-hardware-acceleration （禁用硬件加速）
 
-Or set environment variable:
+或设置环境变量：
   set DISABLE_GPU=1
 
-Example:
+示例：
   xnow-terminal.exe --no-sandbox
-  or
+  或
   set DISABLE_GPU=1 && xnow-terminal.exe
 ================================================================================
 `
 
 // Handle GPU process crashes
 app.on('gpu-process-crashed', (event, killed) => {
-  log.error(`GPU process crashed, killed: ${killed}`)
+  log.error(`GPU 进程崩溃，已终止：${killed}`)
   log.error(GPU_ERROR_SUGGESTION)
 })
 
 // Handle render process gone events
 app.on('render-process-gone', (event, webContents, details) => {
   if (details.reason === 'crashed' || details.reason === 'abnormal-exit') {
-    log.error(`Render process gone: ${details.reason}`, details)
+    log.error(`渲染进程已退出：${details.reason}`, details)
     log.error(GPU_ERROR_SUGGESTION)
   }
 })

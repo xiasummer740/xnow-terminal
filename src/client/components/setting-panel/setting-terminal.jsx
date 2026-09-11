@@ -332,7 +332,7 @@ export default class SettingTerminal extends Component {
       <div className='pd2b'>
         <div className='pd1b'>
           <Tooltip
-            title='eg: https://xx.com/xx.png or /path/to/xx.png'
+            title={e('eg: https://xx.com/xx.png or /path/to/xx.png')}
           >
             <AutoComplete
               value={value}
@@ -473,7 +473,7 @@ export default class SettingTerminal extends Component {
     const tip = (
       <div>
         <span className='mg1r'>{e('supportRegexp')}</span>
-        <Link to={regexHelpLink}>wiki</Link>
+        <Link to={regexHelpLink}>{e('wiki')}</Link>
       </div>
     )
     const startDirectoryLocalTxt = `${e('startDirectory')}:${e('local')}`

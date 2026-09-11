@@ -20,7 +20,7 @@ class TerminalLocal extends TerminalBase {
       const cols = this.initOptions.cols || 80
       const rows = this.initOptions.rows || 30
 
-      log.debug('[local-term] spawning:', shell, cols + 'x' + rows)
+      log.debug('[local-term] 正在启动：', shell, cols + 'x' + rows)
 
       this.term = pty.spawn(shell, [], {
         name: 'xterm-color',
@@ -32,12 +32,12 @@ class TerminalLocal extends TerminalBase {
 
       this.isLocal = true
       globalState.setSession(this.pid, this)
-      log.debug('[local-term] spawned PID:', this.term.pid)
+      log.debug('[local-term] 已启动 PID：', this.term.pid)
 
       // Data forwarding via session-server's term.on('data') → this.on()
       const origOn = this.on.bind(this)
       this.on = (event, cb) => {
-        log.debug('[local-term] on event:', event)
+        log.debug('[local-term] 事件：', event)
         if (event === 'close') {
           return this.term.on('exit', cb)
         }
@@ -46,7 +46,7 @@ class TerminalLocal extends TerminalBase {
 
       return Promise.resolve()
     } catch (e) {
-      log.error('[local-term] init error:', e.message)
+      log.error('[local-term] 初始化错误：', e.message)
       return Promise.reject(new Error('本地终端启动失败: ' + e.message))
     }
   }
@@ -61,7 +61,7 @@ class TerminalLocal extends TerminalBase {
 
   write (data) {
     const str = Buffer.isBuffer(data) ? data.toString('utf8') : data
-    log.debug('[local-term] → write(' + str.length + '):', str.substring(0, 80))
+    log.debug('[local-term] → 写入(' + str.length + ')：', str.substring(0, 80))
     this.term.write(str)
   }
 

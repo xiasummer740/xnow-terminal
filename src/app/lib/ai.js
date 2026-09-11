@@ -65,7 +65,7 @@ exports.AIchatWithTools = async (messages, model, baseURL, path, apiKey, proxy, 
       message: choice.message
     }
   } catch (e) {
-    log.error('AI chat with tools error', e)
+    log.error('AI 工具对话出错', e)
     return { error: e.message }
   }
 }
@@ -140,7 +140,7 @@ exports.AIchat = async (
       }
     }
   } catch (e) {
-    log.error('AI chat error')
+    log.error('AI 对话出错')
     log.error(e)
     return {
       error: e.message,
@@ -200,7 +200,7 @@ function processStream (sessionId, sessionData) {
             sessionData.content += data.choices[0].delta.content
           }
         } catch (e) {
-          log.error('Error parsing stream data:', e)
+          log.error('解析流数据出错：', e)
         }
       }
     }

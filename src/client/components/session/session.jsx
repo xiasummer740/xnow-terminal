@@ -520,7 +520,7 @@ export default class SessionWrapper extends Component {
     }
     return (
       <div className='type-tab'>
-        <span className='mg1r'>Try <b>Shift + Backspace</b>?</span>
+        <span className='mg1r'>{e('Try')} <b>Shift + Backspace</b>?</span>
         <CloseOutlined
           onClick={this.handleDismissDelKeyTip}
           className='pointer'

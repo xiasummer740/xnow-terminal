@@ -8,13 +8,13 @@ const log = require('../common/log')
 const { buildRunScripts } = require('../common/build-run-scripts')
 
 async function fixBookmarks () {
-  log.info('Start update bookmark loginScript config')
+  log.info('开始更新书签 loginScript 配置')
   const arr = await dbAction('bookmarks', 'find', {})
   const len = arr.length
   let i = 0
-  log.info('bookmarks count:', len)
+  log.info('书签数量：', len)
   for (const b of arr) {
-    log.info(i + 1, b._id, b.loginScript ? 'has loginScript' : 'no loginScript')
+    log.info(i + 1, b._id, b.loginScript ? '有 loginScript' : '无 loginScript')
     if (b.loginScript) {
       const runScripts = buildRunScripts(b)
       delete b.loginScript
@@ -36,8 +36,8 @@ async function fixAll () {
 
 module.exports = async () => {
   const versionTo = '1.34.20'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

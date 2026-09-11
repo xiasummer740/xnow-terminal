@@ -95,7 +95,7 @@ function widgetRun (instanceConfig) {
     }
 
     server.on('client-error', ({ connection, context, error }) => {
-      log.info('FTP client error:', error)
+      log.info('FTP 客户端错误：', error)
     })
 
     return new Promise((resolve, reject) => {
@@ -108,13 +108,13 @@ function widgetRun (instanceConfig) {
             url,
             path: config.directory
           }
-          const msg = `${widgetInfo.name} is running at ${serverInfo.url}`
+          const msg = `${widgetInfo.name} 正在运行：${serverInfo.url}`
           log.info(msg)
-          log.info(`Serving files from: ${serverInfo.path}`)
+          log.info(`文件服务目录：${serverInfo.path}`)
           if (!config.anonymous) {
-            log.info(`Login credentials: ${config.username} / ${config.password}`)
+            log.info(`登录凭证：${config.username} / ${config.password}`)
           } else {
-            log.info('Anonymous access enabled')
+            log.info('已启用匿名访问')
           }
           resolve({ serverInfo, msg, success: true })
         })
@@ -127,16 +127,16 @@ function widgetRun (instanceConfig) {
       if (server) {
         server.close()
           .then(() => {
-            log.info(`${widgetInfo.name} has been stopped`)
+            log.info(`${widgetInfo.name} 已停止`)
             server = null
             resolve()
           })
           .catch((err) => {
-            log.error('Error stopping the FTP server:', err)
+            log.error('停止 FTP 服务器出错：', err)
             reject(err)
           })
       } else {
-        log.info(`${widgetInfo.name} is not running`)
+        log.info(`${widgetInfo.name} 未在运行`)
         resolve()
       }
     })

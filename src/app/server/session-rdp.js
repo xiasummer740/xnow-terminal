@@ -33,7 +33,7 @@ class TerminalRdp extends TerminalBase {
    */
   start = async (width, height) => {
     if (!this.ws) {
-      log.error(`[RDP:${this.pid}] No WebSocket available`)
+      log.error(`[RDP:${this.pid}] 没有可用的 WebSocket`)
       return
     }
     this.width = width
@@ -62,7 +62,7 @@ class TerminalRdp extends TerminalBase {
 
   resize () {
     // IronRDP WASM 在浏览器端处理分辨率变化，通过已有中继发送 resize PDU
-    log.debug(`[RDP:${this.pid}] resize(cols/rows) ignored — IronRDP WASM handles resolution in-browser`)
+    log.debug(`[RDP:${this.pid}] resize(cols/rows) 已忽略 — IronRDP WASM 在浏览器端处理分辨率`)
   }
 
   test = async () => {
@@ -110,7 +110,7 @@ class TerminalRdp extends TerminalBase {
       try {
         this.ws.close()
       } catch (e) {
-        log.debug(`[RDP:${this.pid}] ws.close() error: ${e.message}`)
+        log.debug(`[RDP:${this.pid}] ws.close() 出错：${e.message}`)
       }
       delete this.ws
     }

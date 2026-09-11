@@ -27,7 +27,7 @@ const get = async (key) => {
   })
     .catch(e => {
       log.error(e)
-      log.error('last state get error')
+      log.error('获取最后状态出错')
     })
   return res ? res.value : null
 }

@@ -24,7 +24,7 @@ function getStorageKey () {
       }
     }
   } catch (e) {
-    log.error('[storage-key] read error:', e.message)
+    log.error('[storage-key] 读取出错：', e.message)
   }
   if (!key) {
     key = randomBytes(32).toString('base64')
@@ -36,7 +36,7 @@ function getStorageKey () {
       const enc = safeEncrypt(key)
       fs.writeFileSync(keyFilePath, enc, 'utf8')
     } catch (e) {
-      log.error('[storage-key] write error:', e.message)
+      log.error('[storage-key] 写入出错：', e.message)
     }
   }
   _cachedStorageKey = key

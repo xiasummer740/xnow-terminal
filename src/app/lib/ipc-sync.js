@@ -43,7 +43,7 @@ module.exports = {
     try {
       return !!require('node-pty')
     } catch (err) {
-      log.error('Failed to load node-pty:', err)
+      log.error('加载 node-pty 失败：', err)
       return false
     }
   },

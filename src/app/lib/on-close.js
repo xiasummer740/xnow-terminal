@@ -24,7 +24,7 @@ exports.onClose = async function (e) {
     globalState.set('closeAction', '')
     return e.preventDefault()
   }
-  log.debug('Closing app')
+  log.debug('正在关闭应用')
   const childPid = globalState.get('childPid')
   childPid && process.kill(childPid)
   process.on('uncaughtException', function () {
@@ -32,7 +32,7 @@ exports.onClose = async function (e) {
     childPid && process.kill(childPid)
     process.exit(0)
   })
-  log.debug('Child process killed')
+  log.debug('子进程已终止')
   // await dbAction('data', 'update', {
   //   _id: 'exitStatus'
   // }, {

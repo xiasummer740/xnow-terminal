@@ -11,6 +11,7 @@ import { formItemLayout } from '../../../common/form-layout'
 
 const FormItem = Form.Item
 const { Option } = Select
+const e = window.translate
 
 // Available cipher options from ssh2-alg.js
 const cipherOptions = [
@@ -86,7 +87,7 @@ export default function renderX11 ({ form }) {
     <>
       <FormItem
         {...formItemLayout}
-        label='cipher'
+        label={e('cipher')}
         name='cipher'
       >
         <Select
@@ -100,7 +101,7 @@ export default function renderX11 ({ form }) {
       </FormItem>
       <FormItem
         {...formItemLayout}
-        label='serverHostKey'
+        label={e('serverHostKey')}
       >
         <FormItem
           {...formItemLayout}
@@ -122,13 +123,13 @@ export default function renderX11 ({ form }) {
             onClick={setDefaults}
             size='small'
           >
-            Set default cipher and serverHostKey
+            {e('Set default cipher and serverHostKey')}
           </Button>
         </div>
       </FormItem>
       <FormItem
         {...formItemLayout}
-        label='x11'
+        label={e('x11')}
         name='x11'
         valuePropName='checked'
       >

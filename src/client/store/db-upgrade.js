@@ -29,14 +29,14 @@ export default (Store) => {
     }
     if (shouldMigrate) {
       mod = Modal.info({
-        title: 'Migrating database',
-        content: 'Migrating database... please wait',
+        title: window.translate('Migrating database'),
+        content: window.translate('Migrating database... please wait'),
         ...commonProps
       })
       await window.pre.runGlobalAsync('migrate')
       mod.update({
-        title: 'Done',
-        content: 'Database Migrated',
+        title: window.translate('Done'),
+        content: window.translate('Database Migrated'),
         okButtonProps: {}
       })
       await delay(2000)
@@ -48,14 +48,14 @@ export default (Store) => {
         packVersion
       } = shouldUpgrade
       mod = Modal.info({
-        title: 'Upgrading database',
-        content: `Upgrading database... from v${dbVersion} to v${packVersion} please wait`,
+        title: window.translate('Upgrading database'),
+        content: `正在升级数据库…从 v${dbVersion} 升级到 v${packVersion}，请稍候`,
         ...commonProps
       })
       await window.pre.runGlobalAsync('doUpgrade')
       mod.update({
-        title: 'Done',
-        content: 'Database Upgraded',
+        title: window.translate('Done'),
+        content: window.translate('Database Upgraded'),
         okButtonProps: {}
       })
       await delay(2000)

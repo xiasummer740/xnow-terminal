@@ -65,7 +65,7 @@
 
 | # | 问题 | 位置 | 状态 |
 |---|---|---|---|
-| 33 | **界面显示英文原文**：61 个 `e()/t()` 用到的 key 在语言包里不存在，`translate` 回退为 key 本身。实测中文界面出现 `custom` / `Close` / `gist` / `Done` / `noData` / `fullscreen` / `SSH Agent Path`。其中 `e('Opacity')` vs 语言包 `opacity` 属**纯大小写不匹配**，改一处即可 | `entry/basic.js:52-56` + 60 处调用点 | 待修 |
+| 33 | **界面显示英文原文**：61 个 `e()/t()` 用到的 key 在语言包里不存在，`translate` 回退为 key 本身。实测中文界面出现 `custom` / `Close` / `gist` / `Done` / `noData` / `fullscreen` / `SSH Agent Path`。其中 `e('Opacity')` vs 语言包 `opacity` 属**纯大小写不匹配**，改一处即可 | `entry/basic.js:52-56` + 60 处调用点 | 已修已验 |
 | 34 | **17 个孤儿组件**（零 import），其中 `vps-dashboard/monitor-{cards,detail,table}.jsx` + `tab-monitor.jsx` 合计 **约 31.7KB 死 UI**；`ai-chat-entry.jsx` / `ai-float-window.jsx` 同样零引用 | 各文件 | 待修 |
 | 35 | **504 行硬编码中文**（65 个文件），集中在自研模块：ai 131 / terminal-info 105 / vps-dashboard 67 / deploy 35 → 自研功能实际只支持中文 | 见 `temp/hardcoded-zh.js` 输出 | 待修 |
 | 36 | 新增一个工具要改 **5 处**（schema、switch、mcp-handler 第二个 switch、TAB_ID_TOOLS、toolIcons），已造成实际能力缺失：store 有 32 个 `mcp*` 能力，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `ai/agent-tools.js`、`store/mcp-handler.js`、`widgets/widget-mcp-server.js` | 待修 |
@@ -84,6 +84,8 @@
 | 49 | 保存配置用 100ms `debounce` 且 `beforeExit` **不 flush** → 刚改完设置就关窗会丢 | `store/watch.js:86-91` | 待修 |
 | 50 | `saveUserConfig` 跨 await 读-改-写（TOCTOU），并发保存互相覆盖 | `user-config-controller.js:31-52` | 待修 |
 | 51 | 3 个继承自上游的死代码文件零引用：`download-mirrors.js`、`get-category-color.js`、`key-shift-pressed.js` | `client/common/` | 待修 |
+| 52 | **用了 `log.*` 但从未 import `log`** → DNS 解析失败时不是记日志，而是抛 `ReferenceError: log is not defined`（Promise 内抛出 = 未处理拒绝）。写法上属"错误处理路径反而制造错误" | `common/lookup.js:10,19`（走 `lib/ipc.js:252` 暴露给渲染进程） | 已修已验 |
+| 53 | **同上**：主题列表加载失败时 `log.info(e)` 抛 ReferenceError | `lib/iterm-theme.js:8` | 已修已验 |
 
 ---
 

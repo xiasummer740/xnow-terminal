@@ -37,8 +37,8 @@ async function fixAll () {
 
 module.exports = async () => {
   const versionTo = '1.3.9'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

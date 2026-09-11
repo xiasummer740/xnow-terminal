@@ -29,12 +29,12 @@ export default function ResolutionForm (props) {
   }
   const cols = [
     {
-      title: 'NO.',
+      title: window.translate('NO.'),
       dataIndex: 'index',
       key: 'index',
       render: (k) => k
     }, {
-      title: 'Resolutions',
+      title: window.translate('Resolutions'),
       key: 'customResolutions',
       render: (k, item) => {
         return `${item.width}x${item.height}`

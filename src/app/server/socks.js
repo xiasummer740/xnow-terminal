@@ -26,7 +26,7 @@ function parseUrl (str) {
   try {
     return new URL(str)
   } catch (e) {
-    log.info(`parse url error: ${e.message}, url: ${str}`)
+    log.info(`解析 URL 出错：${e.message}，URL：${str}`)
   }
 }
 
@@ -69,7 +69,7 @@ module.exports = (initOptions) => {
       }
       request(opts)
         .on('error', (e) => {
-          log.error(`fail to connect proxy: ${e.message}`)
+          log.error(`连接代理失败：${e.message}`)
           reject(e)
         })
         .on('connect', (res, socket) => {

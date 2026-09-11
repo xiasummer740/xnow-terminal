@@ -10,6 +10,8 @@ import {
   DatabaseOutlined
 } from '@ant-design/icons'
 
+const e = window.translate
+
 const toolIcons = {
   send_terminal_command: CodeOutlined,
   get_terminal_output: CodeOutlined,
@@ -73,13 +75,13 @@ export default function AgentToolCallCard ({ toolCall }) {
         <div className='agent-tool-detail'>
           {args && Object.keys(args).length > 0 && (
             <div className='agent-tool-args'>
-              <div className='agent-tool-label'>Arguments:</div>
+              <div className='agent-tool-label'>{e('Arguments:')}</div>
               <pre className='agent-tool-pre'>{JSON.stringify(args, null, 2)}</pre>
             </div>
           )}
           {result && (
             <div className='agent-tool-result'>
-              <div className='agent-tool-label'>Result:</div>
+              <div className='agent-tool-label'>{e('Result:')}</div>
               <pre className='agent-tool-pre'>{formatResult(result)}</pre>
             </div>
           )}

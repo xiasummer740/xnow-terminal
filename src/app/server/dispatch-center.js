@@ -99,7 +99,7 @@ const initWs = function (app) {
           tcpPing(ws, msg)
         }
       } catch (err) {
-        log.error('common ws error', err)
+        log.error('通用 WS 错误', err)
       }
     })
   })

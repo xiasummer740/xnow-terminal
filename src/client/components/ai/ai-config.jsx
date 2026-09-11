@@ -189,9 +189,9 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
 
   function renderApiUrlLabel () {
     if (baseURLAI === 'https://api.atlascloud.ai/v1') {
-      return <span>API URL (<Link to='https://atlascloud.ai'>AtlasCloud</Link>)</span>
+      return <span>{e('API URL')} (<Link to='https://atlascloud.ai'>AtlasCloud</Link>)</span>
     }
-    return 'API URL'
+    return e('API URL')
   }
 
   if (!showAIConfig) {
@@ -236,7 +236,7 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         <Form.Item label={renderApiUrlLabel()} required>
           <Space.Compact className='width-100'>
             <Form.Item
-              label='API URL'
+              label={e('API URL')}
               name='baseURLAI'
               noStyle
               rules={[
@@ -250,7 +250,7 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
               />
             </Form.Item>
             <Form.Item
-              label='API PATH'
+              label={e('API PATH')}
               name='apiPathAI'
               rules={[
                 { required: true, message: '请输入 API 路径' }
@@ -279,10 +279,10 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         </Form.Item>
 
         <Form.Item
-          label='API Key'
+          label={e('API Key')}
           name='apiKeyAI'
         >
-          <Password placeholder='Enter your API key' />
+          <Password placeholder={e('Enter your API key')} />
         </Form.Item>
 
         <Form.Item
@@ -346,14 +346,14 @@ export default function AIConfigForm ({ initialValues, onSubmit, showAIConfig })
         <Form.Item
           label={e('proxy')}
           name='proxyAI'
-          tooltip='Proxy for AI API requests (e.g., socks5://127.0.0.1:1080)'
+          tooltip={e('Proxy for AI API requests (e.g., socks5://127.0.0.1:1080)')}
         >
           <AutoComplete
             options={proxyOptions}
             filterOption={filter}
             allowClear
           >
-            <Input placeholder='Enter proxy URL (optional)' />
+            <Input placeholder={e('Enter proxy URL (optional)')} />
           </AutoComplete>
         </Form.Item>
 

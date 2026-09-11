@@ -4,8 +4,8 @@ const {
 
 export async function chooseSaveDirectory () {
   const savePaths = await openDialog({
-    title: 'Choose a folder to save file(s)',
-    message: 'Choose a folder to save file(s)',
+    title: window.translate('Choose a folder to save file(s)'),
+    message: window.translate('Choose a folder to save file(s)'),
     properties: [
       'openDirectory',
       'showHiddenFiles',

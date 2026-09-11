@@ -77,7 +77,7 @@ export default function DeepLinkControl () {
         {registrationStatus && (
           <>
             <div className='pd1b'>
-              Protocol Status
+              {e('Protocol Status')}
             </div>
             <div className='pd1b'>
               <Space size='small' wrap>

@@ -50,12 +50,12 @@ function createClient (serverUrl, username, password, proxy, skipVerify = false)
  * Ensure directory exists on WebDAV server
  */
 async function ensureDir (client, dirPath) {
-  log.info(`[WebDAV] ensureDir: ${dirPath}`)
+  log.info(`[WebDAV] 确保目录：${dirPath}`)
   const res = await client.request({
     method: 'MKCOL',
     url: dirPath
   })
-  log.info(`[WebDAV] ensureDir: ${dirPath} -> ${res.status}`)
+  log.info(`[WebDAV] 确保目录：${dirPath} -> ${res.status}`)
   // 201 created, 405 already exists, 200 ok
   if (res.status !== 201 && res.status !== 405 && res.status !== 200) {
     throw new Error(`MKCOL ${dirPath} returned ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`)
@@ -66,7 +66,7 @@ async function ensureDir (client, dirPath) {
  * Upload a file to WebDAV server
  */
 async function uploadFile (client, filePath, content) {
-  log.info(`[WebDAV] uploadFile: ${filePath}`)
+  log.info(`[WebDAV] 上传文件：${filePath}`)
   const body = typeof content === 'string' ? content : JSON.stringify(content)
   const res = await client.request({
     method: 'PUT',
@@ -76,11 +76,11 @@ async function uploadFile (client, filePath, content) {
       'Content-Type': 'application/json; charset=utf-8'
     }
   })
-  log.info(`[WebDAV] uploadFile: ${filePath} -> ${res.status}`)
+  log.info(`[WebDAV] 上传文件：${filePath} -> ${res.status}`)
   if (res.status >= 200 && res.status < 300) {
     return { success: true }
   }
-  const msg = `PUT ${filePath} returned ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`
+  const msg = `PUT ${filePath} 返回 ${res.status}：${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`
   log.error(`[WebDAV] ${msg}`)
   return { error: { message: msg } }
 }
@@ -89,19 +89,19 @@ async function uploadFile (client, filePath, content) {
  * Download a file from WebDAV server
  */
 async function downloadFile (client, filePath) {
-  log.info(`[WebDAV] downloadFile: ${filePath}`)
+  log.info(`[WebDAV] 下载文件：${filePath}`)
   const res = await client.request({
     method: 'GET',
     url: filePath
   })
-  log.info(`[WebDAV] downloadFile: ${filePath} -> ${res.status}`)
+  log.info(`[WebDAV] 下载文件：${filePath} -> ${res.status}`)
   if (res.status === 404) {
     return null
   }
   if (res.status >= 200 && res.status < 300) {
     return typeof res.data === 'string' ? res.data : JSON.stringify(res.data)
   }
-  const msg = `GET ${filePath} returned ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`
+  const msg = `GET ${filePath} 返回 ${res.status}：${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`
   log.error(`[WebDAV] ${msg}`)
   return { error: { message: msg } }
 }
@@ -112,7 +112,7 @@ async function downloadFile (client, filePath) {
 async function test (serverUrl, username, password, proxy, skipVerify) {
   const client = createClient(serverUrl, username, password, proxy, skipVerify)
   try {
-    log.info(`[WebDAV] test: probing ${serverUrl}`)
+    log.info(`[WebDAV] 测试：探测 ${serverUrl}`)
     const res = await client.request({
       method: 'PROPFIND',
       url: '/',
@@ -120,14 +120,14 @@ async function test (serverUrl, username, password, proxy, skipVerify) {
         Depth: '0'
       }
     })
-    log.info(`[WebDAV] test: PROPFIND / -> ${res.status}`)
+    log.info(`[WebDAV] 测试：PROPFIND / -> ${res.status}`)
     if (res.status === 207 || res.status === 200) {
       return { success: true, status: res.status }
     }
     return { error: { message: `WebDAV server returned ${res.status}: ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}` } }
   } catch (err) {
-    log.error('[WebDAV] test error:', err.message)
-    log.error('[WebDAV] test error stack:', err.stack)
+    log.error('[WebDAV] 测试错误：', err.message)
+    log.error('[WebDAV] 测试错误堆栈：', err.stack)
     return { error: { message: err.message } }
   }
 }
@@ -140,8 +140,8 @@ async function upload (serverUrl, username, password, data, proxy, skipVerify) {
   const basePath = '/electerm'
 
   try {
-    log.info(`[WebDAV] upload: starting to ${serverUrl}${basePath}`)
-    log.info(`[WebDAV] upload: data keys = [${Object.keys(data).join(', ')}]`)
+    log.info(`[WebDAV] 上传：开始，目标 ${serverUrl}${basePath}`)
+    log.info(`[WebDAV] 上传：数据字段 = [${Object.keys(data).join(', ')}]`)
 
     // Ensure electerm directory exists
     await ensureDir(client, basePath)
@@ -155,11 +155,11 @@ async function upload (serverUrl, username, password, data, proxy, skipVerify) {
       }
     }
 
-    log.info('[WebDAV] upload: complete')
+    log.info('[WebDAV] 上传完成')
     return { success: true }
   } catch (err) {
-    log.error('[WebDAV] upload error:', err.message)
-    log.error('[WebDAV] upload error stack:', err.stack)
+    log.error('[WebDAV] 上传错误：', err.message)
+    log.error('[WebDAV] 上传错误堆栈：', err.stack)
     return { error: { message: err.message } }
   }
 }
@@ -172,7 +172,7 @@ async function download (serverUrl, username, password, proxy, skipVerify) {
   const basePath = '/electerm'
 
   try {
-    log.info(`[WebDAV] download: starting from ${serverUrl}${basePath}`)
+    log.info(`[WebDAV] 下载：从 ${serverUrl}${basePath} 开始`)
 
     const result = {
       files: {}
@@ -206,15 +206,15 @@ async function download (serverUrl, username, password, proxy, skipVerify) {
         result.files[filename] = {
           content
         }
-        log.info(`[WebDAV] download: got ${filename} (${content.length} chars)`)
+        log.info(`[WebDAV] 下载：已获取 ${filename}（${content.length} 字符）`)
       }
     }
 
-    log.info(`[WebDAV] download: complete, got ${Object.keys(result.files).length} files`)
+    log.info(`[WebDAV] 下载完成，共获取 ${Object.keys(result.files).length} 个文件`)
     return result
   } catch (err) {
-    log.error('[WebDAV] download error:', err.message)
-    log.error('[WebDAV] download error stack:', err.stack)
+    log.error('[WebDAV] 下载错误：', err.message)
+    log.error('[WebDAV] 下载错误堆栈：', err.stack)
     return { error: { message: err.message } }
   }
 }
@@ -223,7 +223,7 @@ async function download (serverUrl, username, password, proxy, skipVerify) {
  * Main WebDAV sync handler
  */
 async function doWebdavSync (func, args, token, proxy) {
-  log.info(`[WebDAV] doWebdavSync: func=${func}`)
+  log.info(`[WebDAV] doWebdavSync：功能=${func}`)
 
   // token format: serverUrl####username####password
   const parts = token ? token.split('####') : []
@@ -232,10 +232,10 @@ async function doWebdavSync (func, args, token, proxy) {
   const password = parts[2] || ''
   const skipVerify = parts[3] === 'true'
 
-  log.info(`[WebDAV] serverUrl=${serverUrl}, username=${username}`)
+  log.info(`[WebDAV] 服务地址=${serverUrl}，用户名=${username}`)
 
   if (!serverUrl) {
-    const msg = 'WebDAV server URL is not configured'
+    const msg = '未配置 WebDAV 服务器地址'
     log.error(`[WebDAV] ${msg}`)
     return { error: { message: msg } }
   }
@@ -249,14 +249,14 @@ async function doWebdavSync (func, args, token, proxy) {
       case 'download':
         return await download(serverUrl, username, password, proxy, skipVerify)
       default: {
-        const msg = `Unknown WebDAV function: ${func}`
+        const msg = `未知的 WebDAV 操作：${func}`
         log.error(`[WebDAV] ${msg}`)
         return { error: { message: msg } }
       }
     }
   } catch (err) {
-    log.error('[WebDAV] sync error:', err.message)
-    log.error('[WebDAV] sync error stack:', err.stack)
+    log.error('[WebDAV] 同步错误：', err.message)
+    log.error('[WebDAV] 同步错误堆栈：', err.stack)
     return { error: { message: err.message } }
   }
 }

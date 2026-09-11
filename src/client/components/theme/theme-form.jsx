@@ -142,7 +142,7 @@ export default function ThemeForm (props) {
       const url = `https://github.com/mbadolato/iTerm2-Color-Schemes/blob/master/electerm/${encodeURIComponent(themeName)}.txt`
       return (
         <FormItem>
-          <span className='mg1r'>src:</span>
+          <span className='mg1r'>{e('src:')}</span>
           <Link
             to={url}
           >{url}

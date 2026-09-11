@@ -184,8 +184,8 @@ export class TransferClientBase {
   openFileSelect = async (options = {}) => {
     const {
       directory = false,
-      title = 'Choose some files to send',
-      message = 'Choose some files to send'
+      title = window.translate('Choose some files to send'),
+      message = window.translate('Choose some files to send')
     } = options
 
     let files
@@ -243,8 +243,8 @@ export class TransferClientBase {
     const lastPath = this.storageKey ? getItem(this.storageKey) : null
 
     const savePaths = await window.api.openDialog({
-      title: 'Choose a folder to save file(s)',
-      message: 'Choose a folder to save file(s)',
+      title: window.translate('Choose a folder to save file(s)'),
+      message: window.translate('Choose a folder to save file(s)'),
       defaultPath: lastPath || undefined,
       properties: [
         'openDirectory',

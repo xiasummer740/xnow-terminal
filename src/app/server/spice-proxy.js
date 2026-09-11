@@ -8,20 +8,20 @@ async function createTcpConnection (host, port, options = {}) {
   const { proxy, readyTimeout = 15000 } = options
 
   if (proxy) {
-    log.debug(`${LOG_PREFIX} Connecting through proxy: ${proxy}`)
+    log.debug(`${LOG_PREFIX} 正在通过代理连接：${proxy}`)
     const proxyResult = await proxySock({
       readyTimeout,
       host,
       port,
       proxy
     })
-    log.debug(`${LOG_PREFIX} Proxy connection established`)
+    log.debug(`${LOG_PREFIX} 代理连接已建立`)
     return proxyResult.socket
   }
 
   return new Promise((resolve, reject) => {
     const tcpSocket = net.createConnection({ host, port }, () => {
-      log.debug(`${LOG_PREFIX} TCP connection established to ${host}:${port}`)
+      log.debug(`${LOG_PREFIX} 已建立到 ${host}:${port} 的 TCP 连接`)
       tcpSocket.setKeepAlive(true, 5000)
       tcpSocket.setTimeout(0)
       resolve(tcpSocket)
@@ -40,10 +40,10 @@ async function handleConnection (ws, options = {}) {
   const { host, port, proxy, readyTimeout = 15000, onCleanup, channelId } = options
   const id = channelId || 'unknown'
 
-  log.debug(`${LOG_PREFIX}[${id}] New WebSocket connection for SPICE proxy`)
+  log.debug(`${LOG_PREFIX}[${id}] 新的 WebSocket 连接用于 SPICE 代理`)
 
   if (!host || !port) {
-    log.error(`${LOG_PREFIX}[${id}] Missing host or port`)
+    log.error(`${LOG_PREFIX}[${id}] 缺少主机或端口`)
     ws.close()
     if (onCleanup) onCleanup()
     return
@@ -56,7 +56,7 @@ async function handleConnection (ws, options = {}) {
 
   const cleanup = (source) => {
     if (wsClosed && tcpClosed) return
-    log.debug(`${LOG_PREFIX}[${id}] Cleanup triggered by: ${source}`)
+    log.debug(`${LOG_PREFIX}[${id}] 清理触发来源：${source}`)
     wsClosed = true
     tcpClosed = true
 
@@ -65,7 +65,7 @@ async function handleConnection (ws, options = {}) {
         ws.close()
       }
     } catch (e) {
-      log.debug(`${LOG_PREFIX}[${id}] WebSocket close error:`, e.message)
+      log.debug(`${LOG_PREFIX}[${id}] WebSocket 关闭错误：`, e.message)
     }
 
     try {
@@ -73,7 +73,7 @@ async function handleConnection (ws, options = {}) {
         tcpSocket.destroy()
       }
     } catch (e) {
-      log.debug(`${LOG_PREFIX}[${id}] TCP socket destroy error:`, e.message)
+      log.debug(`${LOG_PREFIX}[${id}] TCP 套接字销毁错误：`, e.message)
     }
 
     if (onCleanup) {
@@ -89,8 +89,8 @@ async function handleConnection (ws, options = {}) {
       try {
         tcpSocket.write(buf)
       } catch (e) {
-        log.error(`${LOG_PREFIX}[${id}] TCP write error:`, e.message)
-        cleanup('TCP write error')
+        log.error(`${LOG_PREFIX}[${id}] TCP 写入错误：`, e.message)
+        cleanup('TCP 写入错误')
       }
     } else {
       messageBuffer.push(buf)
@@ -99,29 +99,29 @@ async function handleConnection (ws, options = {}) {
 
   ws.on('close', () => cleanup('WebSocket'))
   ws.on('error', (err) => {
-    log.error(`${LOG_PREFIX}[${id}] WebSocket error:`, err.message)
-    cleanup('WebSocket error')
+    log.error(`${LOG_PREFIX}[${id}] WebSocket 错误：`, err.message)
+    cleanup('WebSocket 错误')
   })
 
   try {
     tcpSocket = await createTcpConnection(host, port, { proxy, readyTimeout })
-    log.debug(`${LOG_PREFIX}[${id}] Connected to SPICE server at ${host}:${port}`)
+    log.debug(`${LOG_PREFIX}[${id}] 已连接到 SPICE 服务器 ${host}:${port}`)
 
     tcpSocket.on('data', (data) => {
       if (wsClosed) return
       try {
         ws.send(data)
       } catch (e) {
-        log.error(`${LOG_PREFIX}[${id}] WebSocket send error:`, e.message)
-        cleanup('WebSocket send error')
+        log.error(`${LOG_PREFIX}[${id}] WebSocket 发送错误：`, e.message)
+        cleanup('WebSocket 发送错误')
       }
     })
 
-    tcpSocket.on('close', () => cleanup('TCP close'))
-    tcpSocket.on('end', () => cleanup('TCP end'))
+    tcpSocket.on('close', () => cleanup('TCP 关闭'))
+    tcpSocket.on('end', () => cleanup('TCP 结束'))
     tcpSocket.on('error', (err) => {
-      log.error(`${LOG_PREFIX}[${id}] TCP error:`, err.message)
-      cleanup('TCP error')
+      log.error(`${LOG_PREFIX}[${id}] TCP 错误：`, err.message)
+      cleanup('TCP 错误')
     })
 
     if (messageBuffer.length > 0) {
@@ -129,15 +129,15 @@ async function handleConnection (ws, options = {}) {
         try {
           tcpSocket.write(buf)
         } catch (e) {
-          log.error(`${LOG_PREFIX}[${id}] TCP write error:`, e.message)
-          cleanup('TCP write error')
+          log.error(`${LOG_PREFIX}[${id}] TCP 写入错误：`, e.message)
+          cleanup('TCP 写入错误')
           return
         }
       }
       messageBuffer.length = 0
     }
   } catch (err) {
-    log.error(`${LOG_PREFIX}[${id}] Connection failed:`, err.message)
+    log.error(`${LOG_PREFIX}[${id}] 连接失败：`, err.message)
     try {
       ws.close()
     } catch (e) {}
@@ -153,7 +153,7 @@ function setupRelay (ws, tcpSocket, options = {}) {
 
   const cleanup = (source) => {
     if (wsClosed && tcpClosed) return
-    log.debug(`${LOG_PREFIX}[${id}] Cleanup triggered by: ${source}`)
+    log.debug(`${LOG_PREFIX}[${id}] 清理触发来源：${source}`)
     wsClosed = true
     tcpClosed = true
 
@@ -162,13 +162,13 @@ function setupRelay (ws, tcpSocket, options = {}) {
         ws.close()
       }
     } catch (e) {
-      log.debug(`${LOG_PREFIX}[${id}] WebSocket close error:`, e.message)
+      log.debug(`${LOG_PREFIX}[${id}] WebSocket 关闭错误：`, e.message)
     }
 
     try {
       tcpSocket.destroy()
     } catch (e) {
-      log.debug(`${LOG_PREFIX}[${id}] TCP socket destroy error:`, e.message)
+      log.debug(`${LOG_PREFIX}[${id}] TCP 套接字销毁错误：`, e.message)
     }
 
     if (onCleanup) {
@@ -181,16 +181,16 @@ function setupRelay (ws, tcpSocket, options = {}) {
     try {
       ws.send(data)
     } catch (e) {
-      log.error(`${LOG_PREFIX}[${id}] WebSocket send error:`, e.message)
-      cleanup('WebSocket send error')
+      log.error(`${LOG_PREFIX}[${id}] WebSocket 发送错误：`, e.message)
+      cleanup('WebSocket 发送错误')
     }
   })
 
-  tcpSocket.on('close', () => cleanup('TCP close'))
-  tcpSocket.on('end', () => cleanup('TCP end'))
+  tcpSocket.on('close', () => cleanup('TCP 关闭'))
+  tcpSocket.on('end', () => cleanup('TCP 结束'))
   tcpSocket.on('error', (err) => {
-    log.error(`${LOG_PREFIX}[${id}] TCP error:`, err.message)
-    cleanup('TCP error')
+    log.error(`${LOG_PREFIX}[${id}] TCP 错误：`, err.message)
+    cleanup('TCP 错误')
   })
 
   ws.on('message', (data) => {
@@ -199,15 +199,15 @@ function setupRelay (ws, tcpSocket, options = {}) {
     try {
       tcpSocket.write(buf)
     } catch (e) {
-      log.error(`${LOG_PREFIX}[${id}] TCP write error:`, e.message)
-      cleanup('TCP write error')
+      log.error(`${LOG_PREFIX}[${id}] TCP 写入错误：`, e.message)
+      cleanup('TCP 写入错误')
     }
   })
 
   ws.on('close', () => cleanup('WebSocket'))
   ws.on('error', (err) => {
-    log.error(`${LOG_PREFIX}[${id}] WebSocket error:`, err.message)
-    cleanup('WebSocket error')
+    log.error(`${LOG_PREFIX}[${id}] WebSocket 错误：`, err.message)
+    cleanup('WebSocket 错误')
   })
 }
 

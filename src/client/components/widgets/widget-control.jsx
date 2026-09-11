@@ -5,13 +5,17 @@ import React, { useState } from 'react'
 import WidgetForm from './widget-form'
 import { showMsg } from './widget-notification-with-details'
 
+const e = window.translate
+
 export default function WidgetControl ({ formData, widgetInstancesLength }) {
   const [loading, setLoading] = useState(false)
   const widget = formData
-  if (!widget.id) {
+  // 切到「小组件」页时 formData 可能还留着别的 tab 的条目（有 id 但没有 info），
+  // 只判 id 会让 WidgetForm 解构 undefined 而崩掉整个界面
+  if (!widget.id || !widget.info) {
     return (
       <div className='widget-control-empty aligncenter pd3'>
-        <p>Select a widget to configure</p>
+        <p>{e('Select a widget to configure')}</p>
       </div>
     )
   }

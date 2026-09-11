@@ -38,7 +38,7 @@ export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPast
           ? renderIps()
           : (
             <div className='dns-section'>
-              hostname or ip
+              {e('hostname or ip')}
             </div>
             )
       }
@@ -46,7 +46,7 @@ export default function SshHostSelector ({ ips = [], useIp, form, onBlur, onPast
         noStyle
         name='host'
         rules={[{
-          max: 520, message: '520 chars max'
+          max: 520, message: window.translate('520 chars max')
         }, {
           required: true, message: 'host required'
         }]}

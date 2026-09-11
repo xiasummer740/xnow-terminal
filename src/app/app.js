@@ -7,7 +7,7 @@ const globalState = require('./lib/glob-state')
 
 globalState.set('initTime', Date.now())
 
-log.debug('electerm start')
+log.debug('electron 启动')
 
 const app = createApp()
 globalState.set('app', app)

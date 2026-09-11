@@ -20,6 +20,9 @@ import classnames from 'classnames'
 import ShortcutControl from '../shortcuts/shortcut-control.jsx'
 import { isMac, isWin, textTerminalBgValue } from '../../common/constants'
 import { ConfigProvider } from 'antd'
+// 不传 locale 时 antd 内部文案（分页“10 / page”、空状态、日期选择等）会全走英文
+import antdZhCN from 'antd/locale/zh_CN'
+import antdEnUS from 'antd/locale/en_US'
 import { NotificationContainer } from '../common/notification'
 import InfoModal from '../sidebar/info-modal.jsx'
 import RightPanelContainer from '../right-panel/right-panel-container'
@@ -232,9 +235,13 @@ export default auto(function Index (props) {
   const cmdSuggestionsProps = {
     suggestions: store.terminalCommandSuggestions
   }
+  // 注意用语言 id（zh_cn），不能调 window.getLang() —— 那个返回的是语言表对象
+  const curLang = (store.config && store.config.language) || 'zh_cn'
+  const antdLocale = curLang.startsWith('zh') ? antdZhCN : antdEnUS
   return (
     <ConfigProvider
       theme={uiThemeConfig}
+      locale={antdLocale}
     >
       <div {...ext1}>
         <InputContextMenu />

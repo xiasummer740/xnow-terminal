@@ -4,6 +4,8 @@ import {
   Tag
 } from 'antd'
 
+const e = window.translate
+
 export default function Password ({ ref, onKeyDown, onKeyUp, onFocus, onBlur, prefix, ...props }) {
   const [isCapsLockOn, setIsCapsLockOn] = useState(false)
 
@@ -41,7 +43,7 @@ export default function Password ({ ref, onKeyDown, onKeyUp, onFocus, onBlur, pr
   let capsPrefix = null
   if (isCapsLockOn) {
     capsPrefix = (
-      <Tag color='orange' className='mg1r' variant='solid'>CAPS</Tag>
+      <Tag color='orange' className='mg1r' variant='solid'>{e('CAPS')}</Tag>
     )
   }
 

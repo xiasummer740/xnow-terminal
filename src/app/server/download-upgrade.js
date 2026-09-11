@@ -117,7 +117,7 @@ class Upgrade {
     for (const url of mirrorUrls) {
       readSteam = await tryDownload(url, agent)
       if (readSteam) {
-        log.info('upgrade', 'downloading from', url)
+        log.info('升级', '下载地址：', url)
         break
       }
     }

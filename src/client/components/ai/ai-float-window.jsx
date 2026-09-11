@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { CloseOutlined } from '@ant-design/icons'
 import AIChat from './ai-chat'
 
+const e = window.translate
+
 const MIN_WIDTH = 380
 const MIN_HEIGHT = 400
 const DEFAULT_WIDTH = 520
@@ -154,7 +156,7 @@ export default function AIFloatWindow (props) {
     >
       {/* 标题栏（拖拽手柄） */}
       <div className='ai-float-titlebar' onMouseDown={handleDragStart}>
-        <span className='ai-float-title'>AI Assistant</span>
+        <span className='ai-float-title'>{e('AI Assistant')}</span>
         <div className='ai-float-controls'>
           <CloseOutlined className='ai-float-close-btn' onClick={handleClose} title='关闭' />
         </div>

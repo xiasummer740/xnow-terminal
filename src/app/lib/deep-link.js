@@ -28,8 +28,8 @@ function registerDeepLink (force = false) {
                         process.env.ELECTERM_REGISTER_PROTOCOLS === '1'
 
   if (!shouldRegister) {
-    log.info('Skipping protocol registration in development mode')
-    log.info('Set ELECTERM_REGISTER_PROTOCOLS=1 or pass force=true to enable')
+    log.info('开发模式下跳过协议注册')
+    log.info('设置 ELECTERM_REGISTER_PROTOCOLS=1 或传入 force=true 以启用')
     return { registered: false, reason: 'development-mode' }
   }
 
@@ -38,15 +38,15 @@ function registerDeepLink (force = false) {
     const isDefault = app.isDefaultProtocolClient(protocol)
 
     if (isDefault) {
-      log.info(`Already registered as handler for ${protocol}:// protocol`)
+      log.info(`已注册为 ${protocol}:// 协议的处理程序`)
       results[protocol] = { success: true, alreadyDefault: true }
     } else {
       const registered = app.setAsDefaultProtocolClient(protocol)
       if (registered) {
-        log.info(`Registered as handler for ${protocol}:// protocol`)
+        log.info(`成功注册为 ${protocol}:// 协议的处理程序`)
         results[protocol] = { success: true, alreadyDefault: false }
       } else {
-        log.warn(`Failed to register ${protocol}:// protocol handler`)
+        log.warn(`注册 ${protocol}:// 协议处理程序失败`)
         results[protocol] = { success: false, error: 'registration-failed' }
       }
     }
@@ -82,9 +82,9 @@ function unregisterDeepLink (protocols = SUPPORTED_PROTOCOLS) {
     const removed = app.removeAsDefaultProtocolClient(protocol)
     results[protocol] = removed
     if (removed) {
-      log.info(`Unregistered as handler for ${protocol}:// protocol`)
+      log.info(`已注销 ${protocol}:// 协议的处理程序`)
     } else {
-      log.warn(`Failed to unregister ${protocol}:// protocol handler`)
+      log.warn(`注销 ${protocol}:// 协议处理程序失败`)
     }
   })
 
@@ -99,7 +99,7 @@ function handleDeepLink (url) {
   const parsed = parseQuickConnect(url)
 
   if (!parsed) {
-    log.warn('Could not parse deep link URL:', url)
+    log.warn('无法解析深链接 URL：', url)
     return
   }
 
@@ -139,7 +139,7 @@ function setupDeepLinkHandlers () {
   if (isMac) {
     app.on('open-url', (event, url) => {
       event.preventDefault()
-      log.info('open-url event:', url)
+      log.info('open-url 事件：', url)
       handleDeepLink(url)
     })
   }
@@ -147,7 +147,7 @@ function setupDeepLinkHandlers () {
   // Handle deep links via second-instance (when app is already running)
   // (already handled in create-app.js, but we can add additional parsing here)
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    log.info('second-instance event:', commandLine)
+    log.info('second-instance 事件：', commandLine)
 
     // Look for protocol URLs in command line arguments
     const protocolUrl = commandLine.find(arg =>
@@ -168,7 +168,7 @@ function setupDeepLinkHandlers () {
     )
 
     if (protocolUrl) {
-      log.info('Startup with protocol URL:', protocolUrl)
+      log.info('启动时携带协议 URL：', protocolUrl)
       // Store it to be handled after window is ready
       globalState.set('pendingDeepLink', parseQuickConnect(protocolUrl))
     }

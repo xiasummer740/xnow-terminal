@@ -560,8 +560,8 @@ export default class RdpSession extends PureComponent {
     ]
 
     const files = await window.api.openDialog({
-      title: 'Choose files to upload to remote desktop',
-      message: 'Choose files to upload',
+      title: window.translate('Choose files to upload to remote desktop'),
+      message: window.translate('Choose files to upload'),
       properties
     }).catch((err) => {
       this.log(`File dialog error: ${err.message}`, 'error')

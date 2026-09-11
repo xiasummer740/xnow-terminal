@@ -141,22 +141,22 @@ function widgetRun (instanceConfig) {
 
       server = app.listen(port, host, (err) => {
         if (err) {
-          log.error(`Failed to start ${widgetInfo.name}:`, err)
+          log.error(`启动 ${widgetInfo.name} 失败：`, err)
           reject(err)
         } else {
           const serverInfo = {
             url: `http://${host}:${port}`,
             path: directory
           }
-          const msg = `${widgetInfo.name} is running at ${serverInfo.url}`
+          const msg = `${widgetInfo.name} 正在运行：${serverInfo.url}`
           log.info(msg)
-          log.info(`Serving files from: ${serverInfo.path}`)
+          log.info(`提供文件服务的目录：${serverInfo.path}`)
           resolve({ serverInfo, msg, success: true })
         }
       })
 
       server.on('error', (err) => {
-        log.error(`${widgetInfo.name} encountered an error:`, err)
+        log.error(`${widgetInfo.name} 发生错误：`, err)
         reject(err)
       })
     })
@@ -167,16 +167,16 @@ function widgetRun (instanceConfig) {
       if (server) {
         server.close((err) => {
           if (err) {
-            log.error('Error stopping the server:', err)
+            log.error('停止服务器出错：', err)
             reject(err)
           } else {
-            log.info(`${widgetInfo.name} has been stopped`)
+            log.info(`${widgetInfo.name} 已停止`)
             server = null
             resolve()
           }
         })
       } else {
-        log.info(`${widgetInfo.name} is not running`)
+        log.info(`${widgetInfo.name} 未在运行`)
         resolve()
       }
     })

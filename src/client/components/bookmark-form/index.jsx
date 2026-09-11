@@ -100,7 +100,7 @@ export default class BookmarkIndex2 extends PureComponent {
         onChange={this.handleChange}
       >
         {keys.map(v => {
-          const txt = v === 'ssh' ? 'Ssh/Sftp' : e(v)
+          const txt = v === 'ssh' ? 'SSH/SFTP' : e(v)
           return (<Radio.Button key={v} value={v}>{txt}</Radio.Button>)
         })}
       </Radio.Group>

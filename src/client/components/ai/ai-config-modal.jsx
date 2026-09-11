@@ -37,7 +37,7 @@ export default auto(function AIConfigModal ({ store }) {
       open={showAIConfigModal}
       onCancel={handleClose}
       footer={null}
-      title='AI Config'
+      title={e('AI Config')}
       width='80%'
       destroyOnHidden
       className='ai-config-modal'

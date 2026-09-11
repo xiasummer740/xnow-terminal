@@ -125,7 +125,7 @@ export default function SyncForm (props) {
       return null
     }
     return (
-      <Link to={props.formData.url}>Check gist</Link>
+      <Link to={props.formData.url}>{e('Check gist')}</Link>
     )
   }
 
@@ -168,11 +168,11 @@ export default function SyncForm (props) {
         <Alert
           title={
             <span>
-              Gitee data sync is not recommended. For more information, please refer to the
+              {e('Gitee data sync is not recommended. For more information, please refer to the')}
               <Link to='https://github.com/xiasummer740/xnow-terminal/wiki/gitee-data-sync-warning' className='mg1l'>
-                wiki
+                {e('wiki')}
               </Link>
-              .
+              。
             </span>
           }
           type='warning'
@@ -209,7 +209,7 @@ export default function SyncForm (props) {
         }]}
       >
         <Input
-          placeholder='API Url'
+          placeholder={e('API Url')}
           id='sync-input-url-custom'
         />
       </FormItem>
@@ -244,7 +244,7 @@ export default function SyncForm (props) {
           }]}
         >
           <Input
-            placeholder='WebDAV username'
+            placeholder={e('WebDAV username')}
             id='sync-input-webdav-username'
           />
         </FormItem>
@@ -266,7 +266,7 @@ export default function SyncForm (props) {
           }]}
         >
           <Password
-            placeholder='WebDAV password'
+            placeholder={e('WebDAV password')}
             id='sync-input-webdav-password'
           />
         </FormItem>
@@ -331,7 +331,7 @@ export default function SyncForm (props) {
   function createProxyItem () {
     return (
       <FormItem
-        label='Proxy'
+        label={e('Proxy')}
         name='proxy'
         normalize={trim}
         rules={[{

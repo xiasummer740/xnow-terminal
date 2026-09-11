@@ -98,9 +98,15 @@ export function renderFormItem (item, formItemLayout, form, ctxProps, index) {
     const formItemProps = {
       ...formItemLayout,
       className: cls,
-      label: typeof label === 'string' ? label : label(),
+      // 字符串 label 走一遍翻译，否则 serial.js 之类裸写的 'baudRate' 会直接显示英文
+      label: typeof label === 'string' ? window.translate(label) : label(),
       name,
-      rules,
+      // 校验提示同理，config 里裸写的 'host required' 要翻成中文
+      rules: rules && rules.map(r => (
+        r && typeof r.message === 'string'
+          ? { ...r, message: window.translate(r.message) }
+          : r
+      )),
       valuePropName,
       normalize
     }

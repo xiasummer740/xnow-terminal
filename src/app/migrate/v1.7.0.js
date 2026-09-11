@@ -24,13 +24,13 @@ async function fixAll () {
     await dbAction('terminalThemes', 'update', q, updates).catch(log.error)
   }
   await dbAction('terminalThemes', 'insert', defaultLightThemeConfig).catch(log.error)
-  log.info('end: update db')
+  log.info('结束：更新数据库')
 }
 
 module.exports = async () => {
   const versionTo = '1.7.0'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

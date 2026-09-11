@@ -8,7 +8,7 @@ const { updateDBVersion } = require('./version-upgrade')
 const log = require('../common/log')
 
 async function fixAll () {
-  log.info('Start update default terminal word separator config')
+  log.info('开始更新默认终端分词符配置')
   const q = {
     _id: userConfigId
   }
@@ -25,8 +25,8 @@ async function fixAll () {
 
 module.exports = async () => {
   const versionTo = '1.34.59'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await fixAll()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

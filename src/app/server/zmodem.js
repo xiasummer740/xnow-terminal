@@ -166,7 +166,7 @@ class ZmodemSession {
       }
       this.state = ZMODEM_STATE.WAITING_SAVE_PATH
     } catch (e) {
-      log.error('Failed to start zmodem receiver', e)
+      log.error('启动 ZMODEM 接收端失败', e)
       this.endSession()
     }
   }
@@ -216,7 +216,7 @@ class ZmodemSession {
           break
         }
       } catch (e) {
-        log.error('Zmodem receiver error:', e)
+        log.error('ZMODEM 接收端错误：', e)
         this.endSession()
         break
       }
@@ -264,7 +264,7 @@ class ZmodemSession {
         didWork = true
       }
     } catch (e) {
-      log.error('Zmodem receiver pump error:', e)
+      log.error('ZMODEM 接收端数据泵错误：', e)
       this.endSession()
     }
     return didWork
@@ -322,7 +322,7 @@ class ZmodemSession {
         this.sendProgress()
       }
     } catch (e) {
-      log.error('Failed to write file data', e)
+      log.error('写入文件数据失败', e)
       this.endSession()
     }
   }
@@ -397,7 +397,7 @@ class ZmodemSession {
         message: 'ZMODEM send session started, please select files'
       })
     } catch (e) {
-      log.error('Failed to start zmodem sender', e)
+      log.error('启动 ZMODEM 发送端失败', e)
       this.endSession()
     }
   }
@@ -436,7 +436,7 @@ class ZmodemSession {
           break
         }
       } catch (e) {
-        log.error('Zmodem sender error:', e)
+        log.error('ZMODEM 发送端错误：', e)
         this.endSession()
         break
       }
@@ -505,7 +505,7 @@ class ZmodemSession {
         didWork = true
       }
     } catch (e) {
-      log.error('Zmodem sender pump error', e)
+      log.error('ZMODEM 发送端数据泵错误', e)
       this.endSession()
     }
 
@@ -579,7 +579,7 @@ class ZmodemSession {
         }
       }
     } catch (e) {
-      log.error('Failed to read file data for sending', e)
+      log.error('读取待发送文件数据失败', e)
       this.endSession()
     }
   }
@@ -663,7 +663,7 @@ class ZmodemSession {
         size: file.size
       })
     } catch (e) {
-      log.error('Failed to send file', e)
+      log.error('发送文件失败', e)
       this.endSession()
     }
   }
@@ -681,7 +681,7 @@ class ZmodemSession {
         this.writeToTerminal(Buffer.from(outgoing))
       }
     } catch (e) {
-      log.error('Failed to finish sender session', e)
+      log.error('结束发送端会话失败', e)
       this.endSession()
     }
   }
@@ -756,7 +756,7 @@ class ZmodemSession {
         size
       })
     } catch (e) {
-      log.error('Failed to prepare receive file', e)
+      log.error('准备接收文件失败', e)
       this.endSession()
     }
   }
@@ -780,7 +780,7 @@ class ZmodemSession {
       try {
         this.downloadStream.end()
       } catch (e) {
-        log.error('Error closing download stream', e)
+        log.error('关闭下载流出错', e)
       }
       this.downloadStream = null
     }
@@ -789,7 +789,7 @@ class ZmodemSession {
       try {
         fs.closeSync(this.uploadFd)
       } catch (e) {
-        log.error('Error closing upload file', e)
+        log.error('关闭上传文件出错', e)
       }
       this.uploadFd = null
     }

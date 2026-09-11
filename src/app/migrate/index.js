@@ -45,7 +45,7 @@ async function getUpgradeVersionList () {
 }
 async function versionShouldUpgrade () {
   const dbVersion = await getDBVersion()
-  log.info('database version:', dbVersion)
+  log.info('数据库版本：', dbVersion)
   return compare(dbVersion, packVersion) < 0
 }
 
@@ -55,7 +55,7 @@ async function shouldUpgrade () {
     return false
   }
   const dbVersion = await getDBVersion()
-  log.info('dbVersion', dbVersion)
+  log.info('数据库版本', dbVersion)
   if (dbVersion === emptyVersion) {
     return false
   }
@@ -72,13 +72,13 @@ async function shouldUpgrade () {
 
 async function doUpgrade () {
   const list = await getUpgradeVersionList()
-  log.info('Upgrading...')
+  log.info('正在升级...')
   for (const v of list) {
     const p = resolve(__dirname, v)
     const run = require(p)
     await run()
   }
-  log.info('Upgrade end')
+  log.info('升级结束')
 }
 
 exports.checkDbUpgrade = shouldUpgrade

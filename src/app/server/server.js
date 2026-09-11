@@ -29,11 +29,11 @@ initWs(app)
 const runServer = function () {
   const { electermPort, electermHost } = process.env
   const server = app.listen(electermPort, electermHost, () => {
-    log.info('server', 'runs on', electermHost, electermPort)
+    log.info('服务端', '运行于', electermHost, electermPort)
     process.send({ serverInited: true })
   })
   server.on('error', (err) => {
-    log.error('server', 'failed to start', err.message)
+    log.error('服务端', '启动失败', err.message)
     process.exit(1)
   })
 }
@@ -42,13 +42,13 @@ const runServer = function () {
 runServer()
 
 process.on('uncaughtException', (err) => {
-  log.error('uncaughtException', err)
+  log.error('未捕获异常', err)
 })
 process.on('unhandledRejection', (err) => {
-  log.error('unhandledRejection', err)
+  log.error('未处理的 Promise 拒绝', err)
 })
 
 process.on('SIGTERM', () => {
-  log.info('server', 'received SIGTERM, shutting down')
+  log.info('服务端', '收到 SIGTERM，正在关闭')
   process.exit(0)
 })

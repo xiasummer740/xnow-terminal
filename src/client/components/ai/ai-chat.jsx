@@ -24,6 +24,9 @@ import './ai.styl'
 const { TextArea } = Input
 const MAX_HISTORY = 100
 
+// 本文件内 e 已被用作事件参数名，这里显式调用避免遮蔽
+const t = window.translate
+
 export default function AIChat (props) {
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState(() => getItem(aiChatModeLsKey) || 'ask')
@@ -34,9 +37,8 @@ export default function AIChat (props) {
   }
 
   function handleModeChange (val) {
-    const m = val === 'Ask' ? 'ask' : 'agent'
-    setItem(aiChatModeLsKey, m)
-    setMode(m)
+    setItem(aiChatModeLsKey, val)
+    setMode(val)
   }
 
   const handleSubmit = useCallback(function () {
@@ -113,7 +115,7 @@ export default function AIChat (props) {
       <SendOutlined
         onClick={handleSubmit}
         className='mg1l pointer icon-hover send-to-ai-icon'
-        title='Enter to send, Shift+Enter for new line'
+        title={t('Enter to send, Shift+Enter for new line')}
       />
     )
   }
@@ -153,15 +155,18 @@ export default function AIChat (props) {
           value={prompt}
           onChange={handlePromptChange}
           onPressEnter={handleKeyPress}
-          placeholder='Enter your prompt here'
+          placeholder={t('Enter your prompt here')}
           autoSize={{ minRows: 3, maxRows: 10 }}
           className='ai-chat-textarea'
         />
         <Flex className='ai-chat-terminals' justify='space-between' align='center'>
           <Flex align='center'>
             <Segmented
-              options={['Ask', 'Agent']}
-              value={mode === 'ask' ? 'Ask' : 'Agent'}
+              options={[
+                { label: t('ask'), value: 'ask' },
+                { label: t('Agent'), value: 'agent' }
+              ]}
+              value={mode}
               onChange={handleModeChange}
               size='small'
             />
@@ -183,7 +188,7 @@ export default function AIChat (props) {
             >
               <UnorderedListOutlined
                 className='mg2x pointer clear-ai-icon icon-hover'
-                title='Clear AI chat history'
+                title={t('Clear AI chat history')}
               />
             </Popconfirm>
             <HelpIcon

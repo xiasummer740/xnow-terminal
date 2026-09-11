@@ -14,9 +14,9 @@ export default function SerialPathSelector ({
   return (
     <FormItem
       {...formItemLayout}
-      label='path'
+      label={e('path')}
       rules={[{
-        required: true, message: 'path required'
+        required: true, message: e('path required')
       }]}
       normalize={props.trim}
     >

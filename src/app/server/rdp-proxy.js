@@ -22,7 +22,7 @@ function getCertFingerprint (cert) {
     md.update(derBytes)
     return md.digest().toHex()
   } catch (e) {
-    log.error(`${LOG_PREFIX} Failed to compute cert fingerprint: ${e.message}`)
+    log.error(`${LOG_PREFIX} 计算证书指纹失败：${e.message}`)
     return null
   }
 }
@@ -350,7 +350,7 @@ function parseDestination (destination) {
  */
 async function createTcpConnection (host, port, options, x224Request, logPrefix) {
   if (options.proxy) {
-    log.debug(`${logPrefix} Connecting through proxy: ${options.proxy}`)
+    log.debug(`${logPrefix} 正在通过代理连接：${options.proxy}`)
     const proxyResult = await proxySock({
       readyTimeout: options.readyTimeout || 15000,
       host,
@@ -358,22 +358,22 @@ async function createTcpConnection (host, port, options, x224Request, logPrefix)
       proxy: options.proxy
     })
     const tcpSocket = proxyResult.socket
-    log.debug(`${logPrefix} ✓ Proxy connection established`)
+    log.debug(`${logPrefix} ✓ 代理连接已建立`)
 
     // Send X.224 Connection Request over proxied connection
     tcpSocket.write(x224Request, () => {
-      log.debug(`${logPrefix} ✓ Sent X.224 Connection Request (${x224Request.length} bytes)`)
+      log.debug(`${logPrefix} ✓ 已发送 X.224 连接请求 (${x224Request.length} 字节)`)
     })
     return tcpSocket
   }
 
   return new Promise((resolve, reject) => {
     const tcpSocket = net.createConnection({ host, port }, () => {
-      log.debug(`${logPrefix} ✓ TCP connection established`)
+      log.debug(`${logPrefix} ✓ TCP 连接已建立`)
 
       // Send X.224 Connection Request over raw TCP
       tcpSocket.write(x224Request, () => {
-        log.debug(`${logPrefix} ✓ Sent X.224 Connection Request (${x224Request.length} bytes)`)
+        log.debug(`${logPrefix} ✓ 已发送 X.224 连接请求 (${x224Request.length} 字节)`)
       })
       resolve(tcpSocket)
     })
@@ -426,7 +426,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
 
     // Step 3: Read X.224 Connection Confirm
     tcpSocket.once('data', (x224Response) => {
-      log.debug(`${logPrefix} ✓ Received X.224 Connection Confirm (${x224Response.length} bytes)`)
+      log.debug(`${logPrefix} ✓ 已收到 X.224 连接确认 (${x224Response.length} 字节)`)
 
       if (x224Response.length === 0) {
         tcpSocket.destroy()
@@ -439,7 +439,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
       tcpSocket.removeAllListeners('data')
 
       // Step 4: TLS handshake via node-forge (pure JS — no BoringSSL)
-      log.debug(`${logPrefix} Starting TLS handshake via node-forge`)
+      log.debug(`${logPrefix} 开始通过 node-forge 进行 TLS 握手`)
 
       // Capture the cert chain from the verify callback
       let capturedCertChain = []
@@ -450,7 +450,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
         server: false,
         verify: function (connection, verified, depth, certs) {
           log.debug(
-            `${logPrefix} TLS verify callback: depth=${depth}, verified=${verified}, certs=${certs.length}`
+            `${logPrefix} TLS 验证回调：depth=${depth}, verified=${verified}, certs=${certs.length}`
           )
           // Capture the full chain on the first call (depth = deepest)
           if (certs && certs.length > capturedCertChain.length) {
@@ -481,11 +481,11 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
           return true
         },
         connected: function (connection) {
-          log.debug(`${logPrefix} ✓ node-forge TLS handshake completed`)
+          log.debug(`${logPrefix} ✓ node-forge TLS 握手完成`)
 
           // Step 5: Convert captured certificates to DER
           const certChain = forgeCertsToDer(capturedCertChain)
-          log.debug(`${logPrefix} ✓ Extracted ${certChain.length} certificate(s) from forge`)
+          log.debug(`${logPrefix} ✓ 已从 forge 提取 ${certChain.length} 个证书`)
 
           settle(null, {
             x224Response: Buffer.from(x224Response),
@@ -502,14 +502,14 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
           try {
             tcpSocket.write(buf)
           } catch (err) {
-            log.error(`${logPrefix} Error writing TLS data to TCP: ${err.message}`)
+            log.error(`${logPrefix} 写入 TLS 数据到 TCP 时出错：${err.message}`)
           }
         },
         dataReady: function (connection) {
           // Decrypted data from RDP server — handled by setupForgeRelay
         },
         closed: function () {
-          log.debug(`${logPrefix} node-forge TLS connection closed`)
+          log.debug(`${logPrefix} node-forge TLS 连接已关闭`)
         },
         error: function (connection, error) {
           if (certRejected) {
@@ -517,7 +517,7 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
             log.error(`${logPrefix} ${msg}`)
             settle(new Error(msg))
           } else {
-            log.error(`${logPrefix} node-forge TLS error: ${error.message}`)
+            log.error(`${logPrefix} node-forge TLS 错误：${error.message}`)
             settle(new Error(`TLS handshake failed: ${error.message}`))
           }
         }
@@ -528,12 +528,12 @@ async function performRDPHandshake (host, port, x224Request, options = {}) {
         try {
           forgeTls.process(data.toString('binary'))
         } catch (err) {
-          log.error(`${logPrefix} forge process error: ${err.message}`)
+          log.error(`${logPrefix} forge 处理错误：${err.message}`)
         }
       })
 
       tcpSocket.on('error', (err) => {
-        log.error(`${logPrefix} TCP error during TLS: ${err.message}`)
+        log.error(`${logPrefix} TLS 期间 TCP 错误：${err.message}`)
         settle(new Error(`TCP error: ${err.message}`))
       })
 
@@ -560,7 +560,7 @@ function forgeCertsToDer (certs) {
       const derBytes = forge.asn1.toDer(asn1).getBytes()
       result.push(Buffer.from(derBytes, 'binary'))
     } catch (e) {
-      log.error(`${LOG_PREFIX} Error converting cert to DER: ${e.message}`)
+      log.error(`${LOG_PREFIX} 转换证书为 DER 失败：${e.message}`)
     }
   }
   return result
@@ -596,18 +596,18 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
         ws.send(buf)
       }
     } catch (err) {
-      log.error(`${logPrefix} TLS→WS write error:`, err.message)
+      log.error(`${logPrefix} TLS→WS 写入错误：`, err.message)
     }
   }
 
   // Override forge's closed/error for relay phase
   forgeTls.closed = function () {
-    log.debug(`${logPrefix} forge TLS closed`)
+    log.debug(`${logPrefix} forge TLS 已关闭`)
     cleanup('forge TLS')
   }
   forgeTls.error = function (connection, error) {
-    log.error(`${logPrefix} forge TLS error during relay: ${error.message}`)
-    cleanup('forge TLS (error)')
+    log.error(`${logPrefix} 中继期间 forge TLS 错误：${error.message}`)
+    cleanup('forge TLS（错误）')
   }
 
   // WebSocket → forge TLS → TCP (browser → RDP server)
@@ -617,14 +617,14 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
     try {
       forgeTls.prepare(buf.toString('binary'))
     } catch (err) {
-      log.error(`${logPrefix} WS→TLS write error:`, err.message)
+      log.error(`${logPrefix} WS→TLS 写入错误：`, err.message)
     }
   })
 
   // Cleanup on close
   const cleanup = (source) => {
     log.debug(
-      `${logPrefix} ${source} closed — WS→TLS: ${wsBytesForwarded} bytes, TLS→WS: ${tlsBytesForwarded} bytes`
+      `${logPrefix} ${source} 已关闭 — WS→TLS：${wsBytesForwarded} 字节，TLS→WS：${tlsBytesForwarded} 字节`
     )
     if (!tcpSocket.destroyed) tcpSocket.destroy()
     try {
@@ -639,14 +639,14 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
 
   tcpSocket.on('end', () => cleanup('TCP'))
   tcpSocket.on('error', (err) => {
-    log.error(`${logPrefix} TCP error:`, err.message)
-    cleanup('TCP (error)')
+    log.error(`${logPrefix} TCP 错误：`, err.message)
+    cleanup('TCP（错误）')
   })
 
   ws.on('close', () => cleanup('WebSocket'))
   ws.on('error', (err) => {
-    log.error(`${logPrefix} WebSocket error:`, err.message)
-    cleanup('WebSocket (error)')
+    log.error(`${logPrefix} WebSocket 错误：`, err.message)
+    cleanup('WebSocket（错误）')
   })
 }
 
@@ -671,22 +671,22 @@ function setupForgeRelay (ws, forgeTls, tcpSocket) {
  * @param {number} options.readyTimeout - Connection timeout in ms
  */
 function handleConnection (ws, options = {}, bufferedMessages = []) {
-  log.debug(`${LOG_PREFIX} New WebSocket connection for RDCleanPath proxy`)
+  log.debug(`${LOG_PREFIX} 新的 WebSocket 连接用于 RDCleanPath 代理`)
 
   const handleFirstMessage = async (data) => {
     try {
       const requestData = Buffer.isBuffer(data) ? data : Buffer.from(data)
-      log.debug(`${LOG_PREFIX} Received RDCleanPath request (${requestData.length} bytes)`)
+      log.debug(`${LOG_PREFIX} 收到 RDCleanPath 请求 (${requestData.length} 字节)`)
 
       // Step 1: Parse RDCleanPath request
       const request = parseRDCleanPathRequest(requestData)
       log.debug(
-        `${LOG_PREFIX} RDCleanPath Request → destination: ${request.destination}, proxyAuth: ${request.proxyAuth}`
+        `${LOG_PREFIX} RDCleanPath 请求 → 目标地址：${request.destination}，proxyAuth: ${request.proxyAuth}`
       )
 
       // Step 2: Parse destination
       const { host, port } = parseDestination(request.destination)
-      log.debug(`${LOG_PREFIX} Connecting to RDP server at ${host}:${port}`)
+      log.debug(`${LOG_PREFIX} 正在连接 RDP 服务器 ${host}:${port}`)
 
       // Step 3-5: TCP + X.224 + TLS (node-forge) + Certs
       const { x224Response, certChain, certFingerprint, forgeTls, tcpSocket } =
@@ -711,17 +711,17 @@ function handleConnection (ws, options = {}, bufferedMessages = []) {
       }
       const responsePdu = buildRDCleanPathResponse(serverAddr, x224Response, certChain)
       log.debug(
-        `${LOG_PREFIX} ✓ Sending RDCleanPath response (${responsePdu.length} bytes) to browser`
+        `${LOG_PREFIX} ✓ 正在发送 RDCleanPath 响应 (${responsePdu.length} 字节) 到浏览器`
       )
       ws.send(responsePdu)
 
-      log.debug(`${LOG_PREFIX} ✓ RDCleanPath handshake complete — starting bidirectional relay`)
+      log.debug(`${LOG_PREFIX} ✓ RDCleanPath 握手完成 — 开始双向中继`)
 
       // Step 7: Bidirectional relay via node-forge
       setupForgeRelay(ws, forgeTls, tcpSocket)
     } catch (err) {
-      log.error(`${LOG_PREFIX} RDCleanPath handshake error:`, err.message)
-      log.error(`${LOG_PREFIX} Stack:`, err.stack)
+      log.error(`${LOG_PREFIX} RDCleanPath 握手错误：`, err.message)
+      log.error(`${LOG_PREFIX} 堆栈：`, err.stack)
 
       // Try to send error response to client
       try {
@@ -744,7 +744,7 @@ function handleConnection (ws, options = {}, bufferedMessages = []) {
   }
 
   ws.on('error', (err) => {
-    log.error(`${LOG_PREFIX} WebSocket error:`, err.message)
+    log.error(`${LOG_PREFIX} WebSocket 错误：`, err.message)
   })
 }
 

@@ -10,7 +10,7 @@ exports.loadFontList = () => {
       return fonts.map(f => f.replace(/"/g, ''))
     })
     .catch(err => {
-      log.error('load font list error')
+      log.error('加载字体列表出错')
       log.error(err)
       return []
     })

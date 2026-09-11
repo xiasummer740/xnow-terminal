@@ -233,7 +233,7 @@ class Sftp extends TerminalBase {
         return r
       })
       .catch(err => {
-        log.error('rm -rf dir error', err)
+        log.error('rm -rf 删除目录出错', err)
         return this.removeDirectoryRecursively(remotePath)
       })
   }

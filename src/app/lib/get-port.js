@@ -32,7 +32,7 @@ module.exports = () => {
   }
   return getPort()
     .catch(e => {
-      log.error('failed to get free port')
+      log.error('获取空闲端口失败')
       return 0
     })
 }

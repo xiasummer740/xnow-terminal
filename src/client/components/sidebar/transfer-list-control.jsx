@@ -132,7 +132,7 @@ export default class TransferModalUI extends Component {
     const all = [
       {
         id: 'all',
-        title: 'All'
+        title: window.translate('All')
       },
       ...groups
     ]

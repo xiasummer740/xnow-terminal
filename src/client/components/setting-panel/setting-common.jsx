@@ -284,7 +284,7 @@ export default class SettingCommon extends Component {
           />
           <Select
             {...styleArg}
-            placeholder='args'
+            placeholder={e('args')}
             onChange={onChangeArgs}
             value={args}
             mode='tags'

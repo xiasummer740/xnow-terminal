@@ -33,7 +33,7 @@ class TerminalSshBase extends TerminalBase {
   }
 
   reTryAltAlg () {
-    log.log('retry with default ciphers/server hosts')
+    log.log('使用默认加密套件/服务器主机重试')
     this.doKill()
     this.connectOptions.algorithms = algAlt()
     this.altAlg = true
@@ -254,7 +254,7 @@ class TerminalSshBase extends TerminalBase {
         return this.jumpConnect(true, true)
       })
       .catch(e => {
-        log.error('errored get passphrase for', this.jumpHostFrom, this.jumpPrivateKeyPathFrom, e)
+        log.error('获取私钥口令失败', this.jumpHostFrom, this.jumpPrivateKeyPathFrom, e)
         return this.jumpConnect(true, false)
       })
   }
@@ -278,7 +278,7 @@ class TerminalSshBase extends TerminalBase {
       return next
     }
     const err = next
-    log.error('error when do jump connect', this.nextHost, this.nextPort)
+    log.error('跳板机连接出错', this.nextHost, this.nextPort)
     if (err.message.includes('passphrase')) {
       const options = {
         name: `passphase for ${this.jumpHostFrom}/${this.jumpPrivateKeyPathFrom}`,
@@ -323,7 +323,7 @@ class TerminalSshBase extends TerminalBase {
           }
         })
         .catch(err => {
-          log.error('errored get password for', err)
+          log.error('获取密码失败', err)
           throw err
         })
     } else if (
@@ -353,7 +353,7 @@ class TerminalSshBase extends TerminalBase {
     return new Promise((resolve, reject) => {
       conn.forwardOut('127.0.0.1', 0, hopping.host, hopping.port, async (err, stream) => {
         if (err) {
-          log.error(`forwardOut to ${hopping.host}:${hopping.port} error: ` + err)
+          log.error(`forwardOut 到 ${hopping.host}:${hopping.port} 出错：` + err)
           this.endConns()
           return reject(err)
         }
@@ -424,7 +424,7 @@ class TerminalSshBase extends TerminalBase {
         }
       })
       .catch(err => {
-        log.error('error when do sshTunnel', err)
+        log.error('建立 SSH 隧道出错', err)
         return {
           error: err.message,
           sshTunnel
@@ -749,7 +749,7 @@ class TerminalSshBase extends TerminalBase {
         return this.sshConnect()
       })
       .catch(e => {
-        log.error('errored get username for', e)
+        log.error('获取用户名失败', e)
         return this.nextTry(e)
       })
   }
@@ -792,14 +792,14 @@ class TerminalSshBase extends TerminalBase {
       return this.onInitSshReady()
     }
     const err = result
-    log.error('error when do sshConnect', err, this.privateKeyPath)
+    log.error('SSH 连接出错', err, this.privateKeyPath)
     if (
       err.message.includes(csFailMsg) &&
       !this.altAlg
     ) {
       return this.reTryAltAlg()
     } else if (err.message === '2FA_RETRY') {
-      log.log('2FA detected, retrying without password in auth')
+      log.log('检测到 2FA，正在不使用密码的情况下重试认证')
       delete this.connectOptions.password
       return this.sshConnect()
     } else if (err.message.includes('passphrase')) {
@@ -821,7 +821,7 @@ class TerminalSshBase extends TerminalBase {
           return this.nextTry(err, !!pass)
         })
         .catch(e => {
-          log.error('errored get passphrase for', this.privateKeyPath, e)
+          log.error('获取私钥口令失败', this.privateKeyPath, e)
           return this.nextTry(err)
         })
     } else if (
@@ -858,7 +858,7 @@ class TerminalSshBase extends TerminalBase {
           }
         })
         .catch(err => {
-          log.error('errored get password for', err)
+          log.error('获取密码失败', err)
           throw err
         })
     }
@@ -869,7 +869,7 @@ class TerminalSshBase extends TerminalBase {
     if (
       this.sshKeys || forceRetry
     ) {
-      log.log('retry with next ssh key')
+      log.log('使用下一个 SSH 密钥重试')
       if (this.conn) {
         this.conn.end()
       }
@@ -898,7 +898,7 @@ class TerminalSshBase extends TerminalBase {
         this.conn.setNoDelay(noDelay)
       }
     } catch (e) {
-      log.warn('failed to set ssh noDelay', e)
+      log.warn('设置 SSH noDelay 失败', e)
     }
   }
 
@@ -991,7 +991,7 @@ exports.test = (options, ws) => {
     .init()
     .then(() => true)
     .catch((err) => {
-      log.error('test ssh error', err)
+      log.error('SSH 测试出错', err)
       return false
     })
 }

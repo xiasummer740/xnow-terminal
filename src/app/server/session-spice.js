@@ -14,7 +14,7 @@ class TerminalSpice extends TerminalBase {
 
   start = async (query = {}, ws) => {
     if (!ws) {
-      log.error(`[SPICE:${this.pid}] No WebSocket provided`)
+      log.error(`[SPICE:${this.pid}] 未提供 WebSocket`)
       return
     }
 
@@ -29,11 +29,11 @@ class TerminalSpice extends TerminalBase {
     const connId = `${this.channelCounter}`
     this.wsMap.set(connId, ws)
 
-    log.debug(`[SPICE:${this.pid}] Starting SPICE channel #${connId} to ${host}:${port}, total channels: ${this.wsMap.size}`)
+    log.debug(`[SPICE:${this.pid}] 正在启动 SPICE 通道 #${connId} 到 ${host}:${port}，通道总数：${this.wsMap.size}`)
 
     const cleanup = () => {
       this.wsMap.delete(connId)
-      log.debug(`[SPICE:${this.pid}] Channel #${connId} closed, remaining: ${this.wsMap.size}`)
+      log.debug(`[SPICE:${this.pid}] 通道 #${connId} 已关闭，剩余：${this.wsMap.size}`)
       if (this.wsMap.size === 0) {
         this.kill()
       }
@@ -51,7 +51,7 @@ class TerminalSpice extends TerminalBase {
 
   resize = () => {
     // spice-client 在浏览器端处理分辨率变化，服务端 TCP 中继无需操作
-    log.debug(`[SPICE:${this.pid}] resize(cols/rows) ignored — spice-client handles resolution in-browser`)
+    log.debug(`[SPICE:${this.pid}] resize(cols/rows) 已忽略 — spice-client 在浏览器端处理分辨率`)
   }
 
   test = async () => {
@@ -92,12 +92,12 @@ class TerminalSpice extends TerminalBase {
   }
 
   kill = () => {
-    log.debug('Closed SPICE session ' + this.pid + ', remaining connections: ' + this.wsMap.size)
+    log.debug('SPICE 会话已关闭 ' + this.pid + '，剩余连接数：' + this.wsMap.size)
     for (const ws of this.wsMap.values()) {
       try {
         ws.close()
       } catch (e) {
-        log.debug(`[SPICE:${this.pid}] ws.close() error:`, e.message)
+        log.debug(`[SPICE:${this.pid}] ws.close() 出错：`, e.message)
       }
     }
     this.wsMap.clear()

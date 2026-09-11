@@ -34,7 +34,7 @@ function listWidgetsFromFolder (widgetDirectory = __dirname) {
         info: widgetModule.widgetInfo
       })
     } catch (error) {
-      log.error(`Error loading widget from file ${file}:`, error)
+      log.error(`从文件 ${file} 加载小组件出错：`, error)
       continue
     }
   }
@@ -114,7 +114,7 @@ function runWidget (widgetId, config) {
 function stopWidget (instanceId) {
   const instance = runningInstances.get(instanceId)
   if (!instance) {
-    log.error(`No running instance found for instanceId: ${instanceId}`)
+    log.error(`未找到 instanceId 对应的运行中实例：${instanceId}`)
     return
   }
 
@@ -139,7 +139,7 @@ async function runWidgetFunc (instanceId, funcName, ...args) {
     const result = await instance[funcName](...args)
     return result
   } catch (error) {
-    log.error(`Error executing ${funcName} on widget instance ${instanceId}:`, error)
+    log.error(`在小组件实例 ${instanceId} 上执行 ${funcName} 出错：`, error)
     throw error
   }
 }
@@ -152,34 +152,34 @@ async function cleanup () {
   const stopPromises = []
 
   for (const [instanceId, instance] of runningInstances) {
-    log.info(`Stopping widget instance: ${instanceId}`)
+    log.info(`正在停止小组件实例：${instanceId}`)
     try {
       const stopPromise = instance.stop()
         .then(() => {
-          log.info(`Successfully stopped widget instance: ${instanceId}`)
+          log.info(`已成功停止小组件实例：${instanceId}`)
         })
         .catch(err => {
-          log.error(`Error stopping widget instance ${instanceId}:`, err)
+          log.error(`停止小组件实例 ${instanceId} 出错：`, err)
         })
       stopPromises.push(stopPromise)
     } catch (err) {
-      log.error(`Error initiating stop for widget instance ${instanceId}:`, err)
+      log.error(`发起停止小组件实例 ${instanceId} 的操作出错：`, err)
     }
   }
 
   try {
     await Promise.allSettled(stopPromises)
     runningInstances.clear()
-    log.info('All widget instances have been stopped')
+    log.info('所有小组件实例均已停止')
   } catch (err) {
-    log.error('Error during cleanup:', err)
+    log.error('清理时出错：', err)
   }
 }
 
 // Register cleanup handlers only for process exit signals
 function registerCleanupHandlers () {
   process.on('SIGTERM', async () => {
-    log.info('Received SIGTERM, cleaning up widgets...')
+    log.info('收到 SIGTERM，正在清理小组件...')
     await cleanup()
   })
 }

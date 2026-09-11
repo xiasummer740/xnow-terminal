@@ -219,11 +219,11 @@ export default class Upgrade extends PureComponent {
           </span>
         </div>
         <div className='upgrade-panel-body'>
-          You can visit
+          {e('You can visit')}
           <Link to={homepage} className='mg1x'>
             {homepage}
           </Link>{' '}
-          to download new version.
+          {e('to download new version.')}
         </div>
       </div>
     )
@@ -236,7 +236,7 @@ export default class Upgrade extends PureComponent {
     }
     return (
       <div className='pd1t'>
-        <div className='bold'>Changelog:</div>
+        <div className='bold'>{e('Changelog:')}</div>
         <Markdown text={releaseInfo.body} />
         <Link to={packInfo.releases}>{e('moreChangeLog')}</Link>
       </div>

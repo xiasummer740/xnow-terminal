@@ -2,6 +2,8 @@
  * read themes from https://github.com/mbadolato/iTerm2-Color-Schemes/tree/master/electerm
  */
 
+const log = require('../common/log')
+
 exports.listItermThemes = async () => {
   const all = require('@electerm/electerm-themes/dist/index.js')
   return Promise.all(all).catch(e => {

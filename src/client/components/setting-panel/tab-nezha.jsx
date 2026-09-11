@@ -183,7 +183,7 @@ export default function TabNezha () {
         />
       </div>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>API Token</div>
+        <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>{window.translate('API Token')}</div>
         <Input.Password
           placeholder='nzp_xxxxxxxxxxxx'
           value={apiToken}

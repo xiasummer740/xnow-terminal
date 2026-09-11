@@ -33,13 +33,13 @@ async function migrateData () {
   if (!exist) {
     return false
   }
-  log.log('Start migrating data')
+  log.log('开始迁移数据')
   let json = {}
   try {
     json = require(savePath)
   } catch (e) {
     log.error(e)
-    log.error('load json data fails')
+    log.error('加载 JSON 数据失败')
   }
   const keys = Object.keys(json)
   for (const k of keys) {
@@ -70,7 +70,7 @@ async function migrateData () {
   }
   await writeFileSync(savePath + '.backup', JSON.stringify(json))
   await unlinkSync(savePath)
-  log.log('Finish migrating data')
+  log.log('完成迁移数据')
 }
 
 async function migrateUserConfig () {
@@ -78,13 +78,13 @@ async function migrateUserConfig () {
   if (!exist) {
     return false
   }
-  log.log('Start migrating user config')
+  log.log('开始迁移用户配置')
   let uf = {}
   try {
     uf = require(userConfigPath)
   } catch (e) {
     log.error(e)
-    log.error('load user config fails')
+    log.error('加载用户配置失败')
   }
   await dbAction('data', 'update', {
     _id: userConfigId
@@ -94,14 +94,14 @@ async function migrateUserConfig () {
   }, {
     upsert: true
   }).catch(log.error)
-  log.log('End migrating user config')
+  log.log('完成迁移用户配置')
 }
 
 module.exports = async () => {
   const versionTo = '1.3.0'
-  log.info(`Start: upgrading to v${versionTo}`)
+  log.info(`开始：升级到 v${versionTo}`)
   await migrateData()
   await migrateUserConfig()
   await updateDBVersion(versionTo)
-  log.info(`Done: upgrading to v${versionTo}`)
+  log.info(`完成：升级到 v${versionTo}`)
 }

@@ -24,7 +24,7 @@ exports.initShortCut = (globalShortcut, win, config) => {
     })
     const ok = globalShortcut.isRegistered(shortcut)
     if (!ok) {
-      log.warn('shortcut Registration failed.')
+      log.warn('快捷键注册失败。')
     }
   }
 }

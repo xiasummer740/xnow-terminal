@@ -62,13 +62,13 @@ if (type === 'rdp') {
     markConnected()
     const term = terminals(req.params.pid)
     term.ws = ws
-    log.debug('ws: connected to rdp session ->', term.pid, 'width=', width, 'height=', height)
+    log.debug('WS：已连接到 RDP 会话 ->', term.pid, '宽度=', width, '高度=', height)
     term.start(width, height)
     ws.on('error', (err) => {
-      log.error('rdp ws error:', err)
+      log.error('RDP WS 错误：', err)
     })
     ws.on('close', () => {
-      log.debug('ws: rdp session ws closed ->', term.pid)
+      log.debug('WS：RDP 会话已关闭 ->', term.pid)
       cleanup()
     })
   })
@@ -81,7 +81,7 @@ if (type === 'rdp') {
     const term = terminals(pid)
     term.ws = ws
     term.start(query)
-    log.debug('ws: connected to vnc session ->', pid)
+    log.debug('WS：已连接到 VNC 会话 ->', pid)
     ws.on('error', (err) => {
       log.error(err)
     })
@@ -96,7 +96,7 @@ if (type === 'rdp') {
     markConnected()
     const { pid } = req.params
     const term = terminals(pid)
-    log.debug('ws: connected to spice session ->', pid)
+    log.debug('WS：已连接到 SPICE 会话 ->', pid)
     term.start(query, ws)
     ws.on('error', (err) => {
       log.error(err)
@@ -108,7 +108,7 @@ if (type === 'rdp') {
     markConnected()
     const term = terminals(req.params.pid)
     const { pid } = term
-    log.debug('ws: connected to terminal ->', pid)
+    log.debug('WS：已连接到终端 ->', pid)
 
     const dataBuffer = []
     let sendTimeout = null
@@ -249,7 +249,7 @@ if (type === 'rdp') {
       // Clean up xmodem session
       xmodemManager.destroySession(pid)
       term.kill()
-      log.debug('Closed terminal ' + pid)
+      log.debug('终端已关闭 ' + pid)
       // Clean things up
       ws.close && ws.close()
       cleanup()
@@ -447,7 +447,7 @@ process.on('message', async (message) => {
         }
       })
       .catch(err => {
-        log.error('common message error', err)
+        log.error('通用消息错误', err)
         return {
           id,
           error: {
@@ -465,7 +465,7 @@ process.on('message', async (message) => {
 const runServer = function () {
   return new Promise((resolve) => {
     app.listen(wsPort, electermHost, () => {
-      log.info('session server', 'runs on', electermHost, wsPort)
+      log.info('会话服务端', '运行于', electermHost, wsPort)
       resolve()
     })
   })
@@ -491,7 +491,7 @@ function cleanup () {
 // Self-terminate if the parent process IPC channel disconnects (e.g. Electron crashes/restarts)
 // Without this, child processes become orphans and accumulate in memory
 process.on('disconnect', () => {
-  log.warn('session-server: parent IPC disconnected, terminating')
+  log.warn('会话服务端：父进程 IPC 已断开，正在退出')
   cleanup()
 })
 
@@ -499,18 +499,18 @@ process.on('disconnect', () => {
 // This handles the case where the frontend unmounts before the WebSocket is established
 const noConnectionTimer = setTimeout(() => {
   if (!firstWsConnected) {
-    log.warn('session-server: no WS connection within 2min timeout, terminating')
+    log.warn('会话服务端：2 分钟内没有 WS 连接，正在退出')
     cleanup()
   }
 }, 120000)
 if (noConnectionTimer.unref) noConnectionTimer.unref()
 
 process.on('uncaughtException', (err) => {
-  log.error('uncaughtException', err)
+  log.error('未捕获异常', err)
   cleanup()
 })
 process.on('unhandledRejection', (err) => {
-  log.error('unhandledRejection', err)
+  log.error('未处理的 Promise 拒绝', err)
   cleanup()
 })
 

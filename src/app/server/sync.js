@@ -35,7 +35,7 @@ async function doSync (type, func, args, token, proxy) {
       return r
     })
     .catch(e => {
-      log.error('sync error')
+      log.error('同步出错')
       log.error(e.message)
       return {
         error: e

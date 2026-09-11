@@ -19,13 +19,13 @@ function forwardRemoteToLocal ({
       const srcStream = accept() // Source stream for forwarding
 
       if (!srcStream) {
-        log.error(`Failed to accept connection for tunnel ${result}`)
+        log.error(`隧道 ${result} 接受连接失败`)
         return
       }
 
       // Add error handling for source stream immediately
       srcStream.on('error', (err) => {
-        log.error(`Source stream error for tunnel ${result}:`, err)
+        log.error(`隧道 ${result} 源流错误：`, err)
       })
 
       // Connect the local machine source stream to the local port
@@ -35,14 +35,14 @@ function forwardRemoteToLocal ({
       // CRITICAL: Add error handling IMMEDIATELY before any async operations
       // This prevents unhandled errors from crashing the SSH session
       server.on('error', (err) => {
-        log.error(`Server connection error for tunnel ${result}:`, err.message)
+        log.error(`隧道 ${result} 服务端连接错误：`, err.message)
         // Just close this specific connection, don't break the tunnel
         srcStream.destroy()
         server.destroy()
       })
 
       server.on('close', () => {
-        log.log(`Local server connection closed for tunnel ${result}`)
+        log.log(`隧道 ${result} 的本地服务端连接已关闭`)
         srcStream.end()
       })
 
@@ -56,7 +56,7 @@ function forwardRemoteToLocal ({
     conn.on('tcp connection', handleTcpConnection)
 
     const handleClose = () => {
-      log.log(`SSH connection closed for tunnel ${result}`)
+      log.log(`隧道 ${result} 的 SSH 连接已关闭`)
       conn.removeListener('tcp connection', handleTcpConnection)
       conn.removeListener('close', handleClose)
     }
@@ -66,10 +66,10 @@ function forwardRemoteToLocal ({
     // Forward the remote server's port to the local machine's port
     conn.forwardIn(sshTunnelRemoteHost, sshTunnelRemotePort, (err) => {
       if (err) {
-        log.error('Error forwarding port:', err)
+        log.error('转发端口出错：', err)
         return reject(err)
       }
-      log.log(`Port forwarded: ${result}`)
+      log.log(`端口已转发：${result}`)
       resolve(1)
     })
   })
@@ -92,13 +92,13 @@ function forwardLocalToRemote ({
       })
 
       socket.on('error', (err) => {
-        log.error('Client socket error:', err)
+        log.error('客户端套接字错误：', err)
         socket.end()
       })
 
       conn.forwardOut(sshTunnelLocalHost, sshTunnelLocalPort, sshTunnelRemoteHost, sshTunnelRemotePort, (err, remoteSocket) => {
         if (err) {
-          log.error('Error forwarding connection:', err)
+          log.error('转发连接出错：', err)
           socket.destroy()
           // Don't reject - just close this connection
           // Rejecting would break the entire tunnel
@@ -107,7 +107,7 @@ function forwardLocalToRemote ({
 
         // Add error handlers immediately
         remoteSocket.on('error', (err) => {
-          log.error('Remote socket error:', err)
+          log.error('远程套接字错误：', err)
           socket.destroy()
         })
 
@@ -120,16 +120,16 @@ function forwardLocalToRemote ({
     })
 
     localServer.listen(sshTunnelLocalPort, sshTunnelLocalHost, () => {
-      log.log(`Local server listening on port ${sshTunnelLocalPort}`)
+      log.log(`本地服务端正在监听端口 ${sshTunnelLocalPort}`)
       resolve(1)
     })
     localServer.on('error', (err) => {
-      log.error('Error listening for local connections:', err)
+      log.error('监听本地连接出错：', err)
       reject(err)
     })
 
     conn.on('close', () => {
-      log.log('SSH connection closed, closing local server.')
+      log.log('SSH 连接已关闭，正在关闭本地服务端')
       // ⬇️ 3. Destroy all active sockets before closing the server
       for (const socket of activeSockets) {
         socket.destroy()
@@ -154,7 +154,7 @@ function dynamicForward ({
         info.dstPort,
         (err, stream) => {
           if (err) {
-            log.error('SOCKS forward error:', err)
+            log.error('SOCKS 转发错误：', err)
             deny()
             // Don't reject - just deny this connection
             // Rejecting would break the entire tunnel
@@ -164,13 +164,13 @@ function dynamicForward ({
           if (clientSocket) {
             // Add error handling for stream immediately
             stream.on('error', (err) => {
-              log.error('SOCKS stream error:', err)
+              log.error('SOCKS 流错误：', err)
               clientSocket.destroy()
             })
 
             // Add error handling for client socket immediately
             clientSocket.on('error', (err) => {
-              log.error('SOCKS client socket error:', err)
+              log.error('SOCKS 客户端套接字错误：', err)
               stream.destroy()
             })
 
@@ -187,11 +187,11 @@ function dynamicForward ({
         })
     })
     dproxyServer.on('error', (err) => {
-      log.error('Error listening for local connections:', err)
+      log.error('监听本地连接出错：', err)
       reject(err)
     })
     dproxyServer.listen(sshTunnelLocalPort, sshTunnelLocalHost, () => {
-      log.log(`SOCKS server listening on ${sshTunnelLocalHost}:${sshTunnelLocalPort}`)
+      log.log(`SOCKS 服务端正在监听 ${sshTunnelLocalHost}:${sshTunnelLocalPort}`)
       resolve(1)
     }).useAuth(socks.auth.None())
 

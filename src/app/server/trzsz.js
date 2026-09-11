@@ -111,7 +111,7 @@ class FileWriter {
         flags: 'w'
       })
       this.writeStream.on('error', (err) => {
-        log.error('FileWriter stream error:', err)
+        log.error('文件写入流错误：', err)
       })
     }
   }
@@ -339,7 +339,7 @@ class TrzszSession {
       }
       this._completionTimeout = setTimeout(() => {
         if (this._pendingComplete) {
-          log.warn('Trzsz upload: timeout waiting for server response, auto-ending session')
+          log.warn('Trzsz 上传：等待服务端响应超时，自动结束会话')
           this.sendToClient(this._pendingComplete)
           this._pendingComplete = null
           this.endSession()
@@ -350,9 +350,9 @@ class TrzszSession {
       this.state = TRZSZ_STATE.IDLE
     } catch (err) {
       if (this._cancelling) {
-        log.info('Trzsz upload cancelled by user')
+        log.info('Trzsz 上传已被用户取消')
       } else {
-        log.error('Trzsz upload error:', err)
+        log.error('Trzsz 上传错误：', err)
         this.sendToClient({ event: 'session-error', error: err.message })
         this.endSession()
       }
@@ -466,7 +466,7 @@ class TrzszSession {
       })
       this._runReceiverHandshake()
     } catch (e) {
-      log.error('Failed to start trzsz receiver', e)
+      log.error('启动 Trzsz 接收端失败', e)
       this.endSession()
     }
   }
@@ -479,7 +479,7 @@ class TrzszSession {
       if (this.state !== TRZSZ_STATE.RECEIVING) return
       await this._startFileReceiving()
     } catch (err) {
-      log.error('Trzsz receiver handshake error:', err)
+      log.error('Trzsz 接收端握手错误：', err)
       this.sendToClient({ event: 'session-error', error: err.message })
       this.endSession()
     }
@@ -535,7 +535,7 @@ class TrzszSession {
       }
       this._completionTimeout = setTimeout(() => {
         if (this._pendingComplete) {
-          log.warn('Trzsz download: timeout waiting for server response, auto-ending session')
+          log.warn('Trzsz 下载：等待服务端响应超时，自动结束会话')
           this.sendToClient(this._pendingComplete)
           this._pendingComplete = null
           this.endSession()
@@ -545,9 +545,9 @@ class TrzszSession {
       await this.transfer.clientExit('Success')
     } catch (err) {
       if (this._cancelling) {
-        log.info('Trzsz download cancelled by user')
+        log.info('Trzsz 下载已被用户取消')
       } else {
-        log.error('Trzsz download error:', err)
+        log.error('Trzsz 下载错误：', err)
         this.sendToClient({ event: 'session-error', error: err.message })
         this.endSession()
       }
@@ -622,13 +622,13 @@ class TrzszSession {
       this._filesResolve = null
     }
     for (const writer of this.fileWriters) {
-      try { writer.closeFile() } catch (e) { log.error('Error closing file writer', e) }
+      try { writer.closeFile() } catch (e) { log.error('关闭文件写入器出错', e) }
     }
     for (const reader of this.fileReaders) {
-      try { reader.closeFile() } catch (e) { log.error('Error closing file reader', e) }
+      try { reader.closeFile() } catch (e) { log.error('关闭文件读取器出错', e) }
     }
     if (this.transfer) {
-      try { this.transfer.cleanup() } catch (e) { log.error('Error cleaning up transfer', e) }
+      try { this.transfer.cleanup() } catch (e) { log.error('清理传输出错', e) }
     }
     this.sendToClient({ event: 'session-end' })
     this.state = TRZSZ_STATE.IDLE
@@ -655,7 +655,7 @@ class TrzszSession {
     // know not to send session-error to the client
     this._cancelling = true
     if (this.transfer) {
-      try { await this.transfer.stopTransferring() } catch (e) { log.error('Error stopping transfer', e) }
+      try { await this.transfer.stopTransferring() } catch (e) { log.error('停止传输出错', e) }
     }
     this.endSession()
     if (wasActive) {

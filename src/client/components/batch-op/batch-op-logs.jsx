@@ -3,6 +3,8 @@ import { refsStatic } from '../common/ref'
 
 const STATIC_KEY = 'batch-op-logs'
 
+const e = window.translate
+
 const BatchOpLogs = forwardRef(function BatchOpLogs (_, ref) {
   const [logs, setLogsState] = useState(null)
 
@@ -27,7 +29,7 @@ const BatchOpLogs = forwardRef(function BatchOpLogs (_, ref) {
 
   return (
     <div className='batch-op-logs mg1t pd1 font13'>
-      <div className='bold mg1b'>Execution Log</div>
+      <div className='bold mg1b'>{e('Execution Log')}</div>
       {logs.steps.map((step, i) => (
         <div key={i} className={`batch-op-log-entry ${step.status}`}>
           <span className='log-icon mg1r'>{statusIcon[step.status] || '○'}</span>

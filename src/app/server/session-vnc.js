@@ -68,17 +68,17 @@ class TerminalVnc extends TerminalBase {
     try {
       this.ws?.send(data)
     } catch (e) {
-      log.error('vnc connection send data error', e)
+      log.error('VNC 连接发送数据出错', e)
     }
   }
 
   resize () {
     // noVNC 在浏览器端处理分辨率变化，服务端 TCP 中继无需操作
-    log.debug(`[VNC:${this.pid}] resize(cols/rows) ignored — noVNC handles resolution in-browser`)
+    log.debug(`[VNC:${this.pid}] resize(cols/rows) 已忽略 — noVNC 在浏览器端处理分辨率`)
   }
 
   onError = (err) => {
-    log.error('vnc error', err)
+    log.error('VNC 出错', err)
     this.kill()
   }
 
@@ -103,7 +103,7 @@ class TerminalVnc extends TerminalBase {
   }
 
   kill = () => {
-    log.debug('Closed vnc session ' + this.pid)
+    log.debug('vnc 会话已关闭 ' + this.pid)
     if (this.ws) {
       this.ws.close()
       delete this.ws

@@ -43,7 +43,7 @@ export default Store => {
     if (!sshConfigGroup) {
       sshConfigGroup = {
         id: 'sshConfig',
-        title: 'ssh configs',
+        title: window.translate('ssh configs'),
         bookmarkIds: ids
       }
       store.addBookmarkGroup(sshConfigGroup)
