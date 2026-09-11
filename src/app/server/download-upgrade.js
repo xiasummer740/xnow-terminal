@@ -14,6 +14,7 @@ const { createProxyAgent } = require('../lib/proxy-agent')
 const { openFile, rmrf } = fsExport
 const log = require('../common/log')
 const globalState = require('./global-state')
+const { parseLatestYml, verifyUpgradeFile } = require('./upgrade-verify')
 
 rp.defaults.proxy = false
 
@@ -53,11 +54,39 @@ async function getReleaseInfo (filter, agent) {
   const assets = res.data.assets.filter(filter)
   if (!assets.length) return null
   const asset = assets[0]
+  // latest.yml 是 electron-builder 发布时生成的校验清单（sha512 + size）。
+  // 只认 GitHub 上这一份 —— 镜像可以提供安装包，但不能提供"期望值"（ISSUES #4）。
+  const ymlAsset = res.data.assets.find(a => a.name === 'latest.yml')
   return {
     name: asset.name,
     size: asset.size,
     browser_download_url: asset.browser_download_url,
-    html_url: res.data.html_url
+    html_url: res.data.html_url,
+    checksumUrl: ymlAsset && ymlAsset.browser_download_url
+  }
+}
+
+/**
+ * 取 latest.yml 并解析出该安装包的期望 sha512 + size。
+ * 取不到/解析不了返回 null，调用方按"无法校验"处理。
+ */
+async function getExpectedIntegrity (checksumUrl, fileName, agent) {
+  if (!checksumUrl) {
+    log.warn('升级', '该 release 没有 latest.yml 资源，无法校验安装包')
+    return null
+  }
+  try {
+    const res = await rp({
+      url: checksumUrl,
+      timeout: 15000,
+      responseType: 'text',
+      transformResponse: [d => d],
+      httpsAgent: agent
+    })
+    return parseLatestYml(res.data, fileName)
+  } catch (err) {
+    log.warn('升级', '获取 latest.yml 失败:', err.message)
+    return null
   }
 }
 
@@ -104,6 +133,13 @@ class Upgrade {
     const { size } = releaseInfo
     this.id = id
     this.localPath = localPath
+    this.htmlUrl = releaseInfo.html_url
+    // 先拿期望值：拿到就能在安装前卡一道，拿不到也不阻断下载
+    // （用户在墙内可能下得了镜像、取不到 GitHub，此时降级为手动安装）
+    this.expected = await getExpectedIntegrity(releaseInfo.checksumUrl, releaseInfo.name, agent)
+    if (this.expected) {
+      log.info('升级', '已取得校验清单，期望 sha512:', this.expected.sha512.slice(0, 12) + '…')
+    }
     await rmrf(localPath).catch(log.error)
 
     // ── Multi-mirror fallback ──────────────────────────────────────
@@ -163,7 +199,9 @@ class Upgrade {
     })
 
     readSteam.on('close', () => {
-      writeSteam.end('', () => this.onEnd(id, ws))
+      // 注意：连接中断也会触发 close，所以"下完了"不等于"下对了"——
+      // 必须先过 onDownloaded 的校验才能装（ISSUES #4）
+      writeSteam.end('', () => this.onDownloaded(id, ws))
     })
 
     readSteam.on('error', (err) => this.onError(err, id, ws))
@@ -174,15 +212,54 @@ class Upgrade {
     this.destroy = this.destroy.bind(this)
   }
 
+  /**
+   * 下载结束 → 先校验完整性，过关才进入安装（ISSUES #4）
+   *
+   * 两种失败要分开对待，不能一刀切：
+   *   - **有期望值但对不上** → 文件是坏的或被人换过，删掉，且绝不打开
+   *   - **压根取不到期望值** → 只是"没能证明它是好的"，文件未必有问题，保留下来
+   *     交给用户手动装（手动 = 用户自己确认，跟静默装不是一回事）
+   */
+  async onDownloaded (id, ws) {
+    if (this.onDestroy) return
+    const localPath = this.localPath
+
+    if (!this.expected) {
+      log.warn('[upgrade] 无法取得校验清单，不做静默安装，改为手动安装:', localPath)
+      this.manualInstall(id, ws, localPath)
+      return
+    }
+
+    const { ok, reason } = await verifyUpgradeFile(localPath, this.expected)
+    if (!ok) {
+      log.error('[upgrade] 安装包校验未通过，拒绝安装:', reason)
+      await rmrf(localPath).catch(log.error)
+      this.onFatalError(id, ws, this.htmlUrl, 'CHECKSUM_MISMATCH')
+      return
+    }
+    log.info('[upgrade] 安装包校验通过（sha512 + size 与 latest.yml 一致）')
+    this.onEnd(id, ws)
+  }
+
+  /**
+   * 打开文件让用户自己装（静默安装的降级路径，也是非 Windows 平台的正常路径）
+   */
+  manualInstall (id, ws, localPath) {
+    openFile(localPath)
+    process.send({ showFileInFolder: localPath })
+    ws.s({ id: 'upgrade:end:' + id })
+  }
+
   onEnd (id, ws) {
     if (this.onDestroy) return
     const localPath = this.localPath
 
     if (isWin && localPath.endsWith('.exe')) {
-      // ── Windows NSIS：静默安装 ────────────────────────────
-      log.info('[upgrade] 下载完成，启动静默安装:', localPath)
+      // ── Windows NSIS：静默安装（已过校验）────────────────
+      log.info('[upgrade] 校验通过，启动静默安装:', localPath)
       try {
-        const batPath = resolve(tempDir, `xnow-update-${id}.bat`)
+        // id 来自客户端消息，直接拼进文件名会被 `../` 跳出 tempDir
+        const batPath = resolve(tempDir, `xnow-update-${String(id).replace(/[^\w-]/g, '')}.bat`)
         const batContent = [
           '@echo off',
           'ping 127.0.0.1 -n 4 > nul 2>&1',
@@ -198,18 +275,11 @@ class Upgrade {
       } catch (err) {
         // 静默安装准备失败 → 回退到手动安装
         log.error('[upgrade] 静默安装准备失败，回退到手动安装:', err.message)
-        openFile(localPath)
-        process.send({ showFileInFolder: localPath })
-        ws.s({ id: 'upgrade:end:' + id })
+        this.manualInstall(id, ws, localPath)
       }
     } else {
       // ── 其他平台/格式：打开文件让用户手动安装 ────────────
-      openFile(localPath)
-      process.send({ showFileInFolder: localPath })
-      ws.s({
-        id: 'transfer:end:' + id,
-        data: this.dir
-      })
+      this.manualInstall(id, ws, localPath)
     }
   }
 
@@ -226,12 +296,13 @@ class Upgrade {
   /**
    * All mirrors exhausted — send a fatal error that the UI will
    * render as a manual download link.
+   * CHECKSUM_MISMATCH 也走这里：都给用户一个去官网重新下载的出口。
    */
-  onFatalError (id, ws, downloadUrl) {
+  onFatalError (id, ws, downloadUrl, message = 'ALL_MIRRORS_FAILED') {
     ws.s({
       wid: 'upgrade:err:' + id,
       error: {
-        message: 'ALL_MIRRORS_FAILED',
+        message,
         downloadUrl
       }
     })
@@ -258,3 +329,6 @@ class Upgrade {
 }
 
 exports.Upgrade = Upgrade
+// 供验证脚本走真实网络校验 latest.yml 的解析（temp/verify-issue4.js）
+exports.getReleaseInfo = getReleaseInfo
+exports.getExpectedIntegrity = getExpectedIntegrity

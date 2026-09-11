@@ -6,6 +6,10 @@
 const fs = require('./fs')
 const log = require('../common/log')
 const { Upgrade } = require('./download-upgrade')
+const upgradeFuncs = require('../common/upgrade-funcs')
+
+// 只有这几个方法能被客户端远程调用（ISSUES #4）
+const upgradeFuncSet = new Set(upgradeFuncs)
 const fetch = require('./fetch')
 const sync = require('./sync')
 const {
@@ -70,7 +74,15 @@ const initWs = function (app) {
         await inst.init()
       } else if (action === 'upgrade-func') {
         const { id, func, args } = msg
-        globalState.getUpgradeInst(id)[func](...args)
+        // func 来自客户端消息，不校验就能 `func: 'onEnd'` 直接跳到静默安装（ISSUES #4）
+        if (!upgradeFuncSet.has(func)) {
+          log.warn('拒绝未登记的升级操作:', func)
+          return
+        }
+        const inst = globalState.getUpgradeInst(id)
+        if (inst) {
+          inst[func](...args)
+        }
       }
     })
   })

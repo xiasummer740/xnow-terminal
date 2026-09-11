@@ -15,7 +15,7 @@
 | 1 | IPC 桥 `runGlobalAsync(name,...)` 无白名单：渲染进程任意 JS 可按名字调主进程**全部**能力（文件读写、进程启动、数据库、已存凭据）。且全应用无 `will-navigate`/`setWindowOpenHandler`，AI 输出里的外链一点即导航 → preload 重新注入 → 直达 RCE | `preload/preload.js:31-42`、`lib/ipc.js:247-252,700-712`、`lib/create-window.js:90-119`、`lib/safe-open-external.js`、`components/ai/ai-output.jsx:97-101` | 已修已验 |
 | 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/path-safe.js`（原 `lib/ipc.js:142-158`） | 已修已验 |
 | 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:29-45`、`server/session-server.js:50-61`、`server/ws-origin.js`、`common/ws-token.js`、`common/fs-functions.js`、`server/fs.js:12-25` | 已修已验（残留说明见下方「#3 修复说明」） |
-| 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-197` | 待修 |
+| 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-200`、`server/upgrade-verify.js` | 已修已验（**该路径当前从 UI 已不可达**，见下方「#4 修复说明」） |
 | 5 | AI 对话**请求失败即删记录**（`removeAiHistory` → 落库 DELETE），用户刚打的字一起消失且无提示 | `ai/ai-chat-history-item.jsx:99`、`store/common.js:342-349` | 已修已验 |
 | 6 | AI 历史超 100 条淘汰**方向反了**：数组旧→新，`splice(100)` 砍掉的是**刚 push 的最新那条** | `ai/ai-chat.jsx:25,68-75` | 已修已验 |
 | 7 | 同步为全量覆盖、零冲突处理（冲突逻辑已被注释）。**一端为空即清空另一端**：新设备空书签上传 → 服务端被写成 `[]` → 老设备下载 → watch 逐条删库 | `store/sync.js`（3 处入口）、`watch.js:34-42` | 已修已验（致命方向已堵，见下方「#7 修复说明」） |
@@ -196,7 +196,7 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 - 反向对照：修之前同一组用例实测全部放行（上面的 probe）
 
 **第 2 批（安全闸门 —— 决定风险是"理论"还是"一触即发"）**
-#1 ✅ #2 ✅ #3 ✅ #4
+#1 ✅ #2 ✅ #3 ✅ #4 ✅
 
 ### #3 修复说明（本机 WS 鉴权）
 
@@ -239,6 +239,65 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
   （注：`status === 'success'` **不能**当判据，它在 `new WebSocket()` 之前就置位了，
   `terminal.jsx:1455` 拿到端口即置成功、1459 才建 WS —— 这条差点让我误判，已写进注释）
 
+
+### #4 修复说明（升级包完整性校验）
+
+**先取证，两个发现改变了这条的严重性判断：**
+
+1. **现在有两条更新路径，出问题的是旧的那条**。主路径走 electron-updater
+   （`autoUpdaterDownload` → `downloadUpdate()` → `quitAndInstall()`），它自己会按
+   latest.yml 校验 sha512，**是安全的**。本 issue 指的是另一条自研路径
+   （`server/download-upgrade.js` + `/upgrade/:id` WS）。
+2. **这条自研路径已经从 UI 上摘掉了**：`b3bd2c3d`（2026-06-19，切 electron-updater 时）
+   删掉了 `components/main/upgrade.jsx` 里的 `import upgrade from '../../common/upgrade'`，
+   全仓库再无调用方 —— 客户端 `common/upgrade.js` 成了孤儿，服务端 `/upgrade/:id` 还挂着。
+   所以它不是"一触即发"，而是**一个没人用、但仍可被 WS 调用的静默安装后门**。
+
+3. **闸门装上后自己又发现一个洞，差点白修**：`upgrade-func` 的处理是
+   `globalState.getUpgradeInst(id)[func](...args)`，**func 由客户端消息决定**。
+   也就是说客户端可以直接发 `func: 'onEnd'` —— 一步跳过我刚加的完整性校验，
+   直接写 bat 静默安装。**能被绕过的闸门不算闸门**，已一并堵掉
+   （与 #3 的 fs 名单是同一类缺陷：拿客户端给的字符串去查对象/调方法）。
+   这正是「缺陷回流」要防的：同类问题换个地方又冒出来。
+
+**修法**（按"先把闸门装上"处理，不删功能）：
+- 新增 `server/upgrade-verify.js`：算文件 sha512（流式，100MB+ 不读进内存）、
+  解析 latest.yml、校验
+- **期望值只从 GitHub 取**（release 里的 latest.yml，electron-builder 发布时生成）。
+  绝不从镜像取 —— 否则投毒的镜像只要配一份假 yml 就能自圆其说
+- 装之前先过校验，两种失败**分开处理**（一刀切会误伤或误放）：
+  - **有期望值但对不上** → 文件是坏的或被人换过 → **删掉，且绝不打开**
+  - **取不到期望值** → 只是"没能证明它是好的" → **保留文件，转手动安装**
+    （手动 = 用户自己确认，与静默 `/S` 不是一回事；也照顾了墙内下得了镜像、
+    取不到 GitHub 的场景）
+- 顺手堵掉 `id` 直接拼进 bat 文件名的路径注入（`id` 来自客户端消息）
+- **`upgrade-func` 加方法名单**（`common/upgrade-funcs.js` = pause/resume/destroy，
+  与客户端 `transferKeys` 同一组），名单外的 func 一律拒绝并记日志
+
+**顺带修的一处（已披露，非本 issue 诉求）**：非 Windows 分支原本给客户端发的是
+`transfer:end:`，而客户端监听的是 `upgrade:end:` —— 事件名对不上，永远收不到完成回调。
+已随 `manualInstall` 抽取消正。
+
+**未做（留给祥哥拍板）**：这条路径整体已是孤儿。要不要**整个删掉**
+（客户端 `common/upgrade.js` + 服务端 `/upgrade/:id` + `download-upgrade.js`），
+还是等以后重新接回镜像下载能力？我没擅自删，因为它承载着"三方镜像加速"这个
+可能是刻意保留的能力。
+
+**证据**：
+- 单元测试 `test/unit-ci/upgrade-verify.spec.js` **5/5**（全量 46/46）：
+  用真 latest.yml 原文解析；多文件按名精确取、取不到返回 null（不退回第一条放行）；
+  12 种畸形输入一律 null；sha512 对公开已知向量（非自算自比）
+- 实机 `temp/verify-issue4.js` **18/18**：
+  - 真网络走真 `getExpectedIntegrity` 解析真 latest.yml，解析出的 size 与 GitHub API
+    报的 size **两个独立来源互证**一致
+  - **真实产物**：把真安装包按 Range 截断到 2MB（模拟"下到一半断了"——原来这种文件
+    会直接被静默安装），大小闸门当场拒掉
+  - 加载**真类真方法**，只把落地的两个动作换成记录器，验四种输入下的决策：
+    无期望值→转手动且保留文件；哈希不符→删文件+报错；校验通过→才进安装；截断→拒+删
+  - 全程 `quitAndInstall` 一次未发、temp 下未留 `xnow-update-*.bat`（**没有真的装**）
+  - **真 WS 打真服务端**：带 token + 回环 Origin 连 `/upgrade/:id`，发 `func: 'onEnd'`
+    被拒并留日志，发 `func: 'pause'`（名单内）不被误拒 —— 一拒一放形成对照，
+    证明它确实按客户端给的 func 去查名单了；`__proto__` 同样被拒，且没把服务进程搞崩
 
 **第 3 批（发版链路）**
 #25 #24 #27 #26
