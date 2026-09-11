@@ -2,7 +2,6 @@
 class GlobalState {
   #sessions = {}
   #upgradeInsts = {}
-  #authed = false
 
   // Sessions management
   getSession (id) {
@@ -30,19 +29,10 @@ class GlobalState {
     delete this.#upgradeInsts[id]
   }
 
-  get authed () {
-    return this.#authed
-  }
-
-  set authed (val) {
-    this.#authed = val
-  }
-
   get data () {
     return {
       sessions: this.#sessions,
-      upgradeInsts: this.#upgradeInsts,
-      authed: this.#authed
+      upgradeInsts: this.#upgradeInsts
     }
   }
 }

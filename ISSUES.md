@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | IPC 桥 `runGlobalAsync(name,...)` 无白名单：渲染进程任意 JS 可按名字调主进程**全部**能力（文件读写、进程启动、数据库、已存凭据）。且全应用无 `will-navigate`/`setWindowOpenHandler`，AI 输出里的外链一点即导航 → preload 重新注入 → 直达 RCE | `preload/preload.js:31-42`、`lib/ipc.js:247-252,700-712`、`lib/create-window.js:90-119`、`lib/safe-open-external.js`、`components/ai/ai-output.jsx:97-101` | 已修已验 |
 | 2 | `isPathSafe` 前缀比对可被 `\\?\` 绕过（实测 `\\?\C:\Windows\...` 放行）；且 `~/.ssh`、`Startup` 目录不在黑名单 → 任意读私钥 + 任意写开机自启 | `lib/path-safe.js`（原 `lib/ipc.js:142-158`） | 已修已验 |
-| 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:25-35`、`common/uid.js:3`、`server/fs.js:7-10` | 待修 |
+| 3 | 本机 WS 服务唯一鉴权是 42 位 token（`nanoid(7)`，与所有 ID 共用熵源）；主密码门禁 `requireAuth === 'yes'` 是**死代码**（`requireAuth` 实际是 pbkdf2 哈希）；`/common/s` 按客户端给的 `func` 直接调 fs 函数，含 `runWinCmd`（拼 shell 跑 powershell） | `server/dispatch-center.js:29-45`、`server/session-server.js:50-61`、`server/ws-origin.js`、`common/ws-token.js`、`common/fs-functions.js`、`server/fs.js:12-25` | 已修已验（残留说明见下方「#3 修复说明」） |
 | 4 | 自动更新下载的安装包**无签名/无哈希校验**，落盘后拼 bat `start /wait "x.exe" /S` 静默执行；镜像域为三方域名 | `server/download-upgrade.js:38-62,181-197` | 待修 |
 | 5 | AI 对话**请求失败即删记录**（`removeAiHistory` → 落库 DELETE），用户刚打的字一起消失且无提示 | `ai/ai-chat-history-item.jsx:99`、`store/common.js:342-349` | 已修已验 |
 | 6 | AI 历史超 100 条淘汰**方向反了**：数组旧→新，`splice(100)` 砍掉的是**刚 push 的最新那条** | `ai/ai-chat.jsx:25,68-75` | 已修已验 |
@@ -196,7 +196,49 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 - 反向对照：修之前同一组用例实测全部放行（上面的 probe）
 
 **第 2 批（安全闸门 —— 决定风险是"理论"还是"一触即发"）**
-#1 ✅ #2 ✅ #3 #4
+#1 ✅ #2 ✅ #3 ✅ #4
+
+### #3 修复说明（本机 WS 鉴权）
+
+**先取证**（不盲猜），三个事实推翻了原来的判断：
+
+1. **主密码门禁是**双重**死的**：`verify` 里判 `requireAuth === 'yes'`，但 `requireAuth` 是主密码的
+   pbkdf2 哈希（或空串），**永远不等于 `'yes'`**；而且唯一的写入点 `POST /auth` 全仓库 grep
+   下来**没有任何客户端调用**。所以这道门从来没生效过，不是"配错了"，是压根没接上。
+2. **fs 名单只发给了前端**：`getConstants().fsFunctions` 前端照着它拼 API，服务端 `fs[func](...args)`
+   **从没校验过**。于是名单形同虚设：`constructor`/`__proto__`/`toString` 摸得到，名单外的
+   `rm`/`symlink`/`chown` 照样能调。
+3. **Origin 校验是安全的**：反复确认过 RDP/VNC/Spice 的 WebSocket 是渲染进程**自己**（回环来源）
+   用 WASM 模块建的，不是从远端来源的 `<webview>` 里发的 —— 加 Origin 闸门不会误伤它们。
+
+**改法**：
+- **token 换熵源**：`common/ws-token.js` 用 `randomBytes(32).toString('base64url')`（43 字符 / 256 bit），
+  不再复用给所有 ID 的 `nanoid(7)`（42 bit）
+- **Origin 闸门**：`server/ws-origin.js` 用 `new URL(origin).hostname` 精确判回环，不用字符串包含 ——
+  `http://127.0.0.1.evil.com`、`http://localhost.evil.com` 这类伪造字样一律拒
+  （WS **不走 CORS 预检**，任何网页都能往本机端口发 WS，Origin 是第二道锁；无 Origin 头放行，因为
+  脚本客户端仍受 token 约束）
+- **token 定长比较**：`crypto.timingSafeEqual`，长度不同直接否
+- **fs 名单前后端共用**：抽成 `common/fs-functions.js`，服务端按它校验，名单外的返回
+  `不允许的文件操作: X`
+- **删掉假的门**：`POST /auth` 及其孤儿 `globalState.authed` 一并删除，原处留注释说明为什么 ——
+  留一个"看着能鉴权、实际无人调用也从未生效"的端点只会误导后来的人
+
+**残留说明（不粉饰）**：名单**不是沙箱**。`runWinCmd`（拼 powershell）是真实功能
+（`file-info-modal.jsx` 用它算 Windows 文件夹大小），仍在名单里。也就是说这轮修的是
+「任意函数都能调」，不是「名单内的函数本身危险」。本机 WS 的真实防线 = **回环绑定 + Origin 校验 +
+256 bit token**，三者叠加后，网页要打进来需要先知道 token。
+
+**证据**：
+- 单元测试 `test/unit-ci/ws-auth.spec.js` **5/5**（全量 41/41）
+- 实机 CDP `temp/verify-issue3.js` **21/21**：token 43 字符；`constructor`/`__proto__`/`rm` 全部被拒
+  **且目录仍在**；外站 Origin 与伪造回环域名 Origin 都读不到数据；错/空/前缀 token 全拒；
+  一连串拒绝后正经连接照常
+- **主流程实测**：真开一个本地终端，xterm 缓冲区出现 `C:\Users\Administrator>` ——
+  终端数据只能经 `session-server` 的 WS 过来，说明改过的 `verify` 没有卡住正经会话
+  （注：`status === 'success'` **不能**当判据，它在 `new WebSocket()` 之前就置位了，
+  `terminal.jsx:1455` 拿到端口即置成功、1459 才建 WS —— 这条差点让我误判，已写进注释）
+
 
 **第 3 批（发版链路）**
 #25 #24 #27 #26

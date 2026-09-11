@@ -2,7 +2,7 @@ const { dbAction } = require('./db')
 const defaultSetting = require('../common/config-default')
 const getPort = require('./get-port')
 const { userConfigId, userNoEncryptConfigId } = require('../common/constants')
-const generate = require('../common/uid')
+const { generateWsToken } = require('../common/ws-token')
 const globalState = require('./glob-state')
 
 exports.getConfig = async (inited) => {
@@ -24,7 +24,8 @@ exports.getConfig = async (inited) => {
     ...userConfig,
     requireAuth,
     port,
-    tokenElecterm: inited ? globalState.get('config').tokenElecterm : generate()
+    // WS 鉴权 token 单独用强随机，不用给 ID 的短 uid（ISSUES #3）
+    tokenElecterm: inited ? globalState.get('config').tokenElecterm : generateWsToken()
   }
   return {
     userConfig,

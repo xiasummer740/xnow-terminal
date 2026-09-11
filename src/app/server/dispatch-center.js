@@ -22,16 +22,26 @@ const {
 const globalState = require('./global-state')
 const wsDec = require('./ws-dec')
 
+const { isLoopbackOrigin, tokenEquals } = require('./ws-origin')
+
 const { tokenElecterm } = process.env
 
 function verify (req) {
+  // 网页不受同源策略限制就能往本机端口发 WS，靠 Origin 把非回环来源挡掉（ISSUES #3）
+  if (!isLoopbackOrigin(req.headers.origin)) {
+    // 静默拒绝（不告诉对方是哪一项没过），但留一条审计日志
+    log.warn('拒绝非回环来源的 WS 连接:', req.headers.origin)
+    throw new Error('not valid origin')
+  }
   const { token: to } = req.query
-  if (to !== tokenElecterm) {
+  if (!tokenEquals(to, tokenElecterm)) {
+    log.warn('拒绝 token 不匹配的 WS 连接')
     throw new Error('not valid request')
   }
-  if (process.env.requireAuth === 'yes' && !globalState.authed) {
-    throw new Error('auth required')
-  }
+  // 原此处判 `requireAuth === 'yes'`：requireAuth 实际是主密码的 pbkdf2 哈希（或空串），
+  // 永远不等于 'yes'；且唯一的写入点 POST /auth 没有任何客户端调用。
+  // 也就是说这道"主密码门禁"从来没生效过 —— 已按实际情况删除，不再留一个假的门。
+  // 本机 WS 的真实防线 = Origin 校验 + 强随机 token（见 ws-origin.js / ws-token.js）。
 }
 
 const initWs = function (app) {

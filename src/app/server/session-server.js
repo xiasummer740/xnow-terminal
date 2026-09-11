@@ -29,6 +29,7 @@ const {
   isWin
 } = require('../common/runtime-constants')
 const wsDec = require('./ws-dec')
+const { isLoopbackOrigin, tokenEquals } = require('./ws-origin')
 const { zmodemManager } = require('./zmodem')
 const { trzszManager } = require('./trzsz')
 const { xmodemManager } = require('./xmodem')
@@ -47,8 +48,14 @@ function markConnected () {
 }
 
 function verify (req) {
+  // 同 dispatch-center：先挡非回环来源，再比对 token（ISSUES #3）
+  if (!isLoopbackOrigin(req.headers.origin)) {
+    log.warn('拒绝非回环来源的 WS 连接:', req.headers.origin)
+    throw new Error('not valid origin')
+  }
   const { token: to } = req.query
-  if (to !== tokenElecterm) {
+  if (!tokenEquals(to, tokenElecterm)) {
+    log.warn('拒绝 token 不匹配的 WS 连接')
     throw new Error('not valid request')
   }
 }

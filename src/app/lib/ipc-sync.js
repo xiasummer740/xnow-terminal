@@ -11,6 +11,7 @@ const constants = require('../common/runtime-constants')
 const windowMove = require('./window-drag-move.js')
 const globalState = require('./glob-state')
 const { transferKeys } = require('../server/transfer')
+const fsFunctions = require('../common/fs-functions')
 const os = require('os')
 const {
   isTest
@@ -116,38 +117,7 @@ module.exports = {
       ...constants,
       versions: JSON.stringify(process.versions),
       transferKeys,
-      fsFunctions: [
-        'run',
-        'runWinCmd',
-        'access',
-        'statAsync',
-        'lstatAsync',
-        'cp',
-        'mv',
-        'mkdir',
-        'touch',
-        'chmod',
-        'rename',
-        'unlink',
-        'rmrf',
-        'readdirAsync',
-        'readFile',
-        'readFileAsBase64',
-        'writeFile',
-        'openFile',
-        'zipFolder',
-        'unzipFile',
-        'readCustom',
-        'exists',
-        'readdir',
-        'mkdir',
-        'realpath',
-        'statCustom',
-        'openCustom',
-        'closeCustom',
-        'writeCustom',
-        'getFolderSize'
-      ]
+      fsFunctions
     }
   }
 }
