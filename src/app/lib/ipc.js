@@ -35,7 +35,6 @@ const {
 const {
   packInfo,
   appPath,
-  isWin,
   isMac,
   exePath,
   isPortable,
@@ -134,28 +133,8 @@ const SAFE_ENV_KEYS = [
 ]
 
 // ===== 安全工具函数 (AI Agent 文件操作/请求防护) =====
-const { resolve: pathResolve } = require('path')
-
-// 检测路径遍历攻击
-const PATH_TRAVERSAL_RE = /(?:^|[\\/])\.\.[\\/]/
-
-function isPathSafe (targetPath) {
-  if (PATH_TRAVERSAL_RE.test(targetPath)) return false
-  const resolved = pathResolve(targetPath)
-  // 阻止访问系统敏感目录
-  if (isWin) {
-    const blocked = ['C:\\Windows\\', 'C:\\System32\\', 'C:\\Program Files\\', 'C:\\ProgramData\\']
-    for (const p of blocked) {
-      if (resolved.toLowerCase().startsWith(p.toLowerCase())) return false
-    }
-  } else {
-    const blocked = ['/etc/', '/sys/', '/proc/', '/dev/', '/boot/', '/root/', '/var/']
-    for (const p of blocked) {
-      if (resolved.startsWith(p)) return false
-    }
-  }
-  return true
-}
+// 路径闸门单独成模块，便于单元测试（ISSUES #2）
+const { isPathSafe } = require('./path-safe')
 
 // 检测内网/本地地址（防 SSRF）
 function isPrivateHost (hostname) {
