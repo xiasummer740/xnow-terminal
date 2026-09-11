@@ -6,41 +6,53 @@
  *   node build/bin/release-xnow.js patch   # 3.17.1 → 3.17.2
  *   node build/bin/release-xnow.js minor   # 3.17.1 → 3.18.0
  *
- * 流程：版本自增 → vite 构建 → electron-builder 打包 → 上传 GitHub → 发布 release
+ * 流程：版本自增 → 完整构建 → electron-builder 打包 → 上传 GitHub → 发布 release
  */
 
 const { execSync } = require('child_process')
 const { readFileSync, writeFileSync } = require('fs')
 const { resolve } = require('path')
 const { inc } = require('semver')
+const { checkMainProcessFresh } = require('./check-src-fresh')
 
 const ROOT = resolve(__dirname, '../..')
 const bumpType = process.argv[2] || 'patch'
 
-// 读取版本
+// 读取版本，只改根 package.json
+// work/app/package.json 不用在这里写：下面的 `npm run b` 会先 clean 掉整个 work，
+// 再由 prepare.js 依据根 package.json 重新生成（版本号自然就是新的）。
 const rootPkg = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'))
-const workPkg = JSON.parse(readFileSync(resolve(ROOT, 'work/app/package.json'), 'utf8'))
 
 const oldVer = rootPkg.version
 const newVer = inc(oldVer, bumpType)
 
 console.log(`\n📦 ${oldVer} → ${newVer} (${bumpType})\n`)
 
-// 更新版本号
 rootPkg.version = newVer
-workPkg.version = newVer
 writeFileSync(resolve(ROOT, 'package.json'), JSON.stringify(rootPkg, null, 2) + '\n')
-writeFileSync(resolve(ROOT, 'work/app/package.json'), JSON.stringify(workPkg, null, 2) + '\n')
 
-// Git 提交（work/app/package.json 在 .gitignore 中，需要用 -f 强制添加）
+// 必须跑完整构建，不能只跑 vite-build（ISSUES #27）
+// electron-builder 打的是 work/app，而 work/app 里的东西来自两处：
+//   - 渲染层 work/app/assets ← vite-build 刷新（原来就只有这一步）
+//   - 主进程代码 work/app/*.js ← 只有 prepare.js 的 `cp -r src/app work/` 才会刷新
+// 原来这里只跑 vite-build，于是打出来的包是「新渲染层 + 上一次跑 `npm run b` 时的旧主进程」，
+// 版本号是新的、主进程修复一个都没进去。改成跑 b（clean + compile + prepare-file），
+// 代价是每次发版多花几分钟复制 node_modules，换来的是包里代码确实等于当前 src。
+console.log('\n🏗️  完整构建（clean + compile + prepare-file）...')
+execSync('npm run b', { cwd: ROOT, stdio: 'inherit' })
+
+// 构建完再核一遍：work/app 必须和 src/app 一致。
+// 上面那行是「应该没问题」，这里是「出了问题立刻停」—— 打包旧代码是静默失败，
+// 版本号、安装包、GitHub release 全都正常，只有用户装上去发现修复没生效。
+checkMainProcessFresh(resolve(ROOT, 'src/app'), resolve(ROOT, 'work/app'))
+
+// Git 提交放在构建之后：构建失败就停在这里，不会留下一个「已推送但没产物」的版本号。
+// work/app/package.json 也要等构建完才存在（由 prepare.js 生成），所以 git add 只能放在这里；
+// 顺带一个好处是这个文件提交完之后不会再被改写，发完版工作区是干净的。
 execSync('git add package.json', { cwd: ROOT, stdio: 'inherit' })
 execSync('git add -f work/app/package.json', { cwd: ROOT, stdio: 'inherit' })
 execSync(`git commit -m "release: v${newVer}"`, { cwd: ROOT, stdio: 'inherit' })
 execSync('git push', { cwd: ROOT, stdio: 'inherit' })
-
-// Vite 构建
-console.log('\n🏗️  Vite 构建...')
-execSync('npm run vite-build', { cwd: ROOT, stdio: 'inherit' })
 
 // electron-builder 打包 + 发布
 console.log('\n📀 打包并发布到 GitHub...')

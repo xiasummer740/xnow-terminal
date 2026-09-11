@@ -52,7 +52,7 @@
 | 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 待修 |
 | 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把 CI 版覆盖到根目录 → 之后本地发版带 `channel: win-nsis`，而 release 里只有 `latest.yml` → **一键更新链路当场断掉** | `build/bin/prepare-electron-build.js:3`、两处 `electron-builder.json` | 待修 |
 | 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | 待修 |
-| 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身） | `build/bin/release-xnow.js:41-52` | 待修 |
+| 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身）。实测：148 个文件里 83 个不一致，5 个文件整个缺失（第 1/2 批安全修复全部进不了包） | `build/bin/release-xnow.js:41-52`、`build/bin/check-src-fresh.js` | 已修已验 |
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
 | 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
 | 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | 待修 |
@@ -299,7 +299,61 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
     被拒并留日志，发 `func: 'pause'`（名单内）不被误拒 —— 一拒一放形成对照，
     证明它确实按客户端给的 func 去查名单了；`__proto__` 同样被拒，且没把服务进程搞崩
 
+### #27 修复说明（发版打包的代码不是最新的）
+
+**先取证，确认了这不是"可能"而是"已经"：**
+
+`electron-builder` 打的是 `work/app`，而 `work/app` 里的东西来自两条不同的路径：
+
+| 内容 | 谁刷新 |
+|---|---|
+| 渲染层 `work/app/assets` | `vite-build` |
+| 主进程代码 `work/app/*.js` | 只有 `prepare.js` 的 `cp -r src/app work/` |
+
+`npm run rx`（release-xnow.js）原来只跑 `vite-build` —— **主进程那一半从来没被刷新过**。
+实测当下状态：`src/app` 148 个文件里 **83 个**与 `work/app` 不一致，
+其中 `common/fs-functions.js`、`common/ws-token.js`、`common/upgrade-funcs.js`、
+`lib/path-safe.js`、`server/ws-origin.js` 是**整个文件都不存在** ——
+也就是说第 1/2 批的安全修复一个都进不了包。文件时间戳也对得上：
+`src/app/lib/ipc.js` 是 9-12、`work/app/lib/ipc.js` 停在 6-19（上次跑 `npm run b` 那天）。
+
+危险之处在于它是**静默**的：版本号是新的、安装包能装、GitHub release 正常，
+只有用户装上去才发现修复没生效 —— 而且会误判成"修了没用"。
+
+**改法**：
+1. `release-xnow.js` 的构建步骤从 `npm run vite-build` 换成 `npm run b`
+   （= `clean` + `compile`（含 vite-build）+ `prepare-file`，主进程代码由此刷新）
+2. 打包前加一道**校验**：`build/bin/check-src-fresh.js` 逐文件比对 `work/app` 与 `src/app`，
+   不一致就抛异常中止发布。光靠"记得跑对命令"不算防线，这一步才是
+3. 顺带修正提交时机：原来先 bump 版本号 → commit → push → 再构建。
+   现在改成 **构建成功之后再 commit + push**，于是
+   (a) 构建失败不会留下一个"已推送但没有产物"的版本号提交；
+   (b) `work/app/package.json` 由 prepare.js 生成、提交后不再被改写，发完版工作区是干净的
+   （原来 rx 自己写一份、提交，之后若跑了 b 就会被改写 → 发完版工作区变脏）
+
+**代价/副作用**（必须记）：每次发版多花几分钟复制 `node_modules`（`prepare.js` 会整份拷）。
+换来的是"包里的代码确实等于当前 `src`"。另外 `prepare.js` 里那句 `yarn autoclean`
+在本机是**静默失败**的（机器上没装 yarn，`shelljs.exec` 不抛异常），这是原有行为、
+本次未动，但它意味着这条清理步骤长期没生效 —— 记在这里以免以后误以为它在工作。
+
+**证据**：
+- 单元测试 `test/unit-ci/release-chain.spec.js` **8/8**（全量 **55/55**）：
+  拿临时目录造出"一致 / 差一字节 / 缺文件 / 子目录里不一致 / 打包目录多文件"五种情形，
+  验校验器认不认得出（**一个永远返回"通过"的校验比没有校验更糟**，所以校验器本身必须被测）；
+  另加两条"链路别被改回去"的静态断言（发布脚本必须跑 `npm run b`、必须调校验，
+  `prepare.js` 里 `cp -r src/app work/` 那行必须在）
+- 对**真实目录**跑校验器，两个方向都对：
+  - 当前真 `work/app` → 退出码 1，报「查了 148 个文件，83 个有问题」并列出前 20 个
+  - 一份真正最新的副本 → 退出码 0，「打包目录与源码一致（148 个文件）」
+- `node --check` 语法通过、`standard` 干净
+
+**未做**：没有真跑一次 `npm run b` + 打包。（它会 `rm -rf work`、删根目录 `node_modules/cpu-features`、
+整份拷贝 `node_modules`，属于会动到原生模块目录的操作，按「原生模块不要碰」没有擅自执行。）
+真正发版时 `npm run b` 是否一次跑通，仍是待验证项 —— 但它现在的失败方式是**大声报错**，
+而不是像以前那样静默发出一个旧主进程的包。
+
 **第 3 批（发版链路）**
+#27 ✅ #24 #25 #26（#26 待祥哥定方向 —— 是否投入恢复 mac/linux CI，它决定 #25 的修法）
 #25 #24 #27 #26
 
 **第 4 批（架构债）**
