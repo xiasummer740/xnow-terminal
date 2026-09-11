@@ -1,5 +1,5 @@
 {
-  "test": "",
+  "test": "npm run test-unit-ci",
   "start": "npm run start",
   "build": "npm run build"
 }
