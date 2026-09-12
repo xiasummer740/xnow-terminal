@@ -15,6 +15,7 @@ const { resolve } = require('path')
 const { inc } = require('semver')
 const { checkMainProcessFresh } = require('./check-src-fresh')
 const { checkBuilderConfig } = require('./check-builder-config')
+const { findMissingAssets } = require('./check-release-assets')
 
 const ROOT = resolve(__dirname, '../..')
 const bumpType = process.argv[2] || 'patch'
@@ -72,20 +73,35 @@ execSync('npx electron-builder --config electron-builder.json --win --x64 --publ
   env: { ...process.env, GH_TOKEN: ghToken }
 })
 
-// electron-builder 有时上传不全（latest.yml / .exe 被吞），兜底补传
+// electron-builder 有时上传不全（.exe / .blockmap / latest.yml 被吞），兜底补传（ISSUES #32）
+// 原来只兜 .exe 和 latest.yml，**没管 .blockmap** —— 而 blockmap 漏了是静默的：
+// 差的用户更新时退化成 116MB 全量下载，没有任何地方报错。实测 v3.17.8 / v3.17.10
+// 的 release 就缺 blockmap，本地 dist 里却有。所以补完还要**再核一遍**。
 console.log('\n🔍 检查 Release 文件完整性...')
-const installerName = `XNOW-Terminal-${newVer}-win-x64-installer.exe`
-const uploadedFiles = execSync(`gh release view v${newVer} --json assets --jq ".assets[].name"`, {
-  cwd: ROOT, encoding: 'utf8'
-}).trim().split('\n')
-if (!uploadedFiles.includes(installerName)) {
-  console.log('  ⬆️  补传安装包...')
-  execSync(`gh release upload v${newVer} "dist/${installerName}" --clobber`, { cwd: ROOT, stdio: 'inherit' })
+const listAssets = () => execSync(
+  `gh release view v${newVer} --json assets --jq ".assets[].name"`,
+  { cwd: ROOT, encoding: 'utf8' }
+).trim().split('\n')
+
+const initialMissing = findMissingAssets(listAssets(), newVer)
+for (const asset of initialMissing) {
+  console.log(`  ⬆️  补传 ${asset.name}（${asset.why}）...`)
+  execSync(`gh release upload v${newVer} "dist/${asset.name}" --clobber`, {
+    cwd: ROOT, stdio: 'inherit'
+  })
 }
-if (!uploadedFiles.includes('latest.yml')) {
-  console.log('  ⬆️  补传 latest.yml...')
-  execSync(`gh release upload v${newVer} dist/latest.yml --clobber`, { cwd: ROOT, stdio: 'inherit' })
+
+// 补完复核。到这里 release 还是 draft（--draft=false 在下面），
+// 所以停在这里用户看不到 —— 比发一个下载不完的版本强。
+const stillMissing = findMissingAssets(listAssets(), newVer)
+if (stillMissing.length > 0) {
+  throw new Error(
+    `Release 产物仍不齐：${stillMissing.map(a => a.name).join('、')}\n` +
+    'Release 已停在 draft 状态（用户看不到）。修好后手工补齐再 --draft=false：\n' +
+    `  gh release upload v${newVer} dist/<文件> --clobber`
+  )
 }
+console.log('  ✔ 产物齐全（安装包 / blockmap / latest.yml）')
 
 // 发布 draft release
 console.log('\n🚀 发布 GitHub Release...')
