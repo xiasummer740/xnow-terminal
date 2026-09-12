@@ -68,7 +68,7 @@
 | 33 | **界面显示英文原文**：61 个 `e()/t()` 用到的 key 在语言包里不存在，`translate` 回退为 key 本身。实测中文界面出现 `custom` / `Close` / `gist` / `Done` / `noData` / `fullscreen` / `SSH Agent Path`。其中 `e('Opacity')` vs 语言包 `opacity` 属**纯大小写不匹配**，改一处即可 | `entry/basic.js:52-56` + 60 处调用点 | 已修已验 |
 | 34 | **17 个孤儿组件**（零 import），其中 `vps-dashboard/monitor-{cards,detail,table}.jsx` + `tab-monitor.jsx` 合计 **约 31.7KB 死 UI**；`ai-chat-entry.jsx` / `ai-float-window.jsx` 同样零引用 | 各文件 | 待修 |
 | 35 | **504 行硬编码中文**（65 个文件），集中在自研模块：ai 131 / terminal-info 105 / vps-dashboard 67 / deploy 35 → 自研功能实际只支持中文 | 见 `temp/hardcoded-zh.js` 输出 | 待修 |
-| 36 | 新增一个工具要改 **5 处**（schema、switch、mcp-handler 第二个 switch、TAB_ID_TOOLS、toolIcons），已造成实际能力缺失：store 有 32 个 `mcp*` 能力，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `ai/agent-tools.js`、`store/mcp-handler.js`、`widgets/widget-mcp-server.js` | 待修 |
+| 36 | 新增一个工具要改多处，已造成实际能力缺失：store 的**活跃**能力 31 个，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**（实际缺 12 项，不是 7 项）；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `src/client/components/ai/agent-tools.js`、`src/client/store/mcp-handler.js`、`src/app/widgets/widget-mcp-server.js` | 已修已验（12 项缺口补齐 + 技能假工具不再报给模型；注册表重构拆为 #66 见下） |
 | 37 | `parse-quick-connect` **两份 454 行分叉**（app 版认 `xnow-terminal://`，client 版还是 `electerm://`）；两份手写 zod 垫片已漂移（app 版有 `ZodRecord`，client 版无） | `app/common/` vs `client/common/` | 待修 |
 | 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 已修已验（顺带修好 NeDB 分支**返回 undefined 而非 Promise** —— 不改的话改对调用方反而会 `.catch` 崩） |
 | 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 已修已验 |
@@ -88,6 +88,8 @@
 | 53 | **同上**：主题列表加载失败时 `log.info(e)` 抛 ReferenceError | `lib/iterm-theme.js:8` | 已修已验 |
 | 64 | 网页标签页（`<webview allowpopups>`）**没有给 guest 挂 `setWindowOpenHandler`** → 标签页里的页面 `window.open` 出来的窗口不走主窗口那道导航闸门（`safeOpenExternal` 只挂在主窗口 `webContents` 上） | `client/components/web/web-session.jsx:129`、`app/lib/webview-handler.js:71-105`（只处理 Basic-Auth） | 待修（**要祥哥拍板**：`allowpopups` 很可能是登录/OAuth 跳转需要的，直接删会坏功能；见「#29 修复说明」末段） |
 | 65 | **开发模式"独立数据目录"从来没生效过**：`create-app.js` 里给 `process.env.DATA_PATH` 赋值的时机，晚于数据库解析路径（`db.js` 在模块顶层就 `createDb()` 了）；而且**没有任何模块会读它**（读 DATA_PATH 的只有 nedb/sqlite/storage-key，全在那之前加载）。实际后果：`npm start` 和安装版**共用** `%APPDATA%/xnow-terminal` —— dev 下的改动、测试直接落在真实数据上 | `lib/create-app.js:73-76`、`lib/db.js:11-17`、`lib/sqlite.js:66` | 待修（**要祥哥拍板**：修就是"dev 换到独立目录、首次启动是空的"，会**改变他现在 dev 里看到的数据**；见「#40 修复说明」末段） |
+| 66 | **工具注册分散**（原 #36 的架构债部分）：加一个 AI 工具要同时维护 agent-tools 的 schema+switch、mcp-handler 的 switch、toolIcons；外部 MCP 侧（`widget-mcp-server.js`）还要再加一层 zod 声明。侦察确认约 2/3 是纯机械映射可收敛，但有 6 类带**真实逻辑差异**必须保留显式分支（书签参数拍平、危险命令弹窗、5 个文件类工具走主进程且是位置参数、外部 MCP 一对多拆分、三套命名体系） | `src/client/components/ai/agent-tools.js`、`src/client/store/mcp-handler.js`、`src/app/widgets/widget-mcp-server.js` | 待修（**祥哥 2026-09-12 拍板：先补缺口，重构另立此条**；动它会碰外部 MCP 派发链路，要单独评估） |
+| 67 | `quick_command` 是**整块死代码**：dispatch 的 4 个 case（`mcp-handler.js:68-81`）和 4 个实现（`:306-344`）**全部被注释掉**，但账本/文档里仍按"32 个能力"计数。另：`agent.js` 的 system prompt 用**散文**又列了一遍工具名，与代码清单容易脱节 | `src/client/store/mcp-handler.js:68-81,306-344`、`src/client/components/ai/agent.js:96-105` | 待修（清理类，风险低；本次遵循"预存死代码不动"未碰） |
 
 ---
 
@@ -667,12 +669,12 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #29 ✅（回环 HTTP 上了 Host/Origin 闸门；`disablewebsecurity` 与 popup 两点待祥哥拍板）
 #40 ✅（清理挪到 db 打开之前 + 失败不抛 + 用统一数据目录算法；顺带查出 #65）
 #50 ✅（读-改-写整段串行化，「读」挪进锁内；顺带实测出 `dbAction` 的 update 是替换语义）
+#36 ✅（12 项能力缺口补齐 + 技能假工具不再报给模型；钉住"集合等式"防复发）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 **剩余待修（截至 2026-09-12，建议按此顺序）**
 | 优先 | # | 一句话 | 备注 |
 |---|---|---|---|
-| 1 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
 | 4 | 13 | `prepare-test` bash 语法在 Windows 静默失败 → Playwright 永远装不上 | E2E 线前置 |
 | 5 | 17 | 无 `playwright.config.js` | 同上 |
 | 6 | 11 | `test/unit/` 21 个 spec 从未被执行 | 同上 |
@@ -684,6 +686,10 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 > ~~#30 MCP 默认免鉴权~~ —— 2026-09-12 祥哥拍板不修（自己个人用的电脑），已从本表移除。
 
 **账本需更正的条目**（复核发现原记录不准，修的时候顺带改）：#12 #34 #35 #37 #41 #20
+> #36 已在本批更正：① 文件路径原记成 `src/app/...`，实际在 `src/client/...`；
+> ② 「5 处」把**内置 Agent**（只需 agent-tools 的 schema+case，store 方法本就存在）
+> 和**外部 MCP 那条独立链路**混算了；③ store 活跃能力是 **31** 不是 32
+> （`quick_command` 那 4 个整块被注释，见 #67）；④ 缺口是 **12 项**不是 7 项。
 
 ### #49 修复说明（第 6 批：退出路径）
 
@@ -1270,3 +1276,74 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 不可控）。上面覆盖的是"同一进程内并发调 `saveUserConfig`"这个语义本身，
 而真实触发路径（debounce 到点 + 退出 flush）正是两个并发的 `saveUserConfig`。
 **请祥哥手动测**：改几项设置后立刻关窗、重开，设置还在。
+
+### #36 修复说明（第 16 批：AI 的工具面补齐 + 技能假工具）
+
+**先说更正**：这条账本记错了四处，动手前先核了一遍源码（详见上方「账本需更正」的引注）。
+最容易误导的是「新增一个工具要改 5 处」——侦察发现这**把两条独立链路混算了**：
+
+- **内置 AI Agent**：`agent.js` → `agent-tools.js` 的 `executeToolCall` → `store.mcpXxx`。
+  这里的 case 绝大多数就是一行 `return JSON.stringify(store.mcpXxx(args))`，
+  而 `store.mcpXxx` **本来就在**。所以给它加一个工具 ≈ **schema 一段 + case 一行**（+ 可选图标）。
+- **外部 MCP**（`widget-mcp-server.js`）：Electron 主进程侧的 HTTP MCP server，
+  自己一套 zod 校验 + 命令黑白名单 + 审计限流，而且是**另一套命名**
+  （同一个动作叫 `send_terminal_command` vs `send_electerm_terminal_command`）。
+  它和内置 Agent 是并行两条入口、共享同一实现层。
+
+「5 处」是拿两条链路的登记点加出来的数。这个更正直接决定了修法边界：
+**只补内置 Agent 的缺口，不动外部 MCP 那条安全链路**（祥哥 2026-09-12 拍板）。
+
+**缺陷类别（比单个 case 重要）**：store 里加了能力、AI 工具层忘了跟，
+结果是"store 能干、AI 不会干"，而且**没有任何东西会红**。
+这次实测的缺口是 **12 项**（账本记的是 7 项）：
+
+| 补上的工具 | 之前 AI 会怎样 |
+|---|---|
+| `get_bookmark` / `edit_bookmark` / **`delete_bookmark`** | 书签能建能看能连，**改不了也删不掉** —— 直接 `throw Unknown agent tool` |
+| `list_bookmark_groups` / `add_bookmark_group` | 分组只能人手动建 |
+| `reload_tab` / `duplicate_tab` | 断线重连、开第二个窗口都得让用户自己点 |
+| `get_terminal_selection` | 用户说「我选中的这段」时 AI 看不见 |
+| `wait_for_terminal_idle` | 只能靠固定 sleep 猜命令跑完没有 |
+| `zmodem_upload` / `zmodem_download` | rz/sz 传文件做不了 |
+| `get_settings` | 答不了「我的主题是什么」 |
+
+**第二块：技能自带的工具是「假工具」。** `agent.js` 原本
+`agentTools.concat(getSkillTools())` 把技能里的 `tools` 也报给模型，**说"你可以调"**；
+可执行侧 `executeToolCall` 的 `default` 分支只会回一句「请参考技能说明使用」，**从不真跑**。
+等于让模型白耗轮次去调一个永远失败的工具。祥哥拍板：**既然执行不了就不要报**。
+连带清理（孤儿代码）：`getSkillTools` 导出、`default` 分支的技能查表、以及因此空掉的
+`getInstalledSkills` import。`skill.tools` 在技能详情 UI 里照常展示，技能功能没动。
+
+**证据**（`test/unit-ci/agent-tool-coverage.spec.js`，22 条全绿）：
+
+| 测的东西 | 结果 |
+|---|---|
+| 🔴 **集合等式**：`agent 工具集 == store 活跃能力 ∪ 6 个 Agent 独有` | 缺口为空、悬空为空（两侧都钉） |
+| 解析器自检：被注释掉的 `quick_command` 不算能力 | 防止把它们假报成缺口（并有反面对照） |
+| Agent 独有工具正好那 6 个 | 多一个少一个都红，逼后来者写明理由 |
+| 这 12 项的回归清单 + **单钉**「改书签」「删书签」 | 用户报的两件事单独再钉一次 |
+| 🔴 **反证**：钉修复前那个提交 | 缺口算出来正好是这 12 项，与账本一致 |
+| 🔴 **参数契约**：12 个工具逐个比对 `store 读的 args.X ⊆ schema 声明的字段` | 专治"说明书少写一个字段 → 模型不传 → store 拿到 undefined" |
+| 🔴 技能工具没在发给模型的清单里 / 执行侧查表已删 | 含一条"别把技能功能一起删了"的反向保护 |
+
+全量 unit-ci **227/227 全绿**（本批 +22）；`npx standard` 干净；
+**`npm run build` 真构建通过**（22.57s）—— 这是编译证据，不是只跑 lint。
+
+**两个判断，说明理由免得被当成漏做**：
+
+1. **`delete_bookmark` 没加二次确认弹窗**。`send_terminal_command` 对危险 shell 命令有弹窗闸门，
+   但删书签是用户明确要求（「删掉书签 X」）且可重建，外部 MCP 那条路径也不弹。
+   不过 schema 描述里写死了「调用前必须先用 `get_bookmark` 确认 id，并在回复里说明删了什么」。
+   **如果祥哥觉得该弹窗，说一声我加**。
+2. **`wait_for_terminal_idle` 的 `minWait` 有意不写进 schema**。
+   store 会读它（命令发出后先干等多久再判空闲），但那是内部时序补偿，
+   模型没理由调、默认 1000ms 就是对的。已在测试里用 `INTENTIONAL_OMISSIONS`
+   显式登记 + 写明理由 —— **"故意不暴露"和"忘了"必须在账上分得开**。
+
+**没做到的 / 残留**：unit-ci 证明的是**注册完整性**（集合等式 + 参数契约），
+**不是**"AI 真的会去调这些工具、调了真能成"。我没法驱动 AI Agent 的 GUI 跑一轮对话。
+**请祥哥手动测**：开 AI 助手，说「把书签 X 改名成 Y」「删掉书签 Z」「复制当前标签页」，
+看它是否真的调用了新工具、结果是否正确。
+
+**拆出的新条目**：#66（工具注册表的收敛重构，祥哥拍板另立、单独评估）、
+#67（`quick_command` 整块死代码 + system prompt 散文列工具名）。

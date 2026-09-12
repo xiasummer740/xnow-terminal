@@ -1,7 +1,6 @@
 import { Modal } from 'antd'
 import { z } from '../../common/zod'
 import { bookmarkSchemas } from '../../common/bookmark-schemas'
-import { getInstalledSkills } from '../../common/skill-manager'
 import { isDangerousCommand } from '../../common/dangerous-command'
 
 function buildAddBookmarkParameters () {
@@ -66,6 +65,46 @@ export const agentTools = [
           lines: {
             type: 'number',
             description: 'Number of recent lines to read (default 50).'
+          }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_terminal_selection',
+      description: '读取用户在终端里**手动选中**的那段文字（用户说「我选中的这个」「这段」时用）。不是选中状态就返回空。',
+      parameters: {
+        type: 'object',
+        properties: {
+          tabId: {
+            type: 'string',
+            description: '终端标签页 ID。省略则用当前活动标签页。'
+          }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'wait_for_terminal_idle',
+      description: '等终端输出停下来（命令跑完）再读结果。跑耗时命令后不要用固定 sleep，用这个。最长等 120 秒。',
+      parameters: {
+        type: 'object',
+        properties: {
+          tabId: {
+            type: 'string',
+            description: '终端标签页 ID。省略则用当前活动标签页。'
+          },
+          timeout: {
+            type: 'number',
+            description: '最长等待毫秒数，默认 30000，上限 120000。'
+          },
+          lines: {
+            type: 'number',
+            description: '停止后返回多少行输出，默认 50。'
           }
         }
       }
@@ -141,6 +180,39 @@ export const agentTools = [
   {
     type: 'function',
     function: {
+      name: 'reload_tab',
+      description: '重新连接/刷新一个标签页（断线重连时用）。注意这会中断该标签页上正在跑的命令。',
+      parameters: {
+        type: 'object',
+        properties: {
+          tabId: {
+            type: 'string',
+            description: '标签页 ID。省略则用当前活动标签页。'
+          }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'duplicate_tab',
+      description: '复制一个标签页（用相同的连接参数开一个新标签页）。开同一台机器的第二个窗口时用这个，比重新建书签快。',
+      parameters: {
+        type: 'object',
+        properties: {
+          tabId: {
+            type: 'string',
+            description: '要复制的标签页 ID（必填，没有默认值）。'
+          }
+        },
+        required: ['tabId']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'list_bookmarks',
       description: 'List all saved bookmarks (SSH, Telnet, VNC, etc.).',
       parameters: {
@@ -172,6 +244,93 @@ export const agentTools = [
       name: 'add_bookmark',
       description: 'Create a new bookmark. Specify the type and provide type-specific fields. Supported types: ' + Object.keys(bookmarkSchemas).join(', ') + '.',
       parameters: buildAddBookmarkParameters()
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_bookmark',
+      description: '按 ID 读取单个书签的完整信息（含 SSH/Telnet 等类型专属字段）。改书签前先用它确认当前值。',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '书签 ID。'
+          }
+        },
+        required: ['id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'edit_bookmark',
+      description: '修改已有书签的字段（部分更新，只传要改的字段，其余保持不变）。先用 get_bookmark 查到 id 和当前值。',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '要修改的书签 ID。'
+          },
+          updates: {
+            type: 'object',
+            description: '要更新的字段，例如 {"title":"新名字"} 或 {"port":2222}。只写需要改的键。'
+          }
+        },
+        required: ['id', 'updates']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_bookmark',
+      description: '删除一个书签。删除不可撤销，调用前必须先用 get_bookmark 确认 id 对应的确实是用户想删的那个，并在回复里说明删了什么。',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: '要删除的书签 ID。'
+          }
+        },
+        required: ['id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_bookmark_groups',
+      description: '列出所有书签分组（树形，含各组 id、标题、层级和父子关系）。',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_bookmark_group',
+      description: '新建一个书签分组。传 parentId 会建在该分组下（成为第二级），不传则建在顶层。',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: '分组名称。'
+          },
+          parentId: {
+            type: 'string',
+            description: '父分组 ID。省略则建在顶层。'
+          }
+        },
+        required: ['title']
+      }
     }
   },
   {
@@ -341,6 +500,75 @@ export const agentTools = [
   {
     type: 'function',
     function: {
+      name: 'zmodem_upload',
+      description: '通过 ZMODEM（rz/sz）在终端里上传本地文件到远端。目标机器要装了 rz/sz 或 trzsz。会绕过文件选择框，直接用你给的路径。',
+      parameters: {
+        type: 'object',
+        properties: {
+          files: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '要上传的本地文件完整路径列表（至少一个）。'
+          },
+          tabId: {
+            type: 'string',
+            description: '终端标签页 ID。省略则用当前活动标签页。'
+          },
+          protocol: {
+            type: 'string',
+            enum: ['rzsz', 'trzsz'],
+            description: '传输协议，默认 rzsz（用 rz 命令）。'
+          }
+        },
+        required: ['files']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'zmodem_download',
+      description: '通过 ZMODEM（sz/tsz）把远端文件下载到本地目录。会绕过文件夹选择框，直接用你给的本地目录。',
+      parameters: {
+        type: 'object',
+        properties: {
+          remoteFiles: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '远端文件路径列表（至少一个）。'
+          },
+          saveFolder: {
+            type: 'string',
+            description: '本地保存目录的完整路径（必填）。'
+          },
+          tabId: {
+            type: 'string',
+            description: '终端标签页 ID。省略则用当前活动标签页。'
+          },
+          protocol: {
+            type: 'string',
+            enum: ['rzsz', 'trzsz'],
+            description: '传输协议，默认 rzsz（用 sz 命令）。'
+          }
+        },
+        required: ['remoteFiles', 'saveFolder']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_settings',
+      description: '读取应用当前设置（不含 API 密钥等敏感项）。回答「我的主题是什么」「同步开了吗」这类问题时用。',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'read_local_file',
       description: '读取本地文件内容（文本文件，最大1MB）。用于查看代码、日志、配置文件。',
       parameters: {
@@ -469,6 +697,10 @@ export async function executeToolCall (toolName, args) {
     }
     case 'get_terminal_output':
       return JSON.stringify(store.mcpGetTerminalOutput(args))
+    case 'get_terminal_selection':
+      return JSON.stringify(store.mcpGetTerminalSelection(args))
+    case 'wait_for_terminal_idle':
+      return JSON.stringify(await store.mcpWaitForTerminalIdle(args))
     case 'open_local_terminal':
       return JSON.stringify(store.mcpOpenLocalTerminal())
     case 'list_tabs':
@@ -479,6 +711,10 @@ export async function executeToolCall (toolName, args) {
       return JSON.stringify(store.mcpSwitchTab(args))
     case 'close_tab':
       return JSON.stringify(store.mcpCloseTab(args))
+    case 'reload_tab':
+      return JSON.stringify(store.mcpReloadTab(args))
+    case 'duplicate_tab':
+      return JSON.stringify(store.mcpDuplicateTab(args))
     case 'list_bookmarks':
       return JSON.stringify(store.mcpListBookmarks())
     case 'open_bookmark':
@@ -488,6 +724,16 @@ export async function executeToolCall (toolName, args) {
       const typeFields = args[type] || {}
       return JSON.stringify(await store.mcpAddBookmark({ type, ...typeFields }))
     }
+    case 'get_bookmark':
+      return JSON.stringify(store.mcpGetBookmark(args))
+    case 'edit_bookmark':
+      return JSON.stringify(store.mcpEditBookmark(args))
+    case 'delete_bookmark':
+      return JSON.stringify(store.mcpDeleteBookmark(args))
+    case 'list_bookmark_groups':
+      return JSON.stringify(store.mcpListBookmarkGroups())
+    case 'add_bookmark_group':
+      return JSON.stringify(await store.mcpAddBookmarkGroup(args))
     case 'open_tab': {
       const { type } = args
       const typeFields = args[type] || {}
@@ -509,6 +755,12 @@ export async function executeToolCall (toolName, args) {
       return JSON.stringify(store.mcpSftpTransferList())
     case 'sftp_transfer_history':
       return JSON.stringify(store.mcpSftpTransferHistory())
+    case 'zmodem_upload':
+      return JSON.stringify(store.mcpZmodemUpload(args))
+    case 'zmodem_download':
+      return JSON.stringify(store.mcpZmodemDownload(args))
+    case 'get_settings':
+      return JSON.stringify(store.mcpGetSettings())
     // ===== 新工具：文件系统 =====
     case 'read_local_file':
       return await window.pre.runGlobalAsync('readLocalFile', args.filePath)
@@ -520,16 +772,11 @@ export async function executeToolCall (toolName, args) {
       return await window.pre.runGlobalAsync('grepFiles', args.rootPath, args.pattern, args.glob || '*')
     case 'web_fetch_page':
       return await window.pre.runGlobalAsync('webFetchPage', args.url)
-    default: {
-      // 检查是否是已安装技能的自定义工具
-      const allSkills = getInstalledSkills()
-      for (const skill of allSkills) {
-        const match = (skill.tools || []).find(t => t.name === toolName || t.function?.name === toolName)
-        if (match) {
-          return JSON.stringify({ info: `工具 ${toolName} 属于技能「${skill.name}」，请参考技能说明使用`, skill: skill.name })
-        }
-      }
+    default:
+      // 曾经这里会去技能表里找一圈，找到就回一句「请参考技能说明使用」（ISSUES #36）。
+      // 那段已经删掉：技能工具不再报给模型了（见 agent.js 的 callBackendAIchatWithTools），
+      // 模型不可能合法地调到一个技能工具 —— 落到这里只剩"模型编了个工具名"，
+      // 那就照实说不知道，别再回一句会让人以为"其实能用"的话。
       throw new Error(`Unknown agent tool: ${toolName}`)
-    }
   }
 }

@@ -99,7 +99,10 @@ You are operating inside XNOW, a terminal/SSH/SFTP client with AI superpowers. Y
 - grep_files — 搜索代码
 - list_directory — 浏览目录
 - web_fetch_page — 获取网页信息
-- list_bookmarks + open_bookmark — 管理服务器
+- list_bookmarks / get_bookmark / add_bookmark / edit_bookmark / delete_bookmark — 书签增删改查
+- open_bookmark — 连接某台服务器
+- list_bookmark_groups / add_bookmark_group — 书签分组
+- list_tabs / duplicate_tab / reload_tab / close_tab — 标签页管理
 
 Reply in ${lang} language.`
 
@@ -125,8 +128,13 @@ function updateChatEntry (chatEntry, updates) {
 }
 
 async function callBackendAIchatWithTools (messages, config) {
-  // 合并硬编码工具 + 已安装技能的自定义工具
-  const tools = agentTools.concat(getSkillTools())
+  // 只报内置工具（ISSUES #36）。
+  // 技能自带的 tools 以前也 concat 进来，但执行侧落到 default 分支只会回一句
+  // 「请参考技能说明使用」、**从不真跑** —— 等于告诉模型「这个你能调」然后次次失败，
+  // 白耗轮次。既然执行不了，就不要报。
+  // 将来若要让技能工具真能跑，得先定清楚「技能里的代码在哪跑、怎么隔离、权限多大」，
+  // 那是一条独立的安全面，不是把这一行改回去就完事。
+  const tools = agentTools
   return window.pre.runGlobalAsync(
     'AIchatWithTools',
     messages,
@@ -408,8 +416,4 @@ export function addAgentMemory (text) {
   const existing = loadMemories()
   if (!existing.includes(text)) existing.push(text)
   saveMemories(existing)
-}
-
-export function getSkillTools () {
-  return getInstalledSkills().flatMap(s => s.tools || [])
 }
