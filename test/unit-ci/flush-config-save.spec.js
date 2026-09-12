@@ -133,17 +133,22 @@ test('flush 必须在弹确认框之前调用 —— 用户点取消也不该丢
 
 // ── 反证 ────────────────────────────────────────────────────────
 
+// #49 的修复落在 ba0bf8d2，所以"改之前"要取它的**父提交**。
+// 不能用 HEAD：修复一旦提交，HEAD 就变成修好的版本，这条反证会自己失效
+// （实测踩过 —— 修 #49 时全绿，提交后立刻翻红）。
+const PRE_FIX_REV = 'ba0bf8d2^'
+
 test('🔴 改之前的版本在退出路径里确实没有任何保存动作', () => {
-  // 不然就是"修了个没坏的东西"。取 HEAD 的版本（此刻工作区已改，只能从 git 里取）
+  // 不然就是"修了个没坏的东西"。工作区已改，只能从 git 里取旧版本
   let old
   try {
-    old = execFileSync('git', ['show', 'HEAD:src/client/store/common.js'], {
+    old = execFileSync('git', ['show', `${PRE_FIX_REV}:src/client/store/common.js`], {
       cwd: ROOT,
       encoding: 'utf8',
       maxBuffer: 32 * 1024 * 1024
     })
   } catch (e) {
-    assert.fail('取不到 HEAD 版本，无法反证：' + e.message)
+    assert.fail(`取不到 ${PRE_FIX_REV} 版本，无法反证：` + e.message)
   }
   const leaky = ['beforeExit', 'beforeExitApp'].filter((name) => {
     const body = extractMethodBody(old, name)

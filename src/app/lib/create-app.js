@@ -155,8 +155,13 @@ exports.createApp = async function () {
       return app
     }
 
-    // Also use Electron's built-in lock as a fallback
-    app.requestSingleInstanceLock()
+    // Also use Electron's built-in lock as a fallback.
+    // 返回值必须看：socket 连不上**不等于**我们独占 —— 也可能是握手被拒
+    // （token 不一致，见 ISSUES #44）。丢掉返回值的话那种情况会开出第二个窗口。
+    if (!app.requestSingleInstanceLock()) {
+      app.quit()
+      return app
+    }
   }
 
   app.on('second-instance', (event, commandLine) => {

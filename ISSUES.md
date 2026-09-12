@@ -76,7 +76,7 @@
 | 41 | 迁移版本账本与业务数据**不在同一库**（账本在 `.nedb`，数据在 `xnow.db`），账本被删会重跑全部老迁移 | `migrate/index.js:36-82` | 待修 |
 | 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 已修已验（sftp/transfer/升级 三处走 `parseWsMessage`，畸形丢消息不断连接；「吞异常」那半句描述见说明） |
 | 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 已修已验（日志泄露已堵，4 个入口全走 `redactCreds`；「一点即建标签页」那半句需祥哥拍板是否加确认，见下） |
-| 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 待修 |
+| 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 已修已验（改为共享 token 握手 + 1 MiB 上限；见下） |
 | 45 | `openExternal` **无协议白名单**，传 `file:///C:/evil.exe` 即由系统 shell 打开 | `lib/ipc-sync.js:63-64` | 已修已验（第 2 批 #1 顺带关闭，见下） |
 | 46 | 凭据加密遗留路径：**固定全零 IV 的 CBC**、`isLegacyFormat` 把纯十六进制明文误判为密文、解密失败原样返回 | `lib/enc.js:15-16,71-72,99-112` | 待修 |
 | 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 已修已验（`group1-sha1`/`md5` 已从"每次连接都报价"降为"只在重试档"；**顺带修好了一条从未生效过的兜底路径**，见下） |
@@ -656,6 +656,7 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #42 ✅
 #43 ✅
 #49 ✅
+#44 ✅
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 ### #49 修复说明（第 6 批：退出路径）
@@ -679,7 +680,8 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 **证据**：
 · 单测 `test/unit-ci/flush-config-save.spec.js` **7/7**（抠出源码里真的那份
   `flushConfigSave` 执行验行为 + 静态验两个退出函数都接了 + 反证：HEAD 版本的
-  退出路径里确实没有任何保存动作）；全套 `npm run test-unit-ci` **118/118**。
+  退出路径里确实没有任何保存动作）；全套 `npm run test-unit-ci` **127/127**
+  （修 #49 时是 118，后续批次又加了 9 条）。
 · **真机 A/B**（`temp/verify-issue49.js`，CDP 驱动真 Electron）：
   在渲染进程里清空所有待触发的定时器把 debounce 掐死，然后
   **对照组**（干等 2s，不调退出函数）→ 数据文件无变动；
@@ -696,3 +698,58 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
    同一个版本号下重新构建，Electron 会拿磁盘缓存里的旧副本。
    现象很迷惑：**服务端文件是新代码，渲染进程执行的是旧代码**，
    对着源码怎么查都对不上。已在 harness 里加该开关并注明原因。
+
+### #44 修复说明（第 7 批：本机攻击面）
+
+**问题**：单实例锁用命名管道做 IPC 兜底（`lib/single-instance.js`），但
+`net.createServer` **收到什么就转发什么** —— 本机任意进程连上
+`\.\pipe\xnow-terminal-instance-lock`、写一段 JSON，就会被当成「第二个实例」
+转发给渲染进程执行。落到 `store/load-data.js` 的后果是实打实的：
+
+· `options.privateKeyPath` → `fs.readFile` 读出文件 → 当私钥发给 `options.host`
+  （**任意文件读取 + 外带**，`~/.ssh/id_rsa` 就在射程内）
+· `options.batchOp` → `runBatchOpFromFile()`（按文件批量建连）
+· 其余字段 → 直接建成终端标签页
+
+命令行的**正常**第二实例只会发自己那份 progs，从来不需要这么大的权限，
+所以修法就是补一道握手。
+
+**修法**：
+1. **共享 token**。主实例启动时 `crypto.randomBytes(32).toString('hex')`
+   写进用户数据目录的 `instance-token`（Windows 该目录按用户 ACL，非本用户读不了）。
+   第二实例读同一个文件、随消息带上 `token`，主实例用
+   `crypto.timingSafeEqual` **恒定时间**比对，不一致直接丢弃并记日志。
+   把「任意进程可注入」收窄成「能读到用户数据目录里 token 文件的进程可注入」。
+2. **每次当主实例都换新 token**。上次异常退出留下的旧 token 自然作废。
+3. **1 MiB 消息上限**。原来 `data += chunk` 无上限，本机进程能拿它把内存撑爆；
+   超限即 `socket.destroy()`。
+4. **降级路径**：token 写不进去（目录只读等）就退回旧行为并在日志里说明 ——
+   宁可少一层防护，也不能让单实例锁直接失效（那会变成开两个窗口）。
+   注意降级时**接收端**什么 token 都收，所以**发送端**也必须「读不到 token 照样连」
+   —— 这条是设计时差点写错的地方：`sendToFirstInstance` 若因「没 token」早退
+   `false`，降级模式下第二个实例会以为自己才是主实例，直接开出第二个窗口。
+5. **`create-app.js` 补看兜底锁的返回值**。`app.requestSingleInstanceLock()`
+   原来被丢掉了返回值。socket 连不上**不等于**我们独占 —— 也可能是握手被拒。
+   不看返回值的话那种情况会开出第二个窗口。
+
+**没改的**：命令行 deep-link 的语义（带凭证的 URL 自动建连）**原样保留**。
+那是产品决策不是漏洞，见 #43 的遗留项 —— 要不要加确认框得祥哥拍板。
+
+**证据**：
+· 单测 `test/unit-ci/single-instance-auth.spec.js` **9/9**。连的是**真的命名管道**
+  （不是打桩的网络层），既验「自己人带对 token 能送达」，也验
+  **「没带 token / 带错 token 的人通不了」** —— 后者才是这条 issue 的重点，
+  只验前者的话把校验删掉测试照样全绿。另含：旧 token 立刻作废、畸形 JSON、
+  超长消息、降级模式退回旧行为。
+· 全套 `npm run test-unit-ci` **127/127**。
+· **真机验证**（`temp/verify-issue44.js`，起真 Electron）：
+  A) 主实例起来后 `%APPDATA%\xnow-terminal\instance-token` 出现、长度 64；
+  A2) **拿裸 socket 往真管道里灌带 `privateKeyPath` 的 payload → 主实例日志里
+      出现「拒绝未通过握手的本机连接」，主实例没被搞挂**（这条是核心实证）；
+  B) 第二个实例自动退出（退出码 0），主实例仍在运行；
+  C) 删掉 token 再起第三个实例，也退出了 —— `requestSingleInstanceLock` 兜底生效。
+
+**踩的坑**：`work/app` 的目录结构和 `src/app` **不一样**，`npm run compile`
+只重建 renderer，不会把 `logger.js` 之类的文件带过去。手动 `cp` 单文件进
+`work/app/lib/` 会让主进程起不来（`Cannot find module './logger'`）。
+改主进程代码后要么 `npm run b`，要么 compile 完把缺的文件一并补上。
