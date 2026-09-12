@@ -44,7 +44,7 @@
 | # | 问题 | 位置 | 状态 |
 |---|---|---|---|
 | 18 | **上游同步断裂 3.5 个月**：fork 后 370 个自研 commit、**零次上游合并**；`git merge-tree` 实测 **90 个冲突文件**，其中 6 个是结构性冲突（上游**删除了** `terminal-info/` 整目录、把 `terminal.jsx` 从 1770 行拆成 30 个模块）。再拖将失去合并能力 | `d35b5e1e..HEAD` vs `upstream/master` | 待修 |
-| 19 | **危险命令闸门只匹配整条命令的行首**：`sudo rm -rf /`、`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 —— 而漏过 = **零确认直接执行**。同条另两点（技能全文进 system prompt、`verifySignature` 名不副实）复核后**判定为设计如此 / 需拍板**，理由见下 | `ai/agent-tools.js:31-55`、`skill-manager.js:285-289`、`lib/ipc.js:651-679` | 已修已验（闸门重写为「分段 + 剥包装 + 补目标」，见下） |
+| 19 | **危险命令闸门只匹配整条命令的行首**：`sudo rm -rf /`、`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 —— 而漏过 = **零确认直接执行**。同条另两点（技能全文进 system prompt、`verifySignature` 名不副实）经祥哥 2026-09-12 拍板**不修**（个人自用），理由见下 | `ai/agent-tools.js:31-55`、`skill-manager.js:285-289`、`lib/ipc.js:651-679` | 已修已验（闸门重写为「分段 + 剥包装 + 补目标」；另两点不修，见下） |
 | 20 | Agent 循环**中止不了**且结果无上限膨胀：`createAIClient` 无 timeout、`stream:false` 从不注册 session 故 `stopStream` 无 sessionId 可杀；工具结果原样 push 进 messages（单次可达 1-2MB × 150 轮） | `lib/ai.js:32-57`、`ai/agent.js:302-397` | 待修 |
 | 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
 | 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 待修 |
@@ -55,7 +55,7 @@
 | 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身）。实测：148 个文件里 83 个不一致，5 个文件整个缺失（第 1/2 批安全修复全部进不了包） | `build/bin/release-xnow.js:41-52`、`build/bin/check-src-fresh.js` | 已修已验 |
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
 | 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
-| 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | 待修 |
+| 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | **不修（祥哥 2026-09-12 拍板：「没必要上锁吧，自己用的电脑」）**<br>复看前提：一旦变成多人共用一台机器、或本机上跑不信任的程序，这条要重新评估 —— 同类暴露面还有 #29（回环 HTTP 不校验来源，**那条照修**） |
 | 31 | `httpFetch` 无任何 SSRF 校验（连 `isPrivateHost` 都没调）；`isPrivateHost` 只识别点分十进制，实测 `127.0.0.1.nip.io`、`[::ffff:127.0.0.1]`、`169.254.169.254` **全部放行** | `lib/ipc.js:632-649`、`:161-176` | 已修已验（判定挪到 `lib/ssrf-guard.js` 并补 DNS 判定，三个绕过全堵；`httpFetch` 按「监控必须能用」的口径接闸，见下） |
 | 32 | 安装包 **blockmap 上传无兜底**：`v3.17.8`/`v3.17.10` 的 release 里确实没有 blockmap（本地 `dist/` 却有，`v3.17.11` 又有 —— 间歇性漏传）→ 漏了是**静默**的，用户更新退化为 116MB 全量 | `build/bin/release-xnow.js:54-67` | 已修已验（产物清单可测 + 补传后复核，不过就停在 draft；见下） |
 
@@ -668,7 +668,7 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 | 2 | 23 | `history` 无上限增长（新条目分支直接 return，裁剪只在命中分支） | #22 的成因 |
 | 3 | 21 | 迁移写入用裸 sqlite → **整库明文落盘**（含 SSH 密码） | 动数据，先想回滚 |
 | 4 | 29 | 回环 HTTP 不校验 Origin/Host + `webview` 开 `disablewebsecurity` | #3 只修了 WS 侧 |
-| 5 | 30 | MCP 默认免鉴权（apiKey 留空即跳过）暴露「执行终端命令」 | 改默认值会动用户现有用法，**建议先拍板** |
+| ~~5~~ | ~~30~~ | ~~MCP 默认免鉴权~~ | **2026-09-12 祥哥拍板不修**（自己个人用的电脑）→ 跳过 |
 | 6 | 40 | `--clear-config` 半删 + 不开窗 | |
 | 7 | 50 | `saveUserConfig` TOCTOU | |
 | 8 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
@@ -819,7 +819,11 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
   `builtin`/`ai_generated`/`imported` 直接放行；其余要求 `signature` 字段**非空**，
   有就放行。所以它是个「字段存在性检查」，**不校验签名本身** —— 名字名不副实。
   真正的签名校验要有信任模型（谁签、公钥怎么分发），注释里也写着「云端签名验证在
-  后续阶段实现」。**这是需要拍板的架构决策，不是可以就地补的洞**，留给祥哥定。
+  后续阶段实现」。**这是架构决策不是可以就地补的洞**。
+
+  **决定（祥哥 2026-09-12）**：不修。原话「自己个人用，不需要验证签名吧」——
+  技能都是自己装的，没有「别人上传的技能需要验真伪」这个场景。
+  复看前提：将来若真开放「别人也能上传技能」（技能商店对外），这两点都得重新评估。
 
 **证据**：
 · 单测 `test/unit-ci/dangerous-command.spec.js` **7/7**：23 条「原来漏的」全命中、
