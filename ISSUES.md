@@ -51,7 +51,7 @@
 | 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 待修 |
 | 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 已修已验 |
 | 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把上游配置覆盖到根目录 → 之后本地发版带 `channel: ${env.WORKFLOW_NAME}`，产出的清单不叫 `latest.yml`，而客户端只认 `latest.yml` → **一键更新链路当场断掉**（且打包、发 release 全程不报错） | `build/bin/prepare-electron-build.js`、`build/bin/check-builder-config.js`、两处 `electron-builder.json` | 已修已验 |
-| 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | 待修 |
+| 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | **不修（祥哥 2026-09-12 拍板：不做，就 Windows 单平台）** |
 | 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身）。实测：148 个文件里 83 个不一致，5 个文件整个缺失（第 1/2 批安全修复全部进不了包） | `build/bin/release-xnow.js:41-52`、`build/bin/check-src-fresh.js` | 已修已验 |
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
 | 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
@@ -353,7 +353,28 @@ watch 是通用落库引擎，用户自己多选删光整表是**合法操作**�
 而不是像以前那样静默发出一个旧主进程的包。
 
 **第 3 批（发版链路）**
-#27 ✅ #24 ✅ #25 ✅ #26（#26 待祥哥定方向 —— 是否投入恢复 mac/linux CI）
+#27 ✅ #24 ✅ #25 ✅ #26 ⛔不修（祥哥 2026-09-12 拍板：不做，就 Windows 单平台）
+
+### #26 定为不修的理由（以及将来要做时的前提条件）
+
+**决定**：不做 Mac/Linux 的自动更新，产品就 Windows 单平台。
+
+**理由**：
+- 发版本身走 `npm run rx`（本地），**不需要 CI**；CI 全套是上游 electerm 留下来的，
+  19 个 workflow 没有一个在为这个 fork 服务
+- mac 的 5 个 workflow 是**之前就手工禁用**的（`gh workflow list --all` 均为 `disabled_manually`）
+- mac 自动更新不是"修好 CI 就行"：Squirrel.Mac 会校验签名，**必须有苹果开发者证书
+  （$99/年）**才能让自动更新生效；配置里已有的 `notarize: true` / `hardenedRuntime: true`
+  也都要证书配套。这是买资源，不是技术债
+- Linux 免费可行，但目前没有用户；且要先修 CI 根因（见下）才有意义
+
+**若将来要做，按这个顺序**（现在不做，仅记录，免得将来重新查一遍）：
+1. **先修 CI 根因**：所有 workflow 都死在第一步 `npm i` 上 ——
+   `@electerm/electerm-resource@1.3.7` 在 `cdn.npmmirror.com` 上 **404**。
+   这个根因同时挂着 win-nsis，不修它任何 workflow 都起不来
+2. Linux：给 `linux.target` 加 zip/AppImage 之类可供 electron-updater 消费的产物
+3. mac：买苹果开发者账号 → 配签名/公证 → `mac.target` 从 `dmg` 改成 `["dmg","zip"]`
+   （electron-updater 在 mac 只认 zip，dmg 不行 —— `build/bin/build-mac.js:22` 现在只出 dmg）
 
 ### #24 修复说明（安装要静默）
 
