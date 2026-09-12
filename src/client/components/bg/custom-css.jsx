@@ -3,6 +3,7 @@
  */
 
 import { useEffect } from 'react'
+import { safeCustomCss } from '../../common/sanitize-css'
 
 const themeDomId = 'custom-css'
 
@@ -13,8 +14,7 @@ export default function CustomCss (props) {
     if (configLoaded) {
       const style = document.getElementById(themeDomId)
       if (style) {
-        const safeCss = (customCss || '').replace(/@import/gi, '#')
-        style.innerHTML = safeCss
+        style.innerHTML = safeCustomCss(customCss)
       }
     }
   }, [customCss, configLoaded])
