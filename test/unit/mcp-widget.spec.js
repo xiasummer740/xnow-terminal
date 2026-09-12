@@ -50,6 +50,10 @@ const originalLoad = Module._load.bind(Module)
 Module._load = function (request, parent, isMain) {
   if (request === 'electron') return { ipcMain: mockIpcMain }
   if (request.includes('glob-state')) return mockGlobState
+  // widget → log → runtime-constants 这条链上要 require 构建期生成的 ../package.json
+  // （runtime-constants.js:55 按 isDev 决定往上几层），而纯 node 下 src/app/ 里
+  // 根本没有这个文件 —— 打包时才会有。这里只为拿版本号，给个假的就行。
+  if (request === '../package.json') return { version: '0.0.0-test' }
   return originalLoad(request, parent, isMain)
 }
 
