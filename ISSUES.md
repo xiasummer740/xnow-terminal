@@ -81,7 +81,7 @@
 | 46 | 凭据加密遗留路径：**固定全零 IV 的 CBC**、`isLegacyFormat` 把纯十六进制明文误判为密文、解密失败原样返回 | `lib/enc.js:15-16,71-72,99-112` | 待修 |
 | 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 已修已验（`group1-sha1`/`md5` 已从"每次连接都报价"降为"只在重试档"；**顺带修好了一条从未生效过的兜底路径**，见下） |
 | 48 | 自定义 CSS 走 `style.innerHTML`，只过滤了 `@import` | `bg/custom-css.jsx:16-17` 等 | 待修 |
-| 49 | 保存配置用 100ms `debounce` 且 `beforeExit` **不 flush** → 刚改完设置就关窗会丢 | `store/watch.js:86-91` | 待修 |
+| 49 | 保存配置用 100ms `debounce` 且 `beforeExit` **不 flush** → 刚改完设置就关窗会丢 | `store/watch.js:86-91` | 已修已验（两个退出处理函数开头各补一次**立即派发**的保存，不等 debounce；见下） |
 | 50 | `saveUserConfig` 跨 await 读-改-写（TOCTOU），并发保存互相覆盖 | `user-config-controller.js:31-52` | 待修 |
 | 51 | 3 个继承自上游的死代码文件零引用：`download-mirrors.js`、`get-category-color.js`、`key-shift-pressed.js` | `client/common/` | 待修 |
 | 52 | **用了 `log.*` 但从未 import `log`** → DNS 解析失败时不是记日志，而是抛 `ReferenceError: log is not defined`（Promise 内抛出 = 未处理拒绝）。写法上属"错误处理路径反而制造错误" | `common/lookup.js:10,19`（走 `lib/ipc.js:252` 暴露给渲染进程） | 已修已验 |
@@ -655,4 +655,44 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #38 ✅
 #42 ✅
 #43 ✅
+#49 ✅
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
+
+### #49 修复说明（第 6 批：退出路径）
+
+**问题**：配置保存挂在 100ms 的 `debounce` 上（`watch.js:86-91`），而
+`beforeExit` / `beforeExitApp` 原来**只弹确认框、不 flush**。改完设置马上关窗，
+那 100ms 窗口里的改动就永远写不下去；没开 `confirmBeforeExit` 时更是连提示都没有，
+用户只会觉得「设置根本没保存」。
+
+**修法**：两个退出处理函数的**第一行**各调一次新加的 `flushConfigSave()`，
+把当前配置**再派发一次** `saveUserConfig`。
+
+为什么是「重发一次」而不是「把 debounce 的定时器 flush 掉」：
+`autoRun(fn, wrapper)` 里 `wrapper(wrappedRun)` 只调用一次，返回的 `runner`
+只暴露 `{start, stop, r}`，**被包住的 debounce 函数从外面根本拿不到**，
+没有 `.flush()` 可调。而且重发更强 —— 消息一旦派发给主进程，
+写盘是在主进程完成的，**渲染进程随即销毁也不影响**；
+等定时器到点反而要赌渲染进程还能活到那时。
+放在 `Modal.confirm` **之前**，这样用户点「取消」的那条路径也不会丢。
+
+**证据**：
+· 单测 `test/unit-ci/flush-config-save.spec.js` **7/7**（抠出源码里真的那份
+  `flushConfigSave` 执行验行为 + 静态验两个退出函数都接了 + 反证：HEAD 版本的
+  退出路径里确实没有任何保存动作）；全套 `npm run test-unit-ci` **118/118**。
+· **真机 A/B**（`temp/verify-issue49.js`，CDP 驱动真 Electron）：
+  在渲染进程里清空所有待触发的定时器把 debounce 掐死，然后
+  **对照组**（干等 2s，不调退出函数）→ 数据文件无变动；
+  **实验组**（调 `beforeExit` / `beforeExitApp`）→ `xnow_data.db` 被写。
+  对照组是关键：它同时证明「没有别的写入者」，否则实验组的变动说明不了什么。
+
+**验证时踩的两个坑（写下来免得重踩）**：
+1. **不能拿 `store.config.新键 = x` 当探针标记**。`window.store` 是
+   manate `manage(new StateStore())` 的产物，config 是 MobX observable ——
+   给它**加新键存不住**（赋值后读回 `undefined`，`Object.keys` / `JSON.stringify`
+   里都没有）。第一版探针因此假阴性。所以最终判据改成看**数据文件有没有被写**。
+2. **`temp/cdp-harness.js` 必须带 `--disable-http-cache`**。渲染进程是从本地
+   http 服务加载的，而 bundle 的 URL 只带版本号（`js/electerm-3.17.11.js`）——
+   同一个版本号下重新构建，Electron 会拿磁盘缓存里的旧副本。
+   现象很迷惑：**服务端文件是新代码，渲染进程执行的是旧代码**，
+   对着源码怎么查都对不上。已在 harness 里加该开关并注明原因。

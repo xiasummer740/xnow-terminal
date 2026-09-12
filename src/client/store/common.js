@@ -152,7 +152,27 @@ export default Store => {
     ls.setItem(dismissDelKeyTipLsKey, 'y')
     window.store.hideDelKeyTip = true
   }
+  /**
+   * 退出前把待写的配置立刻落盘（ISSUES #49）
+   *
+   * 配置保存走的是 100ms debounce（watch.js:86-91），而 `beforeExit` /
+   * `beforeExitApp` 原来只弹确认框、**不 flush** —— 于是「刚改完设置就关窗」
+   * （尤其是没开 confirmBeforeExit 时）那 100ms 窗口里的改动就丢了。
+   *
+   * 这里不依赖 debounce 定时器，而是把当前配置**再发一次** saveUserConfig：
+   * 消息一旦派发给主进程，写盘是在主进程里完成的，**渲染进程随后被销毁也不影响**，
+   * 所以这比「等 debounce 到点」可靠。用户若在确认框上点了取消也无妨 ——
+   * 保存当前配置本来就是幂等的。
+   */
+  function flushConfigSave () {
+    const config = window.store.config
+    if (config && Object.keys(config).length > 0) {
+      window.pre.runGlobalAsync('saveUserConfig', config)
+    }
+  }
+
   Store.prototype.beforeExit = function (evt) {
+    flushConfigSave()
     const { confirmBeforeExit } = window.store.config
     const activeTransfers = window.store.fileTransfers?.filter(t => t.status === 'transferring') || []
     if (
@@ -182,6 +202,7 @@ export default Store => {
     }
   }
   Store.prototype.beforeExitApp = function (evt, name) {
+    flushConfigSave()
     const activeTransfers = window.store.fileTransfers?.filter(t => t.status === 'transferring') || []
     const transferWarn = activeTransfers.length > 0
       ? `有 ${activeTransfers.length} 个文件正在传输，关闭将中断传输。`
