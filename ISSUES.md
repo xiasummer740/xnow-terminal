@@ -72,7 +72,7 @@
 | 37 | `parse-quick-connect` **两份 454 行分叉**（app 版认 `xnow-terminal://`，client 版还是 `electerm://`）；两份手写 zod 垫片已漂移（app 版有 `ZodRecord`，client 版无） | `app/common/` vs `client/common/` | 待修 |
 | 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 已修已验（顺带修好 NeDB 分支**返回 undefined 而非 Promise** —— 不改的话改对调用方反而会 `.catch` 崩） |
 | 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 已修已验 |
-| 40 | `--clear-config` 在数据目录被占用时**半删除并让应用起不来**（require 时已打开 db，Windows 删除失败 → 递归删除中断 → 异常无人 catch → 无窗口） | `lib/create-app.js:118-127` | 待修 |
+| 40 | `--clear-config` 在数据目录被占用时**半删除并让应用起不来**（require 时已打开 db，Windows 删除失败 → 递归删除中断 → 异常无人 catch → 无窗口） | `app.js`、`lib/clear-config.js`、`lib/create-app.js` | 已修已验（清理挪到 require create-app 之前 + 失败不抛 + 路径改用 app-props 的 dataPath，见下方「#40 修复说明」） |
 | 41 | 迁移版本账本与业务数据**不在同一库**（账本在 `.nedb`，数据在 `xnow.db`），账本被删会重跑全部老迁移 | `migrate/index.js:36-82` | 待修 |
 | 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 已修已验（sftp/transfer/升级 三处走 `parseWsMessage`，畸形丢消息不断连接；「吞异常」那半句描述见说明） |
 | 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 已修已验（日志泄露已堵，4 个入口全走 `redactCreds`；「一点即建标签页」那半句需祥哥拍板是否加确认，见下） |
@@ -87,6 +87,7 @@
 | 52 | **用了 `log.*` 但从未 import `log`** → DNS 解析失败时不是记日志，而是抛 `ReferenceError: log is not defined`（Promise 内抛出 = 未处理拒绝）。写法上属"错误处理路径反而制造错误" | `common/lookup.js:10,19`（走 `lib/ipc.js:252` 暴露给渲染进程） | 已修已验 |
 | 53 | **同上**：主题列表加载失败时 `log.info(e)` 抛 ReferenceError | `lib/iterm-theme.js:8` | 已修已验 |
 | 64 | 网页标签页（`<webview allowpopups>`）**没有给 guest 挂 `setWindowOpenHandler`** → 标签页里的页面 `window.open` 出来的窗口不走主窗口那道导航闸门（`safeOpenExternal` 只挂在主窗口 `webContents` 上） | `client/components/web/web-session.jsx:129`、`app/lib/webview-handler.js:71-105`（只处理 Basic-Auth） | 待修（**要祥哥拍板**：`allowpopups` 很可能是登录/OAuth 跳转需要的，直接删会坏功能；见「#29 修复说明」末段） |
+| 65 | **开发模式"独立数据目录"从来没生效过**：`create-app.js` 里给 `process.env.DATA_PATH` 赋值的时机，晚于数据库解析路径（`db.js` 在模块顶层就 `createDb()` 了）；而且**没有任何模块会读它**（读 DATA_PATH 的只有 nedb/sqlite/storage-key，全在那之前加载）。实际后果：`npm start` 和安装版**共用** `%APPDATA%/xnow-terminal` —— dev 下的改动、测试直接落在真实数据上 | `lib/create-app.js:73-76`、`lib/db.js:11-17`、`lib/sqlite.js:66` | 待修（**要祥哥拍板**：修就是"dev 换到独立目录、首次启动是空的"，会**改变他现在 dev 里看到的数据**；见「#40 修复说明」末段） |
 
 ---
 
@@ -664,13 +665,13 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #23 ✅（新增条目分支补上裁剪，两支都生效）
 #21 ✅（迁移写入接上 enc/dec，不再明文落盘；存量明文数据没重写，见说明）
 #29 ✅（回环 HTTP 上了 Host/Origin 闸门；`disablewebsecurity` 与 popup 两点待祥哥拍板）
+#40 ✅（清理挪到 db 打开之前 + 失败不抛 + 用统一数据目录算法；顺带查出 #65）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 **剩余待修（截至 2026-09-12，建议按此顺序）**
 | 优先 | # | 一句话 | 备注 |
 |---|---|---|---|
-| 1 | 40 | `--clear-config` 半删 + 不开窗 | |
-| 2 | 50 | `saveUserConfig` TOCTOU | |
+| 1 | 50 | `saveUserConfig` TOCTOU | |
 | 3 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
 | 4 | 13 | `prepare-test` bash 语法在 Windows 静默失败 → Playwright 永远装不上 | E2E 线前置 |
 | 5 | 17 | 无 `playwright.config.js` | 同上 |
@@ -1124,3 +1125,74 @@ HTTP 侧一直是裸的 —— `server.js` 里 `/run` 和静态资源谁都能�
 "HTTP 请求进来时 Host/Origin 怎么判"，用真 express + 真 socket 已经覆盖到；
 启 GUI 反而要动祥哥的真实数据目录。**请祥哥手动测**：应用正常打开、各页面能加载、
 `npm start` 下功能正常 —— 闸门挂错位置的话表现就是整个界面白屏/资源 403。
+
+### #40 修复说明（第 14 批：`--clear-config` 清不干净还打不开）
+
+**问题不是"删错了目录"，是删除的时机。** 打开数据库的是
+`create-app → get-config → db → sqlite` 这条 **require 链** —— `db.js` 在模块顶层就
+`createDb()` 了，所以 `require('./lib/create-app')` 那一刻，`xnow.db` / `xnow_data.db`
+的句柄**已经打开**。而原来的清理写在 `createApp()` 里面，那时候删什么都晚了。
+
+**两个后果实测（不是推理，`node -e` 跑出来的）**：
+
+| 实测 | 结果 |
+|---|---|
+| 对含打开句柄的目录 `fs.rmSync(dir, {recursive, force})` | 抛 `EPERM, Permission denied`。注意 `force: true` 只吞 ENOENT，**吞不掉 EPERM** |
+| 目录里还有别的文件时同一个调用 | **半删除**：`.xnow-version`、`logs/`、旧的 `.nedb` 全删了，锁住的 `xnow.db` / `xnow_data.db` 留下，然后才抛 |
+| electron-log v4 写日志会不会也占句柄 | 不会（写完即关），已实测排除 |
+
+**"应用打不开"是怎么串起来的**：`rmSync` 抛异常 → `createApp()` 返回的 Promise 被拒
+→ `app.js` 那句 `createApp()` **没有 `.catch`** → 只在 `unhandledRejection` 里记一条日志
+→ **一个窗口都不创建**，用户看到的是"双击没反应"。
+
+**修法三条**：
+
+1. **挪时机**：清理搬到 `app.js` 里、`require('./lib/create-app')` **之前**执行，
+   句柄还没开，删得掉。清理逻辑独立成 `lib/clear-config.js`。
+2. **失败不抛**（这条是重点）：清理失败最多是"没清干净"，抛出去就是整个应用起不来，
+   后者严重得多。所以 `clearDataDir` 任何情况下都返回布尔、不抛异常。
+   另外加了 `maxRetries: 5, retryDelay: 100` 躲 Windows 上杀毒/索引服务的瞬时占用。
+3. **路径统一**：原来硬编码 `resolve(app.getPath('appData'), 'xnow-terminal')`，
+   便携版（`appPath` = exe 所在目录）和自定义 `DATA_PATH` 都会算错。
+   现在统一走 `app-props.js` 导出的 `dataPath`，和 `sqlite.js:66` / `nedb.js:26` 同形 ——
+   保证"清理"和"数据库读写"算的是同一个目录，不会清了个寂寞。
+
+`create-app.js` 里原来那段清理已删除（孤儿代码），只留一段注释说明为什么不在这里。
+
+**证据**（`test/unit-ci/clear-config.spec.js`，14 条全绿；unit-ci 全套 196/196）：
+
+| 测的东西 | 结果 |
+|---|---|
+| 锁住的目录 `rmSync` | 实测抛 EPERM |
+| 锁住 + 有别的文件 | 实测半删除：能删的删了、db 留下，`dataDir/.xnow-version` 与旧 `.nedb` 确认消失 |
+| 句柄关掉后同一目录 | 删得干净（修法成立的前提） |
+| `clearDataDir` 对锁住的目录 | 返回 false 且**不抛** |
+| `clearDataDir` 参数为空/非法 | 返回 false，不拿空字符串去删 |
+| **端到端**：electron 用替身，按 app.js 的真顺序跑 | 清理确实删掉了种子数据目录；**并断言此刻 `db.js`/`sqlite.js` 一次都没被 require** —— 这就是"句柄没开"的直接证据 |
+| 源码钉死：`clearConfigIfRequested()` 在 `require('./lib/create-app')` 之前 | 顺序反了会红（含一个"这个断言本身不会被注释骗到"的自检） |
+| 源码钉死：`create-app.js` 里不再有第二份 `rmSync` | 两处清理会各自演化 |
+| `dataPath` 算法与 `sqlite.js`/`nedb.js` 同形 | 防止将来只改一处导致清理和数据库分叉 |
+
+**没做到的**：没真启动 Electron 跑 `--clear-config`（会真的清掉祥哥的数据，不能拿他的真实环境试）。
+端到端那一条用的是「electron 替身 + 真文件系统 + 真 require 顺序」，覆盖了
+"句柄开没开、删不删得掉"这个核心，但**没覆盖 GUI 是否正常开窗**。
+**请祥哥手动测**：`npm start` 能正常开窗、界面正常（我改了主进程启动顺序）。
+
+**顺带查出的新问题 #65（要祥哥拍板，我没动）**：查这个 bug 的过程中发现
+`create-app.js:73-76` 那段「开发模式使用独立数据目录，绝不碰安装版的数据」
+**从来没生效过**：
+
+- 它给 `process.env.DATA_PATH` 赋值，但**读 DATA_PATH 的只有 `nedb.js` / `sqlite.js` /
+  `storage-key.js`**，三者都在 require 链里、都在这句赋值**之前**就执行完了；
+- 也就是说这句赋值对数据库**完全无效**，唯一的作用是一行会误导人的日志
+  （`[dev] 使用独立数据目录: ...`）。
+
+**实测佐证**：`%APPDATA%/xnow-terminal/xnow-terminal-dev` 目录**不存在**，
+而唯一的库在 `%APPDATA%/xnow-terminal/users/default_user/xnow.db`（今天 03:34 还在被改）。
+
+**代价（这个发现为什么我放着不修）**：修它 = dev 真的换到独立目录 = 祥哥 `npm start`
+之后会看到一个**空的**应用（书签/主题/SSH 主机全没了 —— 数据没丢，还在安装版目录里，
+但 dev 下看不见了）。这是**用户可见的行为变化**，还牵扯"以后 dev 和安装版数据不互通"，
+所以按规矩停下来问，不擅自改。三个选项：① 保持现状（dev 继续共用真实数据，好处是
+两边数据一致，坏处是 dev 的测试/误操作直接落在真实数据上）② 修掉（dev 独立，首次为空）
+③ 修掉并做一次「把安装版数据复制到 dev 目录」的搬迁。

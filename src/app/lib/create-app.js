@@ -115,16 +115,11 @@ exports.createApp = async function () {
   const opts = progs?.options
   globalState.set('serverPort', opts?.serverPort)
 
-  // --clear-config: 清除所有旧数据，全新启动
-  if (opts?.clearConfig) {
-    const { resolve } = require('path')
-    const dataPath = resolve(app.getPath('appData'), 'xnow-terminal')
-    const fs = require('fs')
-    if (fs.existsSync(dataPath)) {
-      fs.rmSync(dataPath, { recursive: true, force: true })
-      log.info('[clear-config] 已清除旧配置数据:', dataPath)
-    }
-  }
+  // --clear-config 的清理**不在这里**（ISSUES #40）：
+  // 它已经挪到 app.js 里、require 本文件**之前**执行。走到这一行时数据库句柄
+  // 早就打开了，Windows 上删不掉被打开的文件（实测 EPERM，且 force 吞不掉），
+  // 原来放在这里的写法会抛异常 → createApp 的 Promise 被拒 → app.js 没 catch
+  // → 一个窗口都开不出来。详见 lib/clear-config.js 的文件头。
 
   // 记录当前版本号（只追踪版本，不删除任何用户数据）
   if (app.isPackaged) {
