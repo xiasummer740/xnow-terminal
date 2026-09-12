@@ -18,6 +18,9 @@ const DATA_ENC_ID = 'userConfig'
 // Prefix added to stored strings to mark them as encrypted
 const ENC_PREFIX = 'enc:'
 
+// find 传了 _limit 时的硬上限。超过就截断，但会打日志 —— 见 dbAction 的 find 分支
+const MAX_FIND_LIMIT = 10000
+
 // 解密失败的记录：暂存其原始密文，写回时原样恢复，避免用空对象覆盖造成永久丢失
 // key = `${dbName} ${_id}`
 const decryptFailedRaw = new Map()
@@ -209,13 +212,44 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
         params.push(query._id)
       }
       if (typeof _limit === 'number') {
+        // 显式要多少给多少，只在超过硬上限时截断 —— 但**截断要出声**。
+        // 原来这里是静默 Math.min(..., 10000)，跟下面那个默认 1000 是同一类毛病。
+        const wanted = Math.max(1, _limit)
+        if (wanted > MAX_FIND_LIMIT) {
+          console.warn(
+            `find(${dbName}) 请求 ${wanted} 条，超过硬上限 ${MAX_FIND_LIMIT}，已截断`
+          )
+        }
         sql += ' LIMIT ?'
-        params.push(Math.min(Math.max(1, _limit), 10000))
-      } else {
-        // 默认最多返回 1000 条，防止全表扫描撑爆内存
-        sql += ' LIMIT ?'
-        params.push(1000)
+        params.push(Math.min(wanted, MAX_FIND_LIMIT))
+      } else if (typeof _skip === 'number') {
+        // 只要 OFFSET、不要 LIMIT 时必须补一个 `LIMIT -1`：
+        // SQLite 的 OFFSET 只能挂在 LIMIT 后面，单写 OFFSET 是语法错误
+        // （`SELECT * FROM t OFFSET 2` → near "2": syntax error）。
+        // 改 #22 之前 LIMIT 永远会被加上，所以这个坑是我这次才露出来的。
+        sql += ' LIMIT -1'
       }
+      // 不传 _limit = 要**全部**（ISSUES #22）。
+      //
+      // 原来这里是 `LIMIT 1000`，而 NeDB 那侧（nedb.js find 分支）把 args 原样丢给
+      // NeDB，没有这个上限 —— 同一个 find({}) 在两个后端返回的行数不一样。
+      // 而 Node >= 22 走的就是 sqlite（见 db.js 的后端选择），所以这是线上路径。
+      // 全项目**没有任何调用方**传 _limit，也就是说每一次 find 都吃这个默认值：
+      //   · app/lib/ipc.js exportAllBookmarks —— 备份被静默截断，
+      //     写出去的 totalBookmarks=1000 是假的，第 1000 条之后根本没进备份文件
+      //   · client/common/db.js find() —— 前端列表第 1000 条之后看不见，也就删不掉
+      //   · vps-dashboard-subscription.jsx —— 同上
+      // （迁移脚本不受影响：它们读的是 nedb-instance，读写都在 NeDB 侧。）
+      // 所以默认不加 LIMIT，与 NeDB 对齐。要分页的调用方自己传 _limit。
+      //
+      // 代价（得说清楚，别假装没有）：这 1000 条原本也顺带当了内存护栏。
+      // 启动时 load-data.js 会对 dbNames 里每个表调 fetchInitData → find({})，
+      // 其中 history / terminalCommandHistory / aiChatHistory 是**无上限增长**的表
+      // （ISSUES #23）。实测单行约 1.1KB，10 万行 ≈ 110MB 全进渲染进程，
+      // 这是真实存在的风险，不是理论值。
+      // 但正确的解法是让那三张表别无限长（#23），或在真正的列表调用方显式分页 ——
+      // 而不是全局加一个"悄悄少给你数据"的默认值：备份丢数据是**数据丢失**，
+      // 内存占用是**性能问题**，两害相权，不能让前者假装成后者被掩盖。
       if (typeof _skip === 'number') {
         sql += ' OFFSET ?'
         params.push(Math.max(0, _skip))

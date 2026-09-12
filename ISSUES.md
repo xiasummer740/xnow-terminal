@@ -47,7 +47,7 @@
 | 19 | **危险命令闸门只匹配整条命令的行首**：`sudo rm -rf /`、`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 —— 而漏过 = **零确认直接执行**。同条另两点（技能全文进 system prompt、`verifySignature` 名不副实）经祥哥 2026-09-12 拍板**不修**（个人自用），理由见下 | `ai/agent-tools.js:31-55`、`skill-manager.js:285-289`、`lib/ipc.js:651-679` | 已修已验（闸门重写为「分段 + 剥包装 + 补目标」；另两点不修，见下） |
 | 20 | Agent 循环**中止不了**且结果无上限膨胀：`createAIClient` 无 timeout、`stream:false` 从不注册 session 故 `stopStream` 无 sessionId 可杀；工具结果原样 push 进 messages（单次可达 1-2MB × 150 轮） | `lib/ai.js:32-57`、`ai/agent.js:302-397` | 待修 |
 | 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
-| 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 待修 |
+| 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 已修已验（默认改为「全部」，与 NeDB 对齐；截断改为出声告警。另修掉本次才暴露的 `_skip` 无 `LIMIT` 语法错误，见下） |
 | 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 待修 |
 | 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 已修已验 |
 | 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把上游配置覆盖到根目录 → 之后本地发版带 `channel: ${env.WORKFLOW_NAME}`，产出的清单不叫 `latest.yml`，而客户端只认 `latest.yml` → **一键更新链路当场断掉**（且打包、发 release 全程不报错） | `build/bin/prepare-electron-build.js`、`build/bin/check-builder-config.js`、两处 `electron-builder.json` | 已修已验 |
@@ -659,15 +659,15 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #44 ✅
 #19 ✅（危险命令闸门；另两点见该条说明，非闸门问题）
 #32 ✅
+#22 ✅（find 默认改为「全部」；顺带修掉 `_skip` 无 `LIMIT` 的语法错误）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 **剩余待修（截至 2026-09-12，建议按此顺序）**
 | 优先 | # | 一句话 | 备注 |
 |---|---|---|---|
-| 1 | 22 | `find` 默认 LIMIT 1000 且无调用方传 `_limit` → **导出备份被静默截断**，还写 `totalBookmarks=1000` | 数据丢失级；改导出语义，与 #23 联动 |
-| 2 | 23 | `history` 无上限增长（新条目分支直接 return，裁剪只在命中分支） | #22 的成因 |
-| 3 | 21 | 迁移写入用裸 sqlite → **整库明文落盘**（含 SSH 密码） | 动数据，先想回滚 |
-| 4 | 29 | 回环 HTTP 不校验 Origin/Host + `webview` 开 `disablewebsecurity` | #3 只修了 WS 侧 |
+| 1 | 23 | `history` 无上限增长（新条目分支直接 return，裁剪只在命中分支） | **#22 已经修完，这条要接着修**：去掉默认上限后启动会整表加载，#23 是配套的内存侧 |
+| 2 | 21 | 迁移写入用裸 sqlite → **整库明文落盘**（含 SSH 密码） | 动数据，先想回滚 |
+| 3 | 29 | 回环 HTTP 不校验 Origin/Host + `webview` 开 `disablewebsecurity` | #3 只修了 WS 侧 |
 | ~~5~~ | ~~30~~ | ~~MCP 默认免鉴权~~ | **2026-09-12 祥哥拍板不修**（自己个人用的电脑）→ 跳过 |
 | 6 | 40 | `--clear-config` 半删 + 不开窗 | |
 | 7 | 50 | `saveUserConfig` TOCTOU | |
@@ -887,3 +887,64 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 
 **没做到的**：没有**真跑一次发版**验证补传那段 I/O。发版是外向操作
 （会推 tag、发 release），不在这轮自动执行的范围里 —— 下次真发版时验证。
+
+---
+
+### #22 修复说明（第 10 批：find 的静默截断）
+
+**这条的本质是「跨后端行为分叉」，不是性能取舍**：
+NeDB 那侧（`nedb.js` 的 find 分支）把 `args` 原样丢给 NeDB，**没有**上限；
+sqlite 那侧原来是 `else { LIMIT 1000 }`。而 `db.js` 按 Node 版本选后端，
+Node ≥ 22 走的就是 sqlite —— **线上路径就是被截断的那条**。
+
+**关键前提是实测的，不是推测**：`grep -rn "_limit" src/` **只命中 `sqlite.js` 自己**，
+全项目没有任何调用方传 `_limit`。也就是说每一次 `find` 都吃这个默认值，
+「显式传就没事」这条路在真实代码里根本没人走。受影响的调用方：
+
+| 调用方 | 后果 |
+|---|---|
+| `app/lib/ipc.js` `exportAllBookmarks` | 备份文件被截断，写出去的 `totalBookmarks=1000` 是**假的** |
+| `client/common/db.js` `find()` | 前端列表第 1000 条之后**看不见，也就删不掉** |
+| `vps-dashboard-subscription.jsx` | 同上（它调 `find` 时连 query 都不传） |
+
+**修正一处我先写错的判断**：我最初在注释里写「迁移脚本也会丢数据」——
+**这是错的**。查证后：`migrate-1-to-2.js`、`v1.3.9/v1.7.0/v1.27.17/v1.32.36/v1.34.20.js`
+全部 `require('./nedb-instance')`，读写都在 NeDB 侧，**不受影响**。
+注释已按查证结果改写。教训：影响面要 grep 到 `require` 那一行才算查证。
+
+**修法**：
+1. 不传 `_limit` = 要**全部**，与 NeDB 对齐。要分页的调用方自己传。
+2. 显式 `_limit` 超硬上限（10000）仍截断，但**要出声** ——
+   原来那处 `Math.min(..., 10000)` 也是静默的，跟默认 1000 是同一类毛病。
+3. **顺带修掉一个本次才暴露的坑**：`find({ _skip: n })`（只给偏移不给条数）在
+   改动后会拼出 `SELECT ... OFFSET ?`，而 SQLite 的 `OFFSET` **必须挂在 `LIMIT` 后面**
+   —— 实测 `SELECT * FROM t OFFSET 2` 直接 `near "2": syntax error`。
+   改之前 `LIMIT` 永远会被加上，所以这个坑是这次才露出来的，补 `LIMIT -1` 兜住，并写进测试。
+
+**代价（说清楚，不假装没有）**：这 1000 条原本也顺带当了内存护栏。
+启动时 `load-data.js` 会对 `dbNames` 里每个表调 `fetchInitData → find({})`，
+其中 `history` / `terminalCommandHistory` / `aiChatHistory` 是**无上限增长**的表（#23）。
+实测单行约 **1.1KB**，10 万行 ≈ 110MB 全进渲染进程 —— 这是真实风险。
+但正确解法是让那三张表别无限长（#23），而不是全局挂一个「悄悄少给你数据」的默认值：
+**备份丢数据是数据丢失，内存占用是性能问题**，不能让前者伪装成后者被掩盖。
+所以 #23 要紧接着修，这两条是一对。
+
+**证据**：
+· 单测 `test/unit-ci/find-no-limit.spec.js` **8/8**：造 **1200 条**真实记录，
+  走的是生产同一个 `createDb` + `dbAction`（真 sqlite 文件，不是 mock）。
+  覆盖：`find({})` 全量、不传参数、`totalBookmarks` 真实、显式 `_limit` 照办、
+  `_limit+_skip` 翻页、只给 `_skip` 不崩、超上限有告警。
+· **A/B 反证（这条最重要）**：把 `sqlite.js` 换回 `git HEAD` 的旧版重跑 ——
+  **8 条里 5 条变红**，且红的正是「返回全部」那三条 + 告警 + 反证；
+  另外 3 条（`_limit` 相关）保持绿，因为它们断言的是**没变的行为**。
+  这证明测试确实咬得住这个 bug，不是写了个必绿的摆设。
+· 反证不复用 `git HEAD` 做基准（#49 踩过：修复一提交 HEAD 就变成修好的版本，
+  反证自己失效）。这里把旧版那条 SQL 照抄进测试，永久有效。
+· 端到端无二次截断：`ipcRenderer.invoke` 无大小上限，`writeLocalFile` 无截断 —— 查证过。
+· 全套 `npm run test-unit-ci` **153/153**（145 + 8）；`npx standard` 改动文件 0 报错。
+
+**没做到的**：没有**起 Electron 手工点一次备份**验证 UI 那条路。
+本机开发库几乎是空的（`bookmarks` 0 条、`history` 8 条），
+要么造 1200 条假数据进祥哥的真实开发库、要么空跑 —— 前者污染真实数据，不干。
+单测跑的是同一个 `dbAction` 边界 + 真 sqlite 文件，是这层修复能拿到的最强证据；
+GUI 那条留给祥哥手动测试时顺带看。
