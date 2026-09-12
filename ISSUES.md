@@ -79,7 +79,7 @@
 | 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 待修 |
 | 45 | `openExternal` **无协议白名单**，传 `file:///C:/evil.exe` 即由系统 shell 打开 | `lib/ipc-sync.js:63-64` | 已修已验（第 2 批 #1 顺带关闭，见下） |
 | 46 | 凭据加密遗留路径：**固定全零 IV 的 CBC**、`isLegacyFormat` 把纯十六进制明文误判为密文、解密失败原样返回 | `lib/enc.js:15-16,71-72,99-112` | 待修 |
-| 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 待修 |
+| 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 已修已验（`group1-sha1`/`md5` 已从"每次连接都报价"降为"只在重试档"；**顺带修好了一条从未生效过的兜底路径**，见下） |
 | 48 | 自定义 CSS 走 `style.innerHTML`，只过滤了 `@import` | `bg/custom-css.jsx:16-17` 等 | 待修 |
 | 49 | 保存配置用 100ms `debounce` 且 `beforeExit` **不 flush** → 刚改完设置就关窗会丢 | `store/watch.js:86-91` | 待修 |
 | 50 | `saveUserConfig` 跨 await 读-改-写（TOCTOU），并发保存互相覆盖 | `user-config-controller.js:31-52` | 待修 |
@@ -517,6 +517,63 @@ http/https/ftp/ftps/mailto/tel），`openExternal` 改走它。
 - 两次验证都用临时目录当 HOME，**没有碰真实的 `~/.ssh/known_hosts`**
 #39
 
+### #47 修复说明（SSH 已破解套件不再"每次连接都报价"）
+
+**先纠正原行的描述**（查证后与代码不符，照原样修会做错）：
+
+`algDefault()` **只给 `kex` / `hmac` / `compress` 三个键**，`cipher` 和 `serverHostKey`
+缺省时 ssh2 用的是**它自己的默认表**。实测 ssh2 的 `DEFAULT_CIPHER` 里
+**没有** `3des-cbc`/`arcfour*`/`blowfish`，`DEFAULT_SERVER_HOST_KEY` 里**没有** `ssh-dss`。
+
+所以原行里"算法集含 `3des-cbc`、`arcfour*`、`ssh-dss`"这半句，指的是 `algAlt()`
+（重试档）里的内容 —— 而**这些从来没被真正报价过**，原因见下。
+真正"每次连接都在报价"的只有两个：`diffie-hellman-group1-sha1`（1024 位
+Oakley Group 2，Logjam）和 `hmac-md5`/`hmac-md5-96`。**这两个才是要修的**。
+
+**顺带挖出一个更要紧的问题：那条兜底路径从来没成功过。**
+
+给"删掉弱算法会不会让老设备连不上"做实测时发现的：
+`algAlt()` 的 `cipher` 里塞了 `blowfish-cbc` / `arcfour256` / `arcfour128` / `arcfour`，
+**这个 ssh2 构建根本不支持它们**。而 ssh2 对显式数组里不认识的算法名是**直接抛错**
+（`utils.js` `generateAlgorithmList` → `Unsupported algorithm: X`）——
+也就是说 `algAlt()` 一调用就抛，`reTryAltAlg()` **从来没成功过**。
+
+这条很关键：**只删 default 不修 alt 就是倒退**。改前老设备至少能在第一次握手
+（default 里有 group1-sha1）连上；改后第一次失败、重试又抛错 → **彻底连不上**。
+所以这一项必须两件事一起做，缺一不可。
+
+**改法**（`server/ssh2-alg.js`）：
+
+- `algDefault()` 移除 `diffie-hellman-group1-sha1`、`hmac-md5`、`hmac-md5-96`
+- `algAlt()` = default 全集 + `LEGACY_KEX` / `LEGACY_HMAC` 加回来，**并删掉 4 个
+  ssh2 不认识的 cipher**（`3des-cbc` 保留 —— 还有在役设备只认它）
+- sha1 系列**有意保留在 default**：OpenSSH 自己也仍默认启用，一刀切会连不上一大批在役设备
+
+**保留项 / 代价（说清楚，别当成漏修）**：`3des-cbc` 与 `ssh-dss` 仍在重试档里。
+重试是**握手失败后自动触发一次**（`session-ssh.js:35` `reTryAltAlg`，由
+`csFailMsg` 且 `!altAlg` 守卫），所以残留风险是：**能阻断首次握手的中间人可诱导
+降级到重试档**。要彻底消除，就得把 `3des-cbc`/`ssh-dss` 也从重试档删掉 ——
+代价是只认这几种的老交换机/老路由器**再也连不上**。这一条是**能力取舍**，
+留给祥哥拍板（当前取"保留老设备兼容"，与重试档的设计意图一致）。
+
+**证据**（三层，`temp/` 下）：
+
+| 层 | 结果 |
+|---|---|
+| 单测 `test/unit-ci/ssh-alg-tier.spec.js` | 8/8（全套 `npm run test-unit-ci` 83/83） |
+| 实机握手 `temp/verify-issue47.js` | 11/11 |
+| 守卫有效性反证 `temp/verify-issue47-guard.js` | 旧代码抓出 4 个坏算法名、新代码 0 个 |
+
+实机握手用真 ssh2 `Server`+`Client`，三个场景是关键：
+① 强套件服务器 + `algDefault` → 连得上（基本盘没改坏）
+② 只认 `group1-sha1`+`hmac-md5` 的服务器 + `algDefault` → **连不上**（符合预期，已不报价）
+③ 同一台老服务器 + `algAlt` → **连得上**（兜底生效，老设备没被抛弃）
+
+单测里那条「两档里的每个算法名 ssh2 都认识」就是钉住"兜底路径被写死"这个坑的 ——
+它现在会拦住任何往算法表里塞 ssh2 不认识名字的改动。**用旧代码跑这条会失败**，
+是用 `temp/verify-issue47-guard.js` 反证过的（两边都过的测试等于没测）。
+
 **第 4 批（架构债）**
 #39 ✅
+#47 ✅
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
