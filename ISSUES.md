@@ -48,7 +48,7 @@
 | 20 | Agent 循环**中止不了**且结果无上限膨胀：`createAIClient` 无 timeout、`stream:false` 从不注册 session 故 `stopStream` 无 sessionId 可杀；工具结果原样 push 进 messages（单次可达 1-2MB × 150 轮） | `lib/ai.js:32-57`、`ai/agent.js:302-397` | 待修 |
 | 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
 | 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 已修已验（默认改为「全部」，与 NeDB 对齐；截断改为出声告警。另修掉本次才暴露的 `_skip` 无 `LIMIT` 语法错误，见下） |
-| 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 待修 |
+| 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 已修已验（新增分支补上裁剪，与 `addCmdHistory` 同一口径；残留：**已膨胀的老库不会自动缩**，见下） |
 | 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 已修已验 |
 | 25 | **两份 electron-builder 配置分叉**，`npm run pb` 会把上游配置覆盖到根目录 → 之后本地发版带 `channel: ${env.WORKFLOW_NAME}`，产出的清单不叫 `latest.yml`，而客户端只认 `latest.yml` → **一键更新链路当场断掉**（且打包、发 release 全程不报错） | `build/bin/prepare-electron-build.js`、`build/bin/check-builder-config.js`、两处 `electron-builder.json` | 已修已验 |
 | 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | **不修（祥哥 2026-09-12 拍板：不做，就 Windows 单平台）** |
@@ -948,3 +948,55 @@ Node ≥ 22 走的就是 sqlite —— **线上路径就是被截断的那条**�
 要么造 1200 条假数据进祥哥的真实开发库、要么空跑 —— 前者污染真实数据，不干。
 单测跑的是同一个 `dbAction` 边界 + 真 sqlite 文件，是这层修复能拿到的最强证据；
 GUI 那条留给祥哥手动测试时顺带看。
+
+---
+
+### #23 修复说明（第 11 批：连接历史无上限增长）
+
+**问题**：`updateHistory`（`store/tab.js:506`）里裁剪只写在"命中已有条目"那一支，
+`index === -1`（新条目）那一支 `unshift` 完直接 return —— 于是**每连一个没见过的主机
+就无条件加一条，永不裁剪**。`maxHistory = 50` 在新条目这条路上形同虚设。
+
+**这是漏写而不是有意为之**，证据是同一族的 `addCmdHistory`（`store/common.js:421`）：
+它的裁剪写在 if/else **外面**，两支都生效。同一份代码里两种写法，说明对的那份才是本意。
+
+**为什么现在更要紧（与 #22 是一对）**：修 #22 之前 `find` 默认只给 1000 条，
+撑死也就 1000 条；#22 之后启动会把整张 `history` 表读进来，而
+`sys-menu/history.jsx` 是 `props.history.map(...)` **不切片、全量渲染** ——
+历史有多长就渲染多少个 DOM 节点。两条合起来才是完整的用户可见后果。
+
+**修法**：给新增分支补上和另一边同样的裁剪，并把 unshift+pop 包进 `action()`。
+包 `action()` 不是顺手美化：`manate` 的 `emit` 在**不在** action 里时是**立刻**逐个通知的
+（见 `write-emitter.js` 的 `emit`），不包的话 unshift 和 pop 各触发一次订阅回调 ——
+等于修完反而多渲染一遍。
+
+**代价/副作用**：原新增分支 `return history.unshift(...)`（返回新长度），改成裸 `return`
+（返回 undefined）。三个调用点（`tab.js:109 / 159 / 362`）全是裸语句、没人接返回值，
+已逐个查证。两支现在都返回 undefined，反而对称了。
+
+**残留（需要祥哥拍板，我没有单方面做）**：这次只堵住"继续涨"，
+**已经膨胀的老库不会自动缩** —— 裁剪一次只 pop 一条，得再连 N 次新主机才排空。
+要立刻缩回去就得在启动时按 `maxHistory` 截断，但那等于**批量删用户的可见历史**
+（`history.jsx` 是全量渲染的，超出的那些今天用户确实能翻到），
+属于「清表数据」那一档，按规矩得先问。**默认不动，等祥哥说。**
+
+**证据**：
+· 单测 `test/unit-ci/history-unbounded.spec.js` **9/9**。
+· 测试手法交代清楚：`tab.js` 的依赖链里有 `.jsx` 和 `.png`（Vite 能处理、Node 不能），
+  直接 import 进不来；而 `node_modules` 里**没有 esbuild** 可做 JSX 转换
+  （顺带印证 #13「依赖没装全」）。所以测试把 `updateHistory` 的**函数源码原文**抠出来，
+  用 `new Function` 注入依赖执行 —— 跑的是**生产代码本身**，不是另写一份等价实现
+  （另写一份等于自己测自己）。抠取用大括号配平，并断言抠出来的是这个函数
+  （含 `tabPropertiesExcludes` / `disableConnectionHistory` / 长度下限），防"抠歪了还静默跑过"。
+· **A/B 反证**：把同一套断言跑在修复前的源码上（`git show 00b7f1c5:...`，**写死哈希不用 HEAD**
+  —— #49 踩过：修复一提交 HEAD 就变成修好的版本，反证自己失效），
+  旧版连 200 个不同主机 → **涨到 200 条**，证明 bug 真实存在且测试咬得住。
+· 老行为不坏：重复连同一主机只占一条且 `count` 累加、正好等于上限时不裁、
+  关掉连接历史时一条不记、无 `host/type` 的 tab 不进历史 —— 都单独钉了断言。
+· `maxHistory` 的真值从 `constants.js` **正则读**，不写死数字，避免两边脱钩。
+· 全套 `npm run test-unit-ci` **162/162**（153 + 9）；`npx standard` 改动文件 0 报错。
+
+**没做到的**：仍然没有**真起 Electron 连 200 个主机**看 UI 表现。
+上面是函数级真实执行，UI 层（`history.jsx` 全量渲染会不会卡）留给手动测试。
+另外这套「抠源码执行」是个**临时手法** —— 正经解法是给客户端 store 建可测底座，
+但依赖链缺 esbuild 装不全，属于 #13/#11/#17 那条 E2E 线的事，没在这轮夹带。

@@ -545,12 +545,25 @@ export default Store => {
       tabPropertiesExcludes.forEach(d => {
         delete copiedTab[d]
       })
-      return history.unshift({
-        tab: copiedTab,
-        time: Date.now(),
-        count: 1,
-        id: uid()
-      })
+      // 裁剪原来只写在下面"命中已有条目"那一支里，新增这一支直接 return ——
+      // 于是每次连一个**没见过**的主机就无条件 push 一条，history 无上限增长
+      // （ISSUES #23）。参考同一族的 addCmdHistory：它的裁剪写在 if/else **外面**，
+      // 两支都生效；这里保留原结构，只补上同样的一句。
+      //
+      // 包 action() 是为了让 unshift+pop 合成**一次**通知：不包的话
+      // unshift 和 pop 各触发一次订阅回调，等于修完反而多渲染一遍。
+      action(function () {
+        history.unshift({
+          tab: copiedTab,
+          time: Date.now(),
+          count: 1,
+          id: uid()
+        })
+        if (history.length > maxHistory) {
+          history.pop()
+        }
+      })()
+      return
     }
     const match = history[index]
     match.count = (match.count || 0) + 1
