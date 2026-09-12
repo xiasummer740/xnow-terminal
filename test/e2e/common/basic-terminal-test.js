@@ -2,54 +2,68 @@ const delay = require('./wait')
 const { expect } = require('./expect')
 
 /**
- * 全选/复制的修饰键：Mac 用 Meta(⌘)，其他平台用 Ctrl。
+ * 「读终端内容」统一走 app 自带的 `store.mcpGetTerminalOutput`
+ * （src/client/store/mcp-handler.js:541，从 xterm 的 buffer 取行）。
  *
- * 这里原本是裸写的 `'Meta+A'` / `'Meta+C'` —— 那是 macOS 的写法，在 Windows 上
- * Meta 键根本不存在，两次按键都不生效，于是"执行命令前"和"执行命令后"读到的是
- * **同一份剪贴板内容**，断言 `text1.length < text2.length` 收到 143 < 143 直接失败。
- * 写法与 common.js 的 copyItemWithKeyboard 保持一致（那里早就做了平台判断）。
+ * ## 为什么废弃了原来的「Ctrl+A / Ctrl+C + 剪贴板」
+ *
+ * 那套在本仓库**从根上不成立**，探针实测证据：
+ *
+ *   1. xterm 没有 select-all 语义。Ctrl+A 会被 electerm 自己的
+ *      handleKeyboardEvent（shortcut-handler.js:135，只拦 Backspace / Ctrl+C）
+ *      放行给 PTY，变成 readline 的「移到行首」，**不产生任何选区**。
+ *      实测：按下 Ctrl+A 后 `term.getSelection() === ''`、
+ *      `document.getSelection()` 也是空串。
+ *   2. 没有选区 → Ctrl+C 复制不到东西 → 剪贴板原封不动。
+ *      于是命令前后两次读到的剪贴板是同一份内容，断言恒定
+ *      `expected 143 to be less than 143` 失败。
+ *   3. 主进程剪贴板里那个字符串 "playwright" 是 **Playwright 自己预置的初值**
+ *      （实测：主进程读写往返正常，写 MARKER-XYZ 立刻读得回来）。
+ *      所以失败现场看着像"复制没生效"，实际是"压根没东西可复制"——
+ *      排查时很容易往错误方向走。
+ *
+ * 原来的 `modKey`（darwin 用 Meta、其余用 Control）是在绕第 1 条，
+ * 但两条路都不通，现在整条链路废弃，不再需要这个平台判断。
+ *
+ * ## 为什么该用 mcpGetTerminalOutput
+ *
+ * - 它是**产品自带**的能力（MCP 工具在用），不是为测试新造的口子
+ * - 直接读 xterm buffer，和剪贴板、焦点、选区这些易碎环节全都无关
+ * - 取全量行：lineCount 传大值，避免"输出长了被截断导致前后等长"的假失败
  */
-const modKey = process.platform === 'darwin' ? 'Meta' : 'Control'
+
+// 取全量 scrollback。传 50 这种小值时，一旦输出超过窗口高度，
+// 前后两次取到的行数会被同样的上限卡住，长度相等 → 假失败。
+const ALL_LINES = 100000
+
+async function readTerminal (client) {
+  return client.evaluate((lines) => {
+    return window.store.mcpGetTerminalOutput({ lines }).output || ''
+  }, ALL_LINES)
+}
+
+async function focus (client) {
+  // 必须 await —— 漏掉的话 click 还没落地就往下走了，
+  // 后面 keyboard.type 的按键会落到页面上而不是终端里。
+  await client.click('.session-current .term-wrap')
+}
 
 exports.basicTerminalTest = async (client, cmd) => {
-  async function focus () {
-    // 必须 await —— 漏掉的话 click 还没落地 focus() 就返回了，
-    // 紧跟着的全选/复制会作用在**页面**上（选中整页文本），而不是终端，
-    // 于是命令前后的两次复制拿到同样内容，断言恒定 143 < 143 失败。
-    await client.click('.session-current .term-wrap')
-  }
-  async function selectAll () {
-    await client.keyboard.press(`${modKey}+A`)
-    await delay(401)
-  }
-  async function copy () {
-    await selectAll()
-    await client.keyboard.press(`${modKey}+C`)
-    await delay(401)
-  }
-  await copy()
-  const text1 = await client.readClipboard()
-  await delay(301)
-  await focus()
-  await delay(1010)
+  await focus(client)
+  await delay(500)
+  const before = await readTerminal(client)
+
   await client.keyboard.type(cmd)
   await client.keyboard.press('Enter')
-  await delay(1011)
-  await copy()
-  await delay(101)
-  const text2 = await client.readClipboard()
-  expect(text1.trim().length).lessThan(text2.trim().length)
+  await delay(2500)
+
+  const after = await readTerminal(client)
+  // 原意不变：跑完命令，终端里的内容必须变多
+  expect(before.trim().length).lessThan(after.trim().length)
 }
 
 exports.getTerminalContent = async function (client) {
-  await client.click('.session-current .term-wrap')
+  await focus(client)
   await delay(300)
-  await client.keyboard.press(`${modKey}+A`)
-  await delay(300)
-  await client.keyboard.press(`${modKey}+C`)
-  await delay(300)
-  const clipboardText = await client.readClipboard()
-  await client.keyboard.press('Escape')
-  await delay(300)
-  return clipboardText
+  return readTerminal(client)
 }
