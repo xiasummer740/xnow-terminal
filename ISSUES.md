@@ -54,7 +54,7 @@
 | 26 | CI 全挂导致 **Mac/Linux 用户永远无法自动更新**（release 里零 mac/零 linux 产物；且 `build-mac.js` 只出 dmg，electron-updater 在 mac 需要 zip） | `.github/workflows/*`、`build/bin/build-mac.js:22` | **不修（祥哥 2026-09-12 拍板：不做，就 Windows 单平台）** |
 | 27 | `npm run rx` 不跑 `npm run b` → 只跑 rx 时**渲染层是新代码、主进程可能是旧的**（含自动更新逻辑本身）。实测：148 个文件里 83 个不一致，5 个文件整个缺失（第 1/2 批安全修复全部进不了包） | `build/bin/release-xnow.js:41-52`、`build/bin/check-src-fresh.js` | 已修已验 |
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
-| 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
+| 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js`、`server/http-guard.js`、`web/web-session.jsx:128` | 已修已验（HTTP 闸门已上；**`disablewebsecurity` 那半没动，等祥哥拍板**，见下方「#29 修复说明」） |
 | 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | **不修（祥哥 2026-09-12 拍板：「没必要上锁吧，自己用的电脑」）**<br>复看前提：一旦变成多人共用一台机器、或本机上跑不信任的程序，这条要重新评估 —— 同类暴露面还有 #29（回环 HTTP 不校验来源，**那条照修**） |
 | 31 | `httpFetch` 无任何 SSRF 校验（连 `isPrivateHost` 都没调）；`isPrivateHost` 只识别点分十进制，实测 `127.0.0.1.nip.io`、`[::ffff:127.0.0.1]`、`169.254.169.254` **全部放行** | `lib/ipc.js:632-649`、`:161-176` | 已修已验（判定挪到 `lib/ssrf-guard.js` 并补 DNS 判定，三个绕过全堵；`httpFetch` 按「监控必须能用」的口径接闸，见下） |
 | 32 | 安装包 **blockmap 上传无兜底**：`v3.17.8`/`v3.17.10` 的 release 里确实没有 blockmap（本地 `dist/` 却有，`v3.17.11` 又有 —— 间歇性漏传）→ 漏了是**静默**的，用户更新退化为 116MB 全量 | `build/bin/release-xnow.js:54-67` | 已修已验（产物清单可测 + 补传后复核，不过就停在 draft；见下） |
@@ -86,6 +86,7 @@
 | 51 | 3 个继承自上游的死代码文件零引用：`download-mirrors.js`、`get-category-color.js`、`key-shift-pressed.js` | `client/common/` | 待修 |
 | 52 | **用了 `log.*` 但从未 import `log`** → DNS 解析失败时不是记日志，而是抛 `ReferenceError: log is not defined`（Promise 内抛出 = 未处理拒绝）。写法上属"错误处理路径反而制造错误" | `common/lookup.js:10,19`（走 `lib/ipc.js:252` 暴露给渲染进程） | 已修已验 |
 | 53 | **同上**：主题列表加载失败时 `log.info(e)` 抛 ReferenceError | `lib/iterm-theme.js:8` | 已修已验 |
+| 64 | 网页标签页（`<webview allowpopups>`）**没有给 guest 挂 `setWindowOpenHandler`** → 标签页里的页面 `window.open` 出来的窗口不走主窗口那道导航闸门（`safeOpenExternal` 只挂在主窗口 `webContents` 上） | `client/components/web/web-session.jsx:129`、`app/lib/webview-handler.js:71-105`（只处理 Basic-Auth） | 待修（**要祥哥拍板**：`allowpopups` 很可能是登录/OAuth 跳转需要的，直接删会坏功能；见「#29 修复说明」末段） |
 
 ---
 
@@ -660,25 +661,26 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #19 ✅（危险命令闸门；另两点见该条说明，非闸门问题）
 #32 ✅
 #22 ✅（find 默认改为「全部」；顺带修掉 `_skip` 无 `LIMIT` 的语法错误）
+#23 ✅（新增条目分支补上裁剪，两支都生效）
+#21 ✅（迁移写入接上 enc/dec，不再明文落盘；存量明文数据没重写，见说明）
+#29 ✅（回环 HTTP 上了 Host/Origin 闸门；`disablewebsecurity` 与 popup 两点待祥哥拍板）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 **剩余待修（截至 2026-09-12，建议按此顺序）**
 | 优先 | # | 一句话 | 备注 |
 |---|---|---|---|
-| 1 | 23 | `history` 无上限增长（新条目分支直接 return，裁剪只在命中分支） | **#22 已经修完，这条要接着修**：去掉默认上限后启动会整表加载，#23 是配套的内存侧 |
-| 2 | 21 | 迁移写入用裸 sqlite → **整库明文落盘**（含 SSH 密码） | 动数据，先想回滚 |
-| 3 | 29 | 回环 HTTP 不校验 Origin/Host + `webview` 开 `disablewebsecurity` | #3 只修了 WS 侧 |
-| ~~5~~ | ~~30~~ | ~~MCP 默认免鉴权~~ | **2026-09-12 祥哥拍板不修**（自己个人用的电脑）→ 跳过 |
-| 6 | 40 | `--clear-config` 半删 + 不开窗 | |
-| 7 | 50 | `saveUserConfig` TOCTOU | |
-| 8 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
-| 9 | 13 | `prepare-test` bash 语法在 Windows 静默失败 → Playwright 永远装不上 | E2E 线前置 |
-| 10 | 17 | 无 `playwright.config.js` | 同上 |
-| 11 | 11 | `test/unit/` 21 个 spec 从未被执行 | 同上 |
-| 12 | 12 | Playwright 1.28.1 与 Electron 41 结构性不兼容 | E2E 线根因 |
-| 13 | 9 | 3 个 mac workflow 禁用 3 个月、246/246 失败 | 若走 #26 单平台口径，可转为「删掉」 |
-| 14 | 34 / 35 / 37 | 孤儿组件 12 个 / 硬编码中文 764 行 96 文件 / `parse-quick-connect` 两份分叉 | 清理类，风险低 |
+| 1 | 40 | `--clear-config` 半删 + 不开窗 | |
+| 2 | 50 | `saveUserConfig` TOCTOU | |
+| 3 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
+| 4 | 13 | `prepare-test` bash 语法在 Windows 静默失败 → Playwright 永远装不上 | E2E 线前置 |
+| 5 | 17 | 无 `playwright.config.js` | 同上 |
+| 6 | 11 | `test/unit/` 21 个 spec 从未被执行 | 同上 |
+| 7 | 12 | Playwright 1.28.1 与 Electron 41 结构性不兼容 | E2E 线根因 |
+| 8 | 9 | 3 个 mac workflow 禁用 3 个月、246/246 失败 | 若走 #26 单平台口径，可转为「删掉」 |
+| 9 | 34 / 35 / 37 | 孤儿组件 12 个 / 硬编码中文 764 行 96 文件 / `parse-quick-connect` 两份分叉 | 清理类，风险低 |
 | — | 48 | `customCss` 可被同步源污染（暴露面低） | 简单的「拦 url()」会误伤正常背景图，需另想 |
+
+> ~~#30 MCP 默认免鉴权~~ —— 2026-09-12 祥哥拍板不修（自己个人用的电脑），已从本表移除。
 
 **账本需更正的条目**（复核发现原记录不准，修的时候顺带改）：#12 #34 #35 #37 #41 #20
 
@@ -1057,3 +1059,68 @@ GUI 那条留给祥哥手动测试时顺带看。
 而且迁移会把 NeDB 文件 `renameSync` 成 `.bak`，在原地做实验有风险。
 所以测的是**同一条写入路径**（`createDb` + `dbAction('update', …, {upsert})`，
 与迁移脚本逐个 record 的写法一致），不是端到端迁移。
+
+### #29 修复说明（第 13 批：回环 HTTP 闸门）
+
+**问题**：#3 只修了 WS 侧（`dispatch-center.js` / `session-server.js` 各自 verify）。
+HTTP 侧一直是裸的 —— `server.js` 里 `/run` 和静态资源谁都能打，**Host 是谁完全不看**。
+
+**威胁模型（DNS rebinding）**：攻击者把自己的域名解析到 `127.0.0.1`，用户打开那个页面，
+页面 JS 就以 `http://attacker.com:<端口>` 打到了本机服务。服务看到来源是"本机"，实际是别人。
+比 WS 更糟的是 **HTTP 响应还能被读走**。
+
+**为什么必须靠 Host、Origin 挡不住**：同源请求浏览器压根不发 `Origin`；
+而 `Host` 无论怎么解析都如实反映地址栏里的域名，是这条路上唯一的破绽。
+
+**修法**：新增 `server/http-guard.js`，挂在 `server.js` 所有路由**之前**。两条规则**故意不对称**：
+
+| 头 | 缺失时 | 理由 |
+|---|---|---|
+| `Host` | **拒** | HTTP/1.1 强制带 Host，正常客户端不会漏。这条不对称正是封堵点 |
+| `Origin` | **放** | 非浏览器客户端（脚本/命令行）不带 Origin，卡掉只误伤工具；浏览器发跨站请求一定带 |
+
+放行名单只有 `ws-origin.js` 里那一份 `LOOPBACK_HOSTS`，WS 侧和 HTTP 侧共用，防止两边漂移。
+
+**为什么单独拆一个文件**：`server.js` 模块顶层就 `runServer()` 了，require 不进测试。
+拆出来之后，测试可以把**生产用的中间件原文**挂到真 express 实例上发真请求，
+而不是另写一份等价实现（另写一份 = 测自己）。
+
+**证据**（`test/unit-ci/http-guard.spec.js`，14 条全绿）：
+
+| 测的东西 | 结果 |
+|---|---|
+| `Host: 127.0.0.1/localhost/[::1]` | 200 放行 |
+| 不带 `Origin` | 200 放行（不误伤脚本） |
+| `http://127.0.0.1:<port>` 的 Origin | 200 放行（应用自己能用） |
+| **`Host: attacker.com:<port>`** | **403** |
+| Host 合法但 `Origin: http://evil.example.com` | 403 |
+| **静态资源**（`/secret.txt`）也走闸门 | 403 / 正常 200 |
+| HTTP/1.0 不带 Host（能绕过 Node 自检） | 403 |
+| HTTP/1.1 不带 Host | Node 层 400（闸门之外还有一道） |
+| **反证**：不挂闸门的 app | attacker.com 照样 200、静态资源照样读得到 |
+| 源码钉死：`app.use(httpGuard)` 在 `/run`、`initFileServer`、`initWs` **之前** | 挂后面等于没加 |
+
+**顺手实测到的两个事实**（不是猜的，`node -e` 跑出来的）：
+1. Node 的 HTTP server **自己**会拒掉无 Host 的 **HTTP/1.1** 请求（400，express 根本看不到）
+2. 但 **HTTP/1.0 不要求 Host**，能一路走到 handler 里（`req.headers.host === undefined`）——
+   所以 `isLoopbackHost` 的"缺失即拒"不是摆设，是那条路上的唯一一道锁
+
+**没修的半条（要祥哥拍板，我没单方面动）**：`web/web-session.jsx:128` 的
+`disablewebsecurity: 'true'` 和 `:129` 的 `allowpopups: 'true'`。
+
+- `disablewebsecurity` 关掉的是**被浏览网页自己的**同源策略。网页标签页里开一个站，
+  那个站就能带着用户的 cookie 去读任意别的站的响应 —— 这是实打实的削弱。
+  但它是上游 electerm 的原设计，多半是为了让**内网面板 / 路由器后台 / 摄像头**这类
+  跨域 XHR 能跑。**我删掉就可能弄坏祥哥正在用的页面，而我没法测他用的是哪些**，
+  所以不擅自改。三个选项：① 保持现状 ② 整个删掉（同源策略恢复，跨域的面板会坏）
+  ③ 做成按标签页开关（正常浏览安全，面板单独开）——③ 是新功能，属 post-launch。
+- `allowpopups` 也顺带看了一眼：`lib/webview-handler.js` 只处理 Basic-Auth，
+  **没有给 guest webContents 挂 setWindowOpenHandler**，所以标签页里的页面
+  `window.open` 出来的窗口不走主窗口那道导航闸门（`safeOpenExternal`）。
+  这条**已单独登记为 #64**，和 `disablewebsecurity` 一起等拍板 —— 它很可能也是
+  登录/OAuth 流程需要的，删了会坏功能。
+
+**没做到的**：没在真 Electron 里跑一遍应用（没启动 GUI）。理由是这条改动的验证点全在
+"HTTP 请求进来时 Host/Origin 怎么判"，用真 express + 真 socket 已经覆盖到；
+启 GUI 反而要动祥哥的真实数据目录。**请祥哥手动测**：应用正常打开、各页面能加载、
+`npm start` 下功能正常 —— 闸门挂错位置的话表现就是整个界面白屏/资源 403。

@@ -7,8 +7,13 @@ const {
 } = require('../common/runtime-constants')
 const initFileServer = require('../lib/file-server')
 const appDec = require('./app-wrap')
+const httpGuard = require('./http-guard')
 
 appDec(app)
+
+// Host / Origin 闸门（ISSUES #29）—— 必须在所有路由**之前**，放后面等于没加。
+// 规则和理由见 http-guard.js。
+app.use(httpGuard)
 
 app.get('/run', function (req, res) {
   res.send('ok')
