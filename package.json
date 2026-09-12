@@ -15,7 +15,7 @@
     "postpublish": "node build/bin/postpublish",
     "prepare-file": "node build/bin/prepare",
     "pb": "node build/bin/prepare-electron-build.js",
-    "prepare-test": "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm i -E playwright@1.28.1 --no-save && npm i -E @playwright/test@1.28.1 --no-save",
+    "prepare-test": "node build/bin/prepare-test.js",
     "postinstall": "node build/bin/post-install",
     "lint": "npx standard --verbose",
     "fix": "npx standard --fix",
