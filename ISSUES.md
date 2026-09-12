@@ -44,7 +44,7 @@
 | # | 问题 | 位置 | 状态 |
 |---|---|---|---|
 | 18 | **上游同步断裂 3.5 个月**：fork 后 370 个自研 commit、**零次上游合并**；`git merge-tree` 实测 **90 个冲突文件**，其中 6 个是结构性冲突（上游**删除了** `terminal-info/` 整目录、把 `terminal.jsx` 从 1770 行拆成 30 个模块）。再拖将失去合并能力 | `d35b5e1e..HEAD` vs `upstream/master` | 待修 |
-| 19 | 系统提示可被本地文件改写：`readClaudeSkills` 把 `~/.claude/skills/*/SKILL.md` **全文**塞进 system prompt；`verifySignature` 一律 `return true`（签名校验是装饰）；危险命令只靠 15 条 `^` 锚定正则，`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 | `lib/ipc.js:651-679`、`skill-manager.js:285-289`、`ai/agent-tools.js:31-55` | 待修 |
+| 19 | **危险命令闸门只匹配整条命令的行首**：`sudo rm -rf /`、`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 —— 而漏过 = **零确认直接执行**。同条另两点（技能全文进 system prompt、`verifySignature` 名不副实）复核后**判定为设计如此 / 需拍板**，理由见下 | `ai/agent-tools.js:31-55`、`skill-manager.js:285-289`、`lib/ipc.js:651-679` | 已修已验（闸门重写为「分段 + 剥包装 + 补目标」，见下） |
 | 20 | Agent 循环**中止不了**且结果无上限膨胀：`createAIClient` 无 timeout、`stream:false` 从不注册 session 故 `stopStream` 无 sessionId 可杀；工具结果原样 push 进 messages（单次可达 1-2MB × 150 轮） | `lib/ai.js:32-57`、`ai/agent.js:302-397` | 待修 |
 | 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
 | 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 待修 |
@@ -657,6 +657,7 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #43 ✅
 #49 ✅
 #44 ✅
+#19 ✅（危险命令闸门；另两点见该条说明，非闸门问题）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 ### #49 修复说明（第 6 批：退出路径）
@@ -753,3 +754,63 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 只重建 renderer，不会把 `logger.js` 之类的文件带过去。手动 `cp` 单文件进
 `work/app/lib/` 会让主进程起不来（`Cannot find module './logger'`）。
 改主进程代码后要么 `npm run b`，要么 compile 完把缺的文件一并补上。
+
+### #19 修复说明（第 8 批：AI 执行终端命令的闸门）
+
+**先说清楚这个闸门的性质**：`isDangerousCommand` 返回 true **不是拦住**，而是弹一个
+确认框让用户点头。所以**漏判 = 零确认直接执行，误判 = 用户多点一下**。
+这个不对称决定了修法整体偏向「宁可多问一句」。
+
+**问题**：原来是一串 `^` 锚定的正则，只匹配**整条命令的行首**，实测漏掉四类：
+
+| 漏法 | 例子 | 为什么漏 |
+|---|---|---|
+| 危险操作不在行首 | `sudo rm -rf /`、`cd / && rm -rf /` | `^` 只认第一个 token |
+| 目标不在名单里 | `rm -rf ~/`、`rm -rf $HOME`、`rm -rf /home` | 名单只有 `/` 和 `/*` |
+| 下载即执行 | `curl x \| bash`、`iwr x \| iex` | 形态压根没覆盖 |
+| 读凭证 | `cat ~/.ssh/id_rsa`、`grep -r p ~/.aws/credentials` | 形态压根没覆盖 |
+
+**修法**（`src/client/common/dangerous-command.js`，从 `agent-tools.js` 里抠出来
+成独立纯函数，好测）：
+1. **按 `;` `&&` `||` `|` 换行拆段，逐段判** —— 危险操作在第 3 段也拦得住
+2. **每段先剥包装前缀**再判：`sudo`/`doas`/`env`/`nohup`/`nice`/`xargs`…
+   注意 sudo **自己取值的旗标**（`-u root`）得连值一起剥，
+   否则 `sudo -u root rm -rf /` 剩下的 `-u root rm -rf /` 不认（这条是跑测试才发现的）
+3. **补齐「一整片删光」的目标**：`~` `~/` `~/ *` `$HOME` `${HOME}` `/home` `/etc` `/usr`…；
+   只收**整片** —— `rm -rf /home/user/project/dist` 是正常清理，不该报
+4. **补两类新形态**：下载即执行（`curl…|bash`、`iwr…|iex`）、读凭证
+   （`id_rsa`/`id_ed25519`/`.aws/credentials`/`.netrc`/`.git-credentials`/`.npmrc`…）
+
+**两个刻意的克制**：
+· 段内仍然是**行首锚定** —— `echo "rm -rf /"` 不该报。误报多了用户会形成
+  「看到框就点确认」的习惯，闸门等于没有。
+· 读凭证那类用 `(?!\.pub)` 排除公钥 —— `cp ~/.ssh/id_rsa.pub authorized_keys`
+  是再正常不过的操作。
+· 已知误报（接受）：`grep -rn id_rsa src/` 这种**搜索字符串**的命令会弹框。
+  没法区分「读私钥」和「搜私钥这个词」，按上面的不对称原则选了多问。
+
+**同条另两点的复核结论（不是闸门问题，一并记下免得下轮重新查）**：
+· `readClaudeSkills` 把 `SKILL.md` 全文塞进 system prompt —— **设计如此**。
+  技能就是「用户放进 `~/.claude/skills/` 的指令」，要利用它得先能写这个目录，
+  而能写这里的人在本机已经能做更狠的事。不算这条 issue 的漏洞。
+· `verifySignature` —— 原记录写「一律 return true」**不准确**。实际是：
+  `builtin`/`ai_generated`/`imported` 直接放行；其余要求 `signature` 字段**非空**，
+  有就放行。所以它是个「字段存在性检查」，**不校验签名本身** —— 名字名不副实。
+  真正的签名校验要有信任模型（谁签、公钥怎么分发），注释里也写着「云端签名验证在
+  后续阶段实现」。**这是需要拍板的架构决策，不是可以就地补的洞**，留给祥哥定。
+
+**证据**：
+· 单测 `test/unit-ci/dangerous-command.spec.js` **7/7**：23 条「原来漏的」全命中、
+  12 条「原来拦得住的」没退化、20 条「不该报的」零误报、非字符串输入不崩。
+· **反证**（关键）：把旧版那 15 条正则原样抄进 spec 跑一遍，对上面 23 条
+  **一条都没拦住**，而对「原来拦得住的」12 条拦住 ≥10 条 ——
+  证明 #19 不是「修了个没坏的东西」，也证明反证本身不是恒假。
+· 全套 `npm run test-unit-ci` **134/134**。
+· **进包验证**：`npm run compile` 后新闸门的特征串
+  （`nvme`/`credentials-vault`/`bcdedit`/`${home}`/`~/*`）都在
+  `work/app/assets/js/electerm-3.17.11.js` 里 —— 确认 import 接对了，
+  不会一加载 AI 模块就报错。
+
+**没做到的**：没有**真跑一遍 AI 对话**看确认框弹出来。那条路要起真实模型调用，
+成本远超本次改动的风险面（闸门是纯函数，调用点只有一行）。
+证据止步于「单测 + 反证 + 进包」，如实记在这里，不冒充实测。

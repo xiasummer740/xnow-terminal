@@ -2,6 +2,7 @@ import { Modal } from 'antd'
 import { z } from '../../common/zod'
 import { bookmarkSchemas } from '../../common/bookmark-schemas'
 import { getInstalledSkills } from '../../common/skill-manager'
+import { isDangerousCommand } from '../../common/dangerous-command'
 
 function buildAddBookmarkParameters () {
   const typeProperties = {}
@@ -26,32 +27,6 @@ function buildAddBookmarkParameters () {
     },
     required: ['type']
   }
-}
-
-// 高危命令检测 — 只拦跑路级操作
-const DANGEROUS_PATTERNS = [
-  // Linux
-  /^rm\s+(-rf\s+)?\/$/,
-  /^rm\s+(-rf\s+)?\/\*/,
-  /^mkfs/,
-  /^dd\s+if=.*of=\/dev\//,
-  /^>\s*\/dev\//,
-  /^\s*reboot\s*$/,
-  /^\s*shutdown\s/,
-  /^\s*poweroff\s*$/,
-  /^\s*halt\s*$/,
-  // Windows
-  /^format\s+\w+:/,
-  /^del\s+\/f\s+\/s/,
-  /^rd\s+\/s\s+\/q\s+\w:\\/,
-  /^rmdir\s+\/s\s+\/q\s+\w:\\/,
-  /^diskpart\s*$/,
-  /^reg\s+delete/
-]
-
-function isDangerousCommand (cmd) {
-  const trimmed = cmd.trim().toLowerCase()
-  return DANGEROUS_PATTERNS.some(p => p.test(trimmed))
 }
 
 export const agentTools = [
