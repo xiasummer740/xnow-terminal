@@ -46,7 +46,7 @@
 | 18 | **上游同步断裂 3.5 个月**：fork 后 370 个自研 commit、**零次上游合并**；`git merge-tree` 实测 **90 个冲突文件**，其中 6 个是结构性冲突（上游**删除了** `terminal-info/` 整目录、把 `terminal.jsx` 从 1770 行拆成 30 个模块）。再拖将失去合并能力 | `d35b5e1e..HEAD` vs `upstream/master` | 待修 |
 | 19 | **危险命令闸门只匹配整条命令的行首**：`sudo rm -rf /`、`rm -rf ~/`、`curl x\|bash`、`cat ~/.ssh/id_rsa` 全部漏过 —— 而漏过 = **零确认直接执行**。同条另两点（技能全文进 system prompt、`verifySignature` 名不副实）经祥哥 2026-09-12 拍板**不修**（个人自用），理由见下 | `ai/agent-tools.js:31-55`、`skill-manager.js:285-289`、`lib/ipc.js:651-679` | 已修已验（闸门重写为「分段 + 剥包装 + 补目标」；另两点不修，见下） |
 | 20 | Agent 循环**中止不了**且结果无上限膨胀：`createAIClient` 无 timeout、`stream:false` 从不注册 session 故 `stopStream` 无 sessionId 可杀；工具结果原样 push 进 messages（单次可达 1-2MB × 150 轮） | `lib/ai.js:32-57`、`ai/agent.js:302-397` | 待修 |
-| 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 待修 |
+| 21 | 迁移后**整库明文落盘**：迁移写入用不带 enc/dec 的裸 sqlite，含 SSH 密码的记录长期明文（只有被用户再次编辑的那几条会加密） | `migrate/migrate-1-to-2.js:56-57,88-92` | 已修已验（接上 safe-storage 那对 enc/dec，与 db.js 同源；残留：**已经明文落盘的老库不会自动回加密**，见下） |
 | 22 | `find` 默认 `LIMIT 1000` 且**无任何调用方会传 `_limit`** → 导出备份被静默截断（还写 `totalBookmarks=1000`）；超出 1000 的历史 UI 不可见不可删 | `lib/sqlite.js:192-199`、`lib/ipc.js:478-490` | 已修已验（默认改为「全部」，与 NeDB 对齐；截断改为出声告警。另修掉本次才暴露的 `_skip` 无 `LIMIT` 语法错误，见下） |
 | 23 | `history` **无上限增长**（新条目分支直接 return，裁剪只在"命中已有条目"分支）→ 长期使用突破 1000 即触发 #22 | `store/tab.js:543-565` | 已修已验（新增分支补上裁剪，与 `addCmdHistory` 同一口径；残留：**已膨胀的老库不会自动缩**，见下） |
 | 24 | **安装不静默**，与「像微信一样静默更新」的既定偏好不符：`quitAndInstall()` 无参 → `isSilent=false` → 不追加 `/S` → 弹 NSIS 向导；且 `autoInstallOnAppQuit=false`，用户必须手点 | `lib/auto-updater.js:78-80`、`lib/ipc.js:337-339` | 已修已验 |
@@ -1000,3 +1000,60 @@ GUI 那条留给祥哥手动测试时顺带看。
 上面是函数级真实执行，UI 层（`history.jsx` 全量渲染会不会卡）留给手动测试。
 另外这套「抠源码执行」是个**临时手法** —— 正经解法是给客户端 store 建可测底座，
 但依赖链缺 esbuild 装不全，属于 #13/#11/#17 那条 E2E 线的事，没在这轮夹带。
+
+---
+
+### #21 修复说明（第 12 批：迁移写入加密）
+
+**问题**：`migrate-1-to-2.js` 建 sqlite 连接时是
+`createSqlite(appPath, defaultUserName)` —— **第三个参数没传**。
+于是 `sqlite.js` 里 `enc` 是 undefined，`toRow` 的
+`enc && shouldEncForRow(dbName, _id)` 直接短路成 `false`，
+**整行按明文 JSON 落盘**。书签表里存着 SSH 密码，就是明文密码。
+
+**原注释的理由站不住，两条都不成立**（这是本次的关键判断）：
+1. 原文说「下次用户触发写入时会加密」—— 只有用户**再手工编辑过**的那几条会重新
+   加密，没碰过的**永远明文**。而大部分书签是"连过一次就再没用过"的。
+2. 原文说「safeStorage 在 IPC/迁移上下文不可靠」—— 但 `safeEncrypt` 本身有
+   **三级兜底**（`safe-storage.js:129`）：safeStorage → 本机密钥 AES-256-GCM →
+   带标记的不安全存储。**系统级不可用时会落到第二级照样加密**，
+   「干脆不加密」从来不是它给出的兜底选项。所以这个理由是把「可能降级」
+   误读成了「会明文」。
+
+**可达性**：不是死代码。`store/db-upgrade.js:15` 启动时调 `checkMigrate`，
+为真才调 `migrate`；`checkMigrate` 在「有 NeDB 文件 且 Node ≥ 22」时为真。
+所以从 v1 升级上来的用户会真实走到这里。
+
+**修法**：写入侧接上和 `db.js` **同一对** `safeEncrypt` / `safeDecrypt`。
+读写同源，不会出现"写得进读不出"。`safeEncrypt` 不会抛（失败也返回带前缀的值），
+三级里任何一级成功都仍是加密，所以这次改动不会让迁移本身变脆。
+
+**残留（需要祥哥拍板，我没有单方面做）**：这次只修「以后迁移会加密」，
+**已经被明文写过库的老用户不会自动回加密**。要补救得在启动时扫全库、
+把没有 `enc:` 前缀的行重新加密 —— 那是**批量改写用户数据**，
+一步写坏就是全库读不出来，属于高危那一档，必须先问。
+（当前明文行的**读取**是正常的：`decryptData` 只对 `enc:` 前缀解密，
+明文行原样返回 —— 所以不修也不会坏，只是不安全。）
+
+**证据**：
+· 单测 `test/unit-ci/migrate-encrypted.spec.js` **6/6**。
+· 行为证据（真 sqlite 文件）：传 `enc/dec` → 落盘带 `enc:` 前缀、
+  文件里**搜不到** `p@ssw0rd`，且能读回原值；
+  **反证**：不传 `enc/dec`（就是修复前那行的写法）→ 落盘**明文包含 `p@ssw0rd`**，
+  前提成立、根因判断正确。
+· 三级兜底那条是**读源码钉住**的：断言 `safeEncrypt` 里依次有
+  `ss.encryptString` / `fallbackEncrypt` / `INSECURE_PREFIX`，且兜底用的是
+  `aes-256-gcm` —— 把「系统级不可用 ≠ 不加密」这个判断固化成断言，
+  防以后有人再拿这个理由把加密删掉。
+· 链路钉死：断言迁移脚本 import 了 safe-storage、`createSqlite` 的第三个实参里
+  确实有 `enc: safeEncrypt` 和 `dec: safeDecrypt`（**只 import 不传等于没修**）；
+  另断言 `migrate-1-to-2.js` 与 `db.js` 引用同一来源，保证读写同源。
+· 反证用写死哈希 `6bf7e7ef`（不是 HEAD）：旧版确实是
+  `createSqlite(appPath, defaultUserName)` 且不含 safe-storage。
+· 全套 `npm run test-unit-ci` **168/168**（162 + 6）；`npx standard` 改动文件 0 报错。
+
+**没做到的**：没有**真跑一次 v1→v2 迁移**。本机没有 NeDB 遗留数据
+（`electerm.*.nedb` 不存在），造一套假 NeDB 再跑迁移等于往真实开发库写数据；
+而且迁移会把 NeDB 文件 `renameSync` 成 `.bak`，在原地做实验有风险。
+所以测的是**同一条写入路径**（`createDb` + `dbAction('update', …, {upsert})`，
+与迁移脚本逐个 record 的写法一致），不是端到端迁移。

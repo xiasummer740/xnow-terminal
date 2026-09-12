@@ -49,12 +49,27 @@ async function migrate () {
   log.info('开始从 NeDB (v1) 迁移到 SQLite (v2)...')
   // nedb-instance: raw nedb without enc/dec (legacy data was never encrypted)
   const { dbAction: nedbDbAction } = require('./nedb-instance')
-  // Use plain sqlite (no enc/dec) for migration writes: safeStorage encryption
-  // is not reliable across restarts in the IPC/migration context. The app's
-  // normal read/write path will encrypt data on the next user-triggered write.
+  // 写入侧必须和读的那侧用同一对 enc/dec（ISSUES #21）。
+  //
+  // 原来这里是 `createSqlite(appPath, defaultUserName)` —— 第三个参数没传，
+  // 于是 sqlite.js 里 `enc` 是 undefined，toRow 的 `enc && shouldEncForRow(...)`
+  // 短路成 false，**整库原样明文落盘**。书签里存着 SSH 密码，就是明文密码。
+  //
+  // 原来的理由是「safeStorage 在 IPC/迁移上下文里跨重启不可靠，等用户下次编辑时
+  // 自然会加密」—— 这个理由站不住：
+  //   1. 只有用户**再手工编辑过**的那几条会被重新加密，没碰过的永远明文
+  //   2. safeEncrypt 本身就有三级兜底（safeStorage → 本机密钥 AES-256-GCM
+  //      → 带标记的不安全存储），见 safe-storage.js。就算系统级真的不可用，
+  //      也会落到第二级**照样加密**，而不是干脆不加密
+  // 所以这里直接复用 db.js 用的那对函数，读写同源，不会出现"写得进读不出"。
   const { appPath, defaultUserName } = require('../common/app-props')
   const { createDb: createSqlite } = require('../lib/sqlite')
-  const { dbAction: sqliteDbAction } = createSqlite(appPath, defaultUserName)
+  const { safeEncrypt, safeDecrypt } = require('../lib/safe-storage')
+  const { dbAction: sqliteDbAction } = createSqlite(
+    appPath,
+    defaultUserName,
+    { enc: safeEncrypt, dec: safeDecrypt }
+  )
   const {
     checkDbUpgrade,
     doUpgrade
