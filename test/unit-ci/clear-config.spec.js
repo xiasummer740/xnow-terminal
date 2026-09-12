@@ -219,15 +219,19 @@ describe('#40 清理的调用位置', () => {
 
   test('被删掉的那份旧写法确实存在过（钉住修复前的形状）', () => {
     // 反证不必真的跑 git（旧代码没有 try/catch，跑起来就是本 spec 第一段那个 EPERM），
-    // 用 git show 确认它原来是"无保护的 rmSync + 硬编码 appData 路径"就够了
+    // 用 git show 确认它原来是"无保护的 rmSync + 硬编码 appData 路径"就够了。
+    //
+    // ⚠️ 必须钉**字面提交号**，不能写 HEAD：修复一提交，HEAD 就指到修好之后的
+    // create-app.js 上，这两条断言会立刻反转成"找不到旧写法"（踩过一次）。
+    // 6844d039 是 #40 修复提交 ebcb4eb0 的父提交，即修复前的最后一个版本。
     const old = require('node:child_process').execFileSync(
-      'git', ['show', 'HEAD:src/app/lib/create-app.js'],
+      'git', ['show', '6844d0399d0971ca8db2d6dd3f63d810f136609f:src/app/lib/create-app.js'],
       { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
     )
     assert.match(
       old,
       /fs\.rmSync\(dataPath, \{ recursive: true, force: true \}\)/,
-      '前提失效：HEAD 里找不到原来那行无保护的 rmSync'
+      '前提失效：修复前那个提交里找不到原来那行无保护的 rmSync'
     )
     assert.match(
       old,

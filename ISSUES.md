@@ -82,7 +82,7 @@
 | 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 已修已验（`group1-sha1`/`md5` 已从"每次连接都报价"降为"只在重试档"；**顺带修好了一条从未生效过的兜底路径**，见下） |
 | 48 | 自定义 CSS 走 `style.innerHTML`，只过滤了 `@import` | `bg/custom-css.jsx:16-17` 等 | 待修 |
 | 49 | 保存配置用 100ms `debounce` 且 `beforeExit` **不 flush** → 刚改完设置就关窗会丢 | `store/watch.js:86-91` | 已修已验（两个退出处理函数开头各补一次**立即派发**的保存，不等 debounce；见下） |
-| 50 | `saveUserConfig` 跨 await 读-改-写（TOCTOU），并发保存互相覆盖 | `user-config-controller.js:31-52` | 待修 |
+| 50 | `saveUserConfig` 跨 await 读-改-写（TOCTOU），并发保存互相覆盖 | `user-config-controller.js:31-52` | 已修已验（读-改-写整段串行化，读挪进锁内；见下方「#50 修复说明」） |
 | 51 | 3 个继承自上游的死代码文件零引用：`download-mirrors.js`、`get-category-color.js`、`key-shift-pressed.js` | `client/common/` | 待修 |
 | 52 | **用了 `log.*` 但从未 import `log`** → DNS 解析失败时不是记日志，而是抛 `ReferenceError: log is not defined`（Promise 内抛出 = 未处理拒绝）。写法上属"错误处理路径反而制造错误" | `common/lookup.js:10,19`（走 `lib/ipc.js:252` 暴露给渲染进程） | 已修已验 |
 | 53 | **同上**：主题列表加载失败时 `log.info(e)` 抛 ReferenceError | `lib/iterm-theme.js:8` | 已修已验 |
@@ -666,13 +666,13 @@ TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把�
 #21 ✅（迁移写入接上 enc/dec，不再明文落盘；存量明文数据没重写，见说明）
 #29 ✅（回环 HTTP 上了 Host/Origin 闸门；`disablewebsecurity` 与 popup 两点待祥哥拍板）
 #40 ✅（清理挪到 db 打开之前 + 失败不抛 + 用统一数据目录算法；顺带查出 #65）
+#50 ✅（读-改-写整段串行化，「读」挪进锁内；顺带实测出 `dbAction` 的 update 是替换语义）
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）
 
 **剩余待修（截至 2026-09-12，建议按此顺序）**
 | 优先 | # | 一句话 | 备注 |
 |---|---|---|---|
-| 1 | 50 | `saveUserConfig` TOCTOU | |
-| 3 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
+| 1 | 36 | 新增工具要改 5 处；AI 能建书签但改不了删不掉 | 架构债，量大 |
 | 4 | 13 | `prepare-test` bash 语法在 Windows 静默失败 → Playwright 永远装不上 | E2E 线前置 |
 | 5 | 17 | 无 `playwright.config.js` | 同上 |
 | 6 | 11 | `test/unit/` 21 个 spec 从未被执行 | 同上 |
@@ -1196,3 +1196,77 @@ HTTP 侧一直是裸的 —— `server.js` 里 `/run` 和静态资源谁都能�
 所以按规矩停下来问，不擅自改。三个选项：① 保持现状（dev 继续共用真实数据，好处是
 两边数据一致，坏处是 dev 的测试/误操作直接落在真实数据上）② 修掉（dev 独立，首次为空）
 ③ 修掉并做一次「把安装版数据复制到 dev 目录」的搬迁。
+
+### #50 修复说明（第 15 批：并发保存互相覆盖）
+
+**原来的执行流**：`saveUserConfig` 里「读旧值 → `await getDbConfig()` → 合并 → 写回」，
+中间那道 `await` 就是缺口。两次保存并发时：
+
+```
+A 读旧值 ──await──┐
+                  ├─ A 写回 ├─ B 用**自己读到的旧值**把 A 刚写的盖回去
+B 读旧值 ──await──┘
+```
+
+丢的恰好是"不在 B 这次 payload 里"的那些字段 —— 也就是 A 那次改的东西。
+
+**为什么这条比看起来严重：先得知道 `update` 是替换语义。**
+这点是实测出来的（`node -e` 探针，非推理）：
+
+| 操作 | 结果 |
+|---|---|
+| 写 `{_id, theme:'A', fontSize:14}` 再 `update` 成 `{_id, fontSize:20}` | 落盘是 `{"fontSize":20,"_id":"userConfig"}` —— **`theme` 没了** |
+
+也就是说 `dbAction('data','update', ...)` **不是 merge，是整行替换**。
+所以 `writeConfig` 里「先读 `conf` 再 spread」这一步是**承重的** —— 没有它，
+每次保存都会把这次 payload 里没带的字段全抹掉。而正因为它是承重的，
+"读到的旧值"一旦过期，后果就不是"少改一个字段"，而是**把并发那次刚写的字段整片抹掉**。
+这就是为什么 #50 值一个 P1。
+
+**什么时候会撞上**：`watch.js` 的 debounce 到点触发一次保存，同一时刻
+`flushConfigSave()`（退出路径，`#49` 加的）又发一次 —— **关窗那一刻**就能撞上。
+所以 #49 的 flush 让这条竞态更容易被踩到，两条是一对。
+
+**修法**：把「读-改-写」**整段**串成一条 Promise 链（`saveChain`），关键在
+**「读」必须挪进锁内** —— 读要是留在锁外（先读好再排队），读到的还是过期旧值，等于没修。
+
+```js
+const p = saveChain.then(
+  () => writeConfig(userConfig),
+  () => writeConfig(userConfig)   // 前一次失败也要继续跑
+)
+saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理拒绝
+```
+
+两个细节都不是随手写的：`.then(f, f)` 是因为一次写库异常把后续保存**全卡死**
+比原来丢字段更糟；末尾那个 `.then(() => {}, () => {})` 是因为 `saveChain` 只用于排队、
+没人 await，不吞掉失败会产生未处理拒绝。
+
+**证据**（`test/unit-ci/save-config-race.spec.js`，9 条全绿；unit-ci 全套 205/205）：
+
+| 测的东西 | 结果 |
+|---|---|
+| 并发改三个**不同**字段 | 三个都活下来（改前必丢） |
+| 20 路并发各改一个字段 | 20/20 都在 |
+| 不该落库的字段（host/port/token 等） | 仍然不落库（老行为没坏） |
+| 一次写入失败后紧接着再存 | 后续保存正常落盘（串行化没变成死锁） |
+| **反证**：复刻旧写法（读 → await 一拍 → 写）三路并发 | 实测确实丢字段 —— 钉住"这个竞态真实存在" |
+| 源码钉死：`getDbConfig()` 在 `writeConfig` 里而非 `saveUserConfig` 锁外 | 读跑到锁外就红 |
+| 源码钉死：`saveChain` 的 `.then(f, f)` 形状与吞结果 | 防止后人"简化"成 `.then(f)` 卡死链 |
+| **反证**：钉修复前那个提交的 controller 原文 | 确认旧版确实是"读写都摊在 `saveUserConfig` 里、无 `saveChain`" |
+
+测试用的是**真 sqlite + 真并发 + 生产代码原文**（electron 用替身只为满足 require），
+不是"读源码说它串行了" —— 那样证明不了并发下真不丢。
+
+**顺带修正自己踩的两个坑**（都记在测试注释里，防后人重蹈）：
+
+1. 一开始 4 条行为测试全红，原因是我自己 `readStored()` 忘了 `await`，
+   拿到 Promise 对象才 `stored.theme === undefined`。**不是配置丢了，是没等。**
+2. 更早一版探针把 id 硬编码成 `'user_config'`，而真实常量是 `userConfig`
+   （`constants.js:5`），于是得出"控制器根本没写进去"的**假结论**。
+   凡是要断言"某段代码没生效"，先确认自己查的是同一个 id/路径。
+
+**没做到的 / 残留**：没有真启动 Electron 去"关窗瞬间并发保存"（那要真的连点关窗，
+不可控）。上面覆盖的是"同一进程内并发调 `saveUserConfig`"这个语义本身，
+而真实触发路径（debounce 到点 + 退出 flush）正是两个并发的 `saveUserConfig`。
+**请祥哥手动测**：改几项设置后立刻关窗、重开，设置还在。
