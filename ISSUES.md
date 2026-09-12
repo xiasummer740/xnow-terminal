@@ -77,7 +77,7 @@
 | 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 待修 |
 | 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 待修 |
 | 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 待修 |
-| 45 | `openExternal` **无协议白名单**，传 `file:///C:/evil.exe` 即由系统 shell 打开 | `lib/ipc-sync.js:63-64` | 待修 |
+| 45 | `openExternal` **无协议白名单**，传 `file:///C:/evil.exe` 即由系统 shell 打开 | `lib/ipc-sync.js:63-64` | 已修已验（第 2 批 #1 顺带关闭，见下） |
 | 46 | 凭据加密遗留路径：**固定全零 IV 的 CBC**、`isLegacyFormat` 把纯十六进制明文误判为密文、解密失败原样返回 | `lib/enc.js:15-16,71-72,99-112` | 待修 |
 | 47 | SSH 算法集含已破解套件（`diffie-hellman-group1-sha1`、`hmac-md5`、`3des-cbc`、`arcfour*`、`ssh-dss`） | `server/ssh2-alg.js:25,31,36,66-70,78` | 待修 |
 | 48 | 自定义 CSS 走 `style.innerHTML`，只过滤了 `@import` | `bg/custom-css.jsx:16-17` 等 | 待修 |
@@ -444,6 +444,26 @@ sha512 校验），但如果哪天想留个"我不想现在装"的口子，就�
   **退出码 1** 并列出 7 个问题（含断更新链路的 `channel`）→ `git checkout` 恢复 →
   校验器**退出码 0** → 工作区干净、`.bak` 被 gitignore 忽略
 #25 #24 #27 #26
+
+### #45 关闭说明（openExternal 协议白名单）—— 第 2 批顺带关闭，此行原先漏更新
+
+**没有新写代码**。第 2 批做 #1（IPC 桥 + 导航闸门）时已经一并解决了：
+新增 `lib/safe-open-external.js` 做协议白名单（只放行
+http/https/ftp/ftps/mailto/tel），`openExternal` 改走它。
+
+**复核证据**（2026-09-12 重新查了一遍，确认不是"以为改了"）：
+- `grep -rn "shell.openExternal" src/` —— 除 `safe-open-external.js` 自身外**零命中**，
+  说明没有绕过白名单的裸调用点残留
+- 三个调用点都走白名单：`lib/ipc-sync.js:66`、`lib/create-window.js:108,116`
+- `git log` 显示 `safe-open-external.js` 由第 2 批 commit `bc3b0194` 新增，
+  **不是上游自带**（上游原本就是裸 `shell.openExternal`）
+- 已有测试 `test/unit-ci/safe-open-external.spec.js`，含
+  `FILE:///C:/Windows/System32/calc.exe`、`httpfile:///C:/evil.exe`、
+  `httpsomething:x` 这类"看起来像但不是"的用例；#1 的实机验证（`temp/verify-issue1.js` 19/19）
+  里也真跑过 `openExternal('file://...')` 被拒
+
+**教训（记录传承）**：这条是"修好了但台账没更新"，害我这次差点重做一遍。
+批量修复顺带关掉别的条目时，要顺手把那些行也标掉。
 
 ### #39 修复说明（SSH 主机密钥校验形同虚设）
 
