@@ -137,21 +137,14 @@ const SAFE_ENV_KEYS = [
 // 路径闸门单独成模块，便于单元测试（ISSUES #2）
 const { isPathSafe } = require('./path-safe')
 
-// 检测内网/本地地址（防 SSRF）
-function isPrivateHost (hostname) {
-  const lower = hostname.toLowerCase()
-  if (['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'].includes(lower)) return true
-  const m = lower.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/)
-  if (m) {
-    const a = +m[1]
-    const b = +m[2]
-    if (a === 10) return true
-    if (a === 192 && b === 168) return true
-    if (a === 172 && b >= 16 && b <= 31) return true
-    if (a === 127) return true
-  }
-  return false
-}
+// SSRF 判定挪到 lib/ssrf-guard.js —— 原版实测能绕过（[::ffff:127.0.0.1]、
+// 169.254.169.254、127.0.0.1.nip.io 全部放行），且那个文件里写不了单测（本文件要 electron）
+const {
+  isPrivateHost,
+  isLinkLocalOrReserved,
+  resolvesToPrivate,
+  resolvesToLinkLocalOrReserved
+} = require('./ssrf-guard')
 
 async function initAppServer () {
   const { config } = await getConfig(globalState.get('serverInited'))
@@ -430,7 +423,10 @@ function initIpc () {
     webFetchPage: async (url) => {
       try {
         const parsed = new URL(url)
-        if (isPrivateHost(parsed.hostname)) {
+        // 字符串判定先挡掉 IP 字面量，DNS 判定再挡"域名指向内网"
+        // （`127.0.0.1.nip.io` 这种解析到环回的公开域名，只比对字符串看不出来）
+        if (isPrivateHost(parsed.hostname) ||
+            await resolvesToPrivate(parsed.hostname)) {
           return JSON.stringify({ error: '不允许访问内网地址' })
         }
         const http = url.startsWith('https') ? require('https') : require('http')
@@ -633,6 +629,19 @@ function initIpc () {
     },
     // ===== HTTP 请求（主进程发请求，绕过渲染进程 CORS 限制） =====
     httpFetch: async (url, options = {}) => {
+      // 地址是用户自己配的监控机（netdata / 哪吒），**内网必须放行**，
+      // 所以这里只挡"任何监控都不可能指向"的：链路本地（含 169.254.169.254
+      // 云元数据）/ 保留段 / 组播 / 元数据域名 —— 且要连 DNS 解析结果一起看，
+      // 否则 `169.254.169.254.nip.io` 这类域名能绕过字符串判定（ISSUES #31）
+      try {
+        const hostname = new URL(url).hostname
+        if (isLinkLocalOrReserved(hostname) ||
+            await resolvesToLinkLocalOrReserved(hostname)) {
+          return JSON.stringify({ status: 0, error: '不允许访问该地址' })
+        }
+      } catch (e) {
+        return JSON.stringify({ status: 0, error: 'URL 不合法' })
+      }
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), options?.timeout || 5000)
       try {

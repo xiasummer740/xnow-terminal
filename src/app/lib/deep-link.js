@@ -10,6 +10,8 @@ const {
 } = require('../common/runtime-constants')
 const globalState = require('./glob-state')
 const { parseQuickConnect, SUPPORTED_PROTOCOLS } = require('../common/parse-quick-connect')
+// 连接串里带明文密码，落日志前必须盖掉（ISSUES #43）
+const { redactCreds, redactCredsList } = require('../common/redact-url')
 /**
  * Register electerm as a handler for supported protocols
  * Note: This makes electerm available as a handler but doesn't force it as default.
@@ -99,7 +101,7 @@ function handleDeepLink (url) {
   const parsed = parseQuickConnect(url)
 
   if (!parsed) {
-    log.warn('无法解析深链接 URL：', url)
+    log.warn('无法解析深链接 URL：', redactCreds(url))
     return
   }
 
@@ -139,7 +141,7 @@ function setupDeepLinkHandlers () {
   if (isMac) {
     app.on('open-url', (event, url) => {
       event.preventDefault()
-      log.info('open-url 事件：', url)
+      log.info('open-url 事件：', redactCreds(url))
       handleDeepLink(url)
     })
   }
@@ -147,7 +149,7 @@ function setupDeepLinkHandlers () {
   // Handle deep links via second-instance (when app is already running)
   // (already handled in create-app.js, but we can add additional parsing here)
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    log.info('second-instance 事件：', commandLine)
+    log.info('second-instance 事件：', redactCredsList(commandLine))
 
     // Look for protocol URLs in command line arguments
     const protocolUrl = commandLine.find(arg =>
@@ -168,7 +170,7 @@ function setupDeepLinkHandlers () {
     )
 
     if (protocolUrl) {
-      log.info('启动时携带协议 URL：', protocolUrl)
+      log.info('启动时携带协议 URL：', redactCreds(protocolUrl))
       // Store it to be handled after window is ready
       globalState.set('pendingDeepLink', parseQuickConnect(protocolUrl))
     }

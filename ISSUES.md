@@ -56,7 +56,7 @@
 | 28 | `db-upgrade.js` 弹窗 `keyboard:false` + 隐藏确定按钮且**无 try/catch**：`doUpgrade` 一旦 reject，弹窗永久无法关闭；且无论成败都无条件播报"Done / Database Upgraded"（硬编码英文） | `store/db-upgrade.js` 全文 | 已修已验 |
 | 29 | 回环服务不校验 `Origin`/`Host`，且 `webview` 开了 `disablewebsecurity` → DNS rebinding / 网页标签页可打本机接口 | `server/server.js:29-39`、`web/web-session.jsx:128` | 待修 |
 | 30 | MCP 组件**默认免鉴权**（apiKey 留空即跳过）把「执行终端命令」暴露在回环端口 | `widgets/widget-mcp-server.js:45-49,891` | 待修 |
-| 31 | `httpFetch` 无任何 SSRF 校验（连 `isPrivateHost` 都没调）；`isPrivateHost` 只识别点分十进制，实测 `127.0.0.1.nip.io`、`[::ffff:127.0.0.1]`、`169.254.169.254` **全部放行** | `lib/ipc.js:632-649`、`:161-176` | 待修 |
+| 31 | `httpFetch` 无任何 SSRF 校验（连 `isPrivateHost` 都没调）；`isPrivateHost` 只识别点分十进制，实测 `127.0.0.1.nip.io`、`[::ffff:127.0.0.1]`、`169.254.169.254` **全部放行** | `lib/ipc.js:632-649`、`:161-176` | 已修已验（判定挪到 `lib/ssrf-guard.js` 并补 DNS 判定，三个绕过全堵；`httpFetch` 按「监控必须能用」的口径接闸，见下） |
 | 32 | 安装包 **blockmap 上传无兜底**（v3.17.8/v3.17.10 release 里缺失，本地 dist 却有）→ 差量更新退化为 116MB 全量 | `build/bin/release-xnow.js:54-67` | 待修 |
 
 ---
@@ -70,12 +70,12 @@
 | 35 | **504 行硬编码中文**（65 个文件），集中在自研模块：ai 131 / terminal-info 105 / vps-dashboard 67 / deploy 35 → 自研功能实际只支持中文 | 见 `temp/hardcoded-zh.js` 输出 | 待修 |
 | 36 | 新增一个工具要改 **5 处**（schema、switch、mcp-handler 第二个 switch、TAB_ID_TOOLS、toolIcons），已造成实际能力缺失：store 有 32 个 `mcp*` 能力，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `ai/agent-tools.js`、`store/mcp-handler.js`、`widgets/widget-mcp-server.js` | 待修 |
 | 37 | `parse-quick-connect` **两份 454 行分叉**（app 版认 `xnow-terminal://`，client 版还是 `electerm://`）；两份手写 zod 垫片已漂移（app 版有 `ZodRecord`，client 版无） | `app/common/` vs `client/common/` | 待修 |
-| 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 待修 |
+| 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 已修已验（顺带修好 NeDB 分支**返回 undefined 而非 Promise** —— 不改的话改对调用方反而会 `.catch` 崩） |
 | 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 已修已验 |
 | 40 | `--clear-config` 在数据目录被占用时**半删除并让应用起不来**（require 时已打开 db，Windows 删除失败 → 递归删除中断 → 异常无人 catch → 无窗口） | `lib/create-app.js:118-127` | 待修 |
 | 41 | 迁移版本账本与业务数据**不在同一库**（账本在 `.nedb`，数据在 `xnow.db`），账本被删会重跑全部老迁移 | `migrate/index.js:36-82` | 待修 |
-| 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 待修 |
-| 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 待修 |
+| 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 已修已验（sftp/transfer/升级 三处走 `parseWsMessage`，畸形丢消息不断连接；「吞异常」那半句描述见说明） |
+| 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 已修已验（日志泄露已堵，4 个入口全走 `redactCreds`；「一点即建标签页」那半句需祥哥拍板是否加确认，见下） |
 | 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 待修 |
 | 45 | `openExternal` **无协议白名单**，传 `file:///C:/evil.exe` 即由系统 shell 打开 | `lib/ipc-sync.js:63-64` | 已修已验（第 2 批 #1 顺带关闭，见下） |
 | 46 | 凭据加密遗留路径：**固定全零 IV 的 CBC**、`isLegacyFormat` 把纯十六进制明文误判为密文、解密失败原样返回 | `lib/enc.js:15-16,71-72,99-112` | 待修 |
@@ -573,7 +573,86 @@ Oakley Group 2，Logjam）和 `hmac-md5`/`hmac-md5-96`。**这两个才是要修
 它现在会拦住任何往算法表里塞 ssh2 不认识名字的改动。**用旧代码跑这条会失败**，
 是用 `temp/verify-issue47-guard.js` 反证过的（两边都过的测试等于没测）。
 
+### #31 / #38 / #42 / #43 修复说明（第 5 批：网络与输入面）
+
+四条都遵守同一条纪律：**先证明原问题真的存在，再动手**。所以每条的单测里都有一句「反证」——
+把旧实现/旧行为拿来跑同一批用例，证明它确实会挂（#31 的旧 `isPrivateHost`、
+#47 的旧算法表都是这么做的）。**两边都过的测试等于没测。**
+
+#### #31 SSRF —— 两处「想当然会做错」的地方
+
+**① `isPrivateHost` 不能自己硬写字符串比对**，有两类它天然看不出来：
+
+- `new URL()` 会把 `2130706433` / `0x7f000001` / `127.1` / `0177.0.0.1`
+  **统一归一化成 `127.0.0.1`** —— 这部分不用自己还原，交给解析器就行；
+- 但 IPv6 它**会重写成十六进制**：`[::ffff:169.254.169.254]` → `::ffff:a9fe:a9fe`。
+  只按 `::ffff:` + 点分十进制去判会**直接漏掉**，得把末两组按十六进制还原回 IPv4。
+- `127.0.0.1.nip.io` 这类**域名指向内网**，字符串比对永远无解 → 必须查 DNS，
+  且**只要解析出的任一地址是内网就算内网**（DNS rebinding 的典型形态）。
+
+**② `httpFetch` 不能照搬 `webFetchPage` 的策略 —— 会把功能砍掉。**
+`httpFetch` 的调用方是 **netdata 监控（`netdata-api.js:5`）和哪吒 Dashboard
+（`nezha-api.js:27`）**，地址是**用户自己配的服务器**，本来就可能是 `192.168.x.x`
+甚至本机。内网一律拦 = 直接砍掉这两个功能。
+
+所以分了两套判定：
+
+| 用途 | 函数 | 策略 |
+|---|---|---|
+| `webFetchPage`（AI 抓网页，URL 来自模型输出，**不可信**） | `isPrivateHost` | 内网 / 环回 / 链路本地 / 保留段**全拦** + DNS 判定 |
+| `httpFetch`（监控，地址是用户配的） | `isLinkLocalOrReserved` | **有意放行 RFC1918 与环回**，只拦「任何监控都不可能指向」的：链路本地（含 `169.254.169.254` 云元数据）/ 保留段 / 组播 / 元数据域名 + DNS 判定 |
+
+窄策略**也必须查 DNS**：不然 `169.254.169.254.nip.io` 一样能绕过字符串判定。
+
+> **代价/副作用**：DNS 判定在解析失败时**放行**（fail-open）。理由：解析不出来时
+> 后面的请求本身也连不上，不存在「实际能打通却被放过」；反过来 fail-closed 会让
+> DNS 抖一下就误伤正常请求。这是**有意的取舍，不是漏写**。
+
+#### #38 `compactDatafile` —— 改对调用方之前，先看清被调方
+
+原调用 `dbAction('compactDatafile')` 少传一个参数：`dbName` 被当成表名、`op` 变 `undefined`。
+但**只把调用方改对会引入新崩溃** —— NeDB 分支里 `compactDatafile` 是同步调用 + 裸 `return`
+（返回 `undefined`），而调用方写的是 `.catch(log.error)`，对 `undefined` 调 `.catch` 直接
+TypeError。`dbAction` 其它所有分支都返回 Promise，所以按约定把这一支也包成 Promise
+（异常走 reject）。**两处必须一起改。**
+
+#### #42 会话 WS —— 原描述里「进程级 handler 无条件吞异常」这半句不准确
+
+实测：**会话进程**（`session-server.js`）的 `uncaughtException` / `unhandledRejection`
+是 `log.error` + `cleanup()` → **`process.exit(0)`，并不吞**；真会吞的是**父进程**
+（`server/server.js:41-46`，只记日志继续跑）。所以畸形 JSON 的实际后果是
+**会话进程被打死** —— 而那个进程里挂着同一会话的**全部终端**，
+一条脏消息 = 用户所有标签页一起断。现在三处（sftp / transfer / 升级）统一走
+`parseWsMessage`：**丢这条消息，不断连接**。
+
+`dispatch-center.js` 的 `/common/s` 里那处裸 `JSON.parse` **没改** —— 它外层本来就有
+`try`，抛出去不会变成致命异常。单测里那条静态检查也是按这个标准写的
+（判「外层有没有 try」，而不是「有没有裸 JSON.parse」），避免误报。
+
+#### #43 深链接 —— 只修了「写日志」这半句，「一点即建标签页」要祥哥拍板
+
+**已修**：4 个入口（`open-url`、`second-instance` 的 `commandLine`、启动 argv、
+**以及解析失败那条**）全部走 `redactCreds`。解析失败那条最容易漏，但它恰恰最可能
+带密码（没解析成功 = 原样进日志）。覆盖三种形态，其中**不带协议的简写
+`user:pass@host` 最容易漏** —— 只按 `scheme://` 写正则会**静默放过**这种最常见的写法，
+那比不脱敏更糟（会以为已经安全了）。单测里特意用**真的 `parseQuickConnect`** 兜底：
+凡解析出 `password` 的串，脱敏后都不能再出现该密码 —— 将来解析器加了新形态会失败，
+逼着回来补脱敏。
+
+**未改（需祥哥拍板）**：`handleDeepLink` 收到带凭据的 URL 会**直接建标签页、无确认**。
+但「任意网页一点即建」这个前提**是打折扣的** —— OS 层协议注册是**用户在设置里手动开的**
+（`deep-link-control.jsx:28`），不是自动注册的。要不要再加一道确认弹窗属于**交互变更**，
+不擅自加。另外 URL 里的凭据是攻击者自己填的（不是偷来的），实际危害有限。
+
+**证据**：新增单测 `ssrf-guard.spec.js` 14/14、`parse-ws-message.spec.js` 6/6、
+`redact-url.spec.js` 8/8；全套 `npm run test-unit-ci` **111/111**（本批开始时 83）；
+另跑 `temp/verify-issue39-ipc.js` 9/9，确认 `ipc.js` 改完仍能正常加载、#39 未被带坏。
+
 **第 4 批（架构债）**
 #39 ✅
 #47 ✅
+#31 ✅
+#38 ✅
+#42 ✅
+#43 ✅
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）

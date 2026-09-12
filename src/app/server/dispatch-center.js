@@ -5,6 +5,7 @@
 
 const fs = require('./fs')
 const log = require('../common/log')
+const { parseWsMessage } = require('./parse-ws-message')
 const { Upgrade } = require('./download-upgrade')
 const upgradeFuncs = require('../common/upgrade-funcs')
 
@@ -61,7 +62,8 @@ const initWs = function (app) {
       }
     })
     ws.on('message', async (message) => {
-      const msg = JSON.parse(message)
+      const msg = parseWsMessage(message)
+      if (!msg) return
       const { action } = msg
 
       if (action === 'upgrade-new') {

@@ -13,6 +13,7 @@ const { Transfer } = require('./transfer')
 const { Transfer: FtpTransfer } = require('./ftp-transfer')
 const app = express()
 const log = require('../common/log')
+const { parseWsMessage } = require('./parse-ws-message')
 const appDec = require('./app-wrap')
 const {
   createTerm,
@@ -320,7 +321,8 @@ if (type === 'rdp') {
       onDestroySftp(id)
     })
     ws.on('message', (message) => {
-      const msg = JSON.parse(message)
+      const msg = parseWsMessage(message)
+      if (!msg) return
       const { action } = msg
 
       if (action === 'sftp-new') {
@@ -373,7 +375,8 @@ if (type === 'rdp') {
     })
 
     ws.on('message', (message) => {
-      const msg = JSON.parse(message)
+      const msg = parseWsMessage(message)
+      if (!msg) return
       const { action } = msg
 
       if (action === 'transfer-new') {

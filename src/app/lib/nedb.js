@@ -135,8 +135,16 @@ function createDb (appPath, defaultUserName, { enc, dec } = {}) {
 
   const dbAction = (dbName, op, ...args) => {
     if (op === 'compactDatafile') {
-      db[dbName].persistence.compactDatafile()
-      return
+      // dbAction 的约定是**一律返回 Promise**（其它分支都返回 Promise）。
+      // 这里原来是同步调用 + 裸 return（undefined），调用方写 `.catch()` 会炸
+      // TypeError —— 而调用方确实这么写了（ISSUES #38）。
+      return Promise.resolve().then(() => {
+        if (!db[dbName]) {
+          throw new Error(`Table ${dbName} does not exist`)
+        }
+        // NeDB 的压缩是同步的，包一层让异常走 reject，与其它分支行为一致
+        db[dbName].persistence.compactDatafile()
+      })
     }
     return new Promise((resolve, reject) => {
       if (op === 'find') {

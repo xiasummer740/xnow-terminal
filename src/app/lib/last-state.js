@@ -9,7 +9,11 @@ const set = (key, value) => {
   count = count + 1
   if (count > 100) {
     count = 0
-    dbAction('compactDatafile').catch(log.error)
+    // 签名是 dbAction(dbName, op, ...args)，原来只传了一个参数：
+    // dbName 变成了 'compactDatafile'、op 变成 undefined → sqlite 抛
+    // `Table compactDatafile does not exist`、NeDB 取到 undefined 方法报错，
+    // 于是**每写满 100 次就刷一条错误日志，而压缩从来没发生过**（ISSUES #38）
+    dbAction('lastStates', 'compactDatafile').catch(log.error)
   }
   return dbAction('lastStates', 'update', {
     _id: key
