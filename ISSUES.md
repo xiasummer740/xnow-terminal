@@ -71,7 +71,7 @@
 | 36 | 新增一个工具要改 **5 处**（schema、switch、mcp-handler 第二个 switch、TAB_ID_TOOLS、toolIcons），已造成实际能力缺失：store 有 32 个 `mcp*` 能力，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `ai/agent-tools.js`、`store/mcp-handler.js`、`widgets/widget-mcp-server.js` | 待修 |
 | 37 | `parse-quick-connect` **两份 454 行分叉**（app 版认 `xnow-terminal://`，client 版还是 `electerm://`）；两份手写 zod 垫片已漂移（app 版有 `ZodRecord`，client 版无） | `app/common/` vs `client/common/` | 待修 |
 | 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 待修 |
-| 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 待修 |
+| 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 已修已验 |
 | 40 | `--clear-config` 在数据目录被占用时**半删除并让应用起不来**（require 时已打开 db，Windows 删除失败 → 递归删除中断 → 异常无人 catch → 无窗口） | `lib/create-app.js:118-127` | 待修 |
 | 41 | 迁移版本账本与业务数据**不在同一库**（账本在 `.nedb`，数据在 `xnow.db`），账本被删会重跑全部老迁移 | `migrate/index.js:36-82` | 待修 |
 | 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 待修 |
@@ -445,5 +445,58 @@ sha512 校验），但如果哪天想留个"我不想现在装"的口子，就�
   校验器**退出码 0** → 工作区干净、`.bak` 被 gitignore 忽略
 #25 #24 #27 #26
 
+### #39 修复说明（SSH 主机密钥校验形同虚设）
+
+**原来的样子**：`execSshCommand` 在内存里记一份主机密钥，发现对不上时
+`console.warn` 一句**然后照样连**（`return true`）。而这条路径是要往目标机
+发密码和命令的（一键部署哪吒、VPS 监控），中间人把密钥换掉时用户看不到那句警告，
+防护等于零。项目里其实已经有写好的 `ssh-known-hosts.js`（`session-ssh.js` 在用），
+只是这条路径没接上去。
+
+**为什么不用现成的 `createHostVerifier`**：那条是**交互式**的，会弹"是否信任该主机密钥"。
+`execSshCommand` 没有终端可以问（点一下就批量执行），弹不出来。所以按 OpenSSH 的
+`StrictHostKeyChecking=accept-new` 语义办，新增 `createAcceptNewHostVerifier`：
+
+| 情况 | 行为 |
+| --- | --- |
+| known_hosts 里有且一致 | 放行 |
+| **有但对不上 / 被 @revoked** | **拒绝连接** |
+| 从没见过 | 记住它（写进 `~/.ssh/known_hosts`）再放行 |
+| 读不了 / 写不了 known_hosts | **拒绝**（fail closed，不赌） |
+
+关键是**没有"警告一下继续连"的中间态**。用真实文件还有个附带好处：用户在终端里
+确认过的主机和这里共用同一份信任记录，不再是各记各的。
+
+**顺带修的 UX 问题**：ssh2 校验失败时抛给上层的是它自己那句
+`Host denied (verification failed)` —— 看不出是哪台机、哪个指纹对不上，
+用户没法判断是"真被劫持"还是"机器重装了"，很可能就绕过防护了。
+现在把详细原因（主机、端口、指纹、known_hosts 路径）转给用户。
+
+**代价/副作用**：给目标机重装系统后主机密钥会变，这时一键部署**会被拒绝**，
+报错里带了指纹和 known_hosts 路径，需要用户自己去删掉那条旧记录。
+这是有意的取舍 —— 安全上的默认必须是"拒绝"，但确实多了一步手工操作，
+预计会有人问"为什么突然部署不了"。报错信息就是为这个场景写的。
+另外记录写的是 `~/.ssh/known_hosts`（与系统 `ssh` 共用），不是应用自己的目录。
+
+**没做的**：`createHostVerifier` 那套交互式确认没动；终端里的会话行为不变。
+
+**证据**（真起 SSH 服务端连出来的，不是推演）：
+- 单元测试 `test/unit-ci/ssh-host-verifier.spec.js` +9 条（全量 **75/75**）：
+  首次放行并落盘、同密钥不重复写、**换密钥拒绝**、`@revoked` 拒绝、
+  非 22 端口"写进去的格式和认出来的格式必须同一套"、读写不了时 fail closed、
+  审计回调抛异常不拖垮判断，外加两条静态断言（`ipc.js` 走的是这个工厂、
+  被拒原因要转给用户）
+- 实机验证 `temp/verify-issue39.js`（**12/12**）：用 ssh2 自带的 `Server` 起**真 SSH 服务端**，
+  真的 `Client` 带上同一套校验器去连。四个场景：首次连上并落盘 → 同密钥连上且不重复写
+  → **对端换密钥时被拒**（`Host denied (verification failed)`，改前会成功）
+  → 被拒的密钥没落盘（再查仍是 `mismatch`）
+- 实机验证 `temp/verify-issue39-ipc.js`（**9/9**）：把 electron 换成假的只为拿到
+  `ipcMain` 注册的处理器，调**真的** `initIpc()` 取出**真的** `execSshCommand`，
+  让它连真服务端 —— 证明用户实际收到的报错是带主机、端口、`SHA256:` 指纹和
+  known_hosts 路径的那句，而不是 ssh2 那句看不懂的 `Host denied`
+- 两次验证都用临时目录当 HOME，**没有碰真实的 `~/.ssh/known_hosts`**
+#39
+
 **第 4 批（架构债）**
+#39 ✅
 #18（先打 tag 冻结，按功能组重放，不要 bulk merge）

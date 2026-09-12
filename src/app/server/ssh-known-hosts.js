@@ -325,9 +325,74 @@ function createHostVerifier (options) {
   }
 }
 
+/**
+ * 非交互场景的主机密钥校验（ISSUES #39）
+ *
+ * 与 createHostVerifier 的区别只有一个：**没有人可以问**。一键部署 / VPS 监控这类
+ * 点一下就批量执行的功能没有终端，弹不出"是否信任该主机密钥"。所以按 OpenSSH 的
+ * `StrictHostKeyChecking=accept-new` 语义办：
+ *   · known_hosts 里有且一致   → 放行
+ *   · 有但对不上 / 被标记吊销  → **拒绝连接**（中间人攻击的特征）
+ *   · 从没见过                 → 记住它再放行（TOFU），写进 known_hosts
+ *
+ * 关键是第二条：这是"要么拒绝要么放行"，没有"警告一下然后照样连"的中间态。
+ * 之前这里的实现就是警告完继续连，等于没有防护。
+ *
+ * @param {object} options
+ * @param {string} options.host
+ * @param {number} [options.port]
+ * @param {string} [options.knownHostsPath]
+ * @param {(event: string, detail?: string) => void} [options.onEvent] 审计回调
+ * @returns {(hostKey: Buffer|string, verify: (ok: boolean) => void) => void} ssh2 的 hostVerifier
+ */
+function createAcceptNewHostVerifier (options) {
+  const {
+    host,
+    port,
+    knownHostsPath = getKnownHostsPath(),
+    onEvent
+  } = options
+  const emit = (event, detail) => {
+    try {
+      onEvent && onEvent(event, detail)
+    } catch {
+      // 审计失败不影响连接判断
+    }
+  }
+  return (hostKey, verify) => {
+    checkKnownHosts({ host, port, hostKey, knownHostsPath })
+      .then(async (result) => {
+        if (result.status === 'match') {
+          verify(true)
+          return
+        }
+        if (result.status === 'mismatch' || result.status === 'revoked') {
+          const err = buildHostMismatchError({
+            host,
+            port,
+            meta: result.meta,
+            knownHostsPath: result.knownHostsPath
+          })
+          emit('host-key-rejected', err.message)
+          verify(false)
+          return
+        }
+        await appendKnownHost({ host, port, hostKey, knownHostsPath })
+        emit('host-key-added')
+        verify(true)
+      })
+      .catch((err) => {
+        // 读不了 / 写不了 known_hosts → 拒绝，不赌
+        emit('host-key-check-failed', err && err.message)
+        verify(false)
+      })
+  }
+}
+
 module.exports = {
   appendKnownHost,
   buildHostMismatchError,
+  createAcceptNewHostVerifier,
   buildUnknownHostPrompt,
   checkKnownHosts,
   createHostVerifier,

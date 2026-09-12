@@ -54,6 +54,7 @@ const { initCommandLine } = require('./command-line')
 const { watchFile, unwatchFile } = require('./watch-file')
 const lookup = require('../common/lookup')
 const { AIchat, AIchatWithTools, getStreamContent, stopStream } = require('./ai')
+const { createAcceptNewHostVerifier } = require('../server/ssh-known-hosts')
 
 // Security: whitelist of safe environment variables for Linux/Mac/Windows
 const SAFE_ENV_KEYS = [
@@ -529,7 +530,6 @@ function initIpc () {
         sshRateLimit.set(host, recent)
       }
 
-      const knownHostKeys = {}
       return async (opts) => {
         const { Client } = require('@electerm/ssh2')
         const host = opts.host || opts.ipv4
@@ -542,6 +542,10 @@ function initIpc () {
 
         return new Promise((resolve, reject) => {
           let settled = false
+          // 主机密钥被拒时，ssh2 抛给上层的是它自己那句 "Host denied (verification failed)"，
+          // 看不出是哪台机器、哪个指纹对不上。真正有用的原因（哪个主机、什么指纹、
+          // 记录在哪个文件）在这里存一份，报错时用它 —— 否则用户只知道"连不上"。
+          let hostKeyRejection = null
           const conn = new Client()
           const timer = setTimeout(() => {
             if (settled) return
@@ -576,10 +580,11 @@ function initIpc () {
             if (settled) return
             settled = true
             clearTimeout(timer)
-            reject(err)
+            // 主机密钥对不上时用我们记下的那条详细原因，别让用户对着
+            // "Host denied (verification failed)" 猜发生了什么
+            reject(hostKeyRejection ? new Error(hostKeyRejection) : err)
           })
 
-          const hostKey = host + ':' + port
           conn.connect({
             host,
             port,
@@ -588,16 +593,25 @@ function initIpc () {
             privateKey: opts.privateKey,
             readyTimeout: timeout,
             keepaliveInterval: 0,
-            hostVerifier: (keyHash) => {
-              const stored = knownHostKeys[hostKey]
-              if (!stored) {
-                knownHostKeys[hostKey] = keyHash
-                return true
+            // 主机密钥校验（ISSUES #39）
+            //
+            // 这条路径没有终端可以反问用户（一键部署 / VPS 监控都是点一下就批量执行），
+            // 所以走 accept-new：从没见过就记住，**对不上就拒绝连接**。
+            //
+            // 原来的实现是在内存里记一份，发现密钥变了只 `console.warn` 一句**然后照样连** ——
+            // 中间人把主机密钥换掉时，用户永远看不到那句警告，防护等于零。
+            // 现在用真实的 known_hosts 文件，还有个好处：用户在终端里确认过一次的主机，
+            // 这里也能认出来（同一份信任记录），而不是各记各的。
+            hostVerifier: createAcceptNewHostVerifier({
+              host,
+              port,
+              onEvent: (event, detail) => {
+                if (event === 'host-key-rejected') {
+                  hostKeyRejection = detail
+                }
+                auditSsh(event, { host, port, username, command: detail })
               }
-              if (stored === keyHash) return true
-              console.warn(`[SSH] ⚠️ ${hostKey} 的主机密钥已变更！可能存在中间人攻击。`)
-              return true
-            }
+            })
           })
         })
       }
