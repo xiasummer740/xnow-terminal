@@ -67,13 +67,13 @@
 |---|---|---|---|
 | 33 | **界面显示英文原文**：61 个 `e()/t()` 用到的 key 在语言包里不存在，`translate` 回退为 key 本身。实测中文界面出现 `custom` / `Close` / `gist` / `Done` / `noData` / `fullscreen` / `SSH Agent Path`。其中 `e('Opacity')` vs 语言包 `opacity` 属**纯大小写不匹配**，改一处即可 | `entry/basic.js:52-56` + 60 处调用点 | 已修已验 |
 | 34 | **17 个孤儿组件**（零 import），其中 `vps-dashboard/monitor-{cards,detail,table}.jsx` + `tab-monitor.jsx` 合计 **约 31.7KB 死 UI**；`ai-chat-entry.jsx` / `ai-float-window.jsx` 同样零引用 | 各文件 | 待修 |
-| 35 | **504 行硬编码中文**（65 个文件），集中在自研模块：ai 131 / terminal-info 105 / vps-dashboard 67 / deploy 35 → 自研功能实际只支持中文 | 见 `temp/hardcoded-zh.js` 输出 | 待修 |
+| 35 | 硬编码中文，自研功能实际只支持中文。**原登记「504 行 / 65 文件」与实测对不上**：2026-09-12 跑 `temp/hardcoded-zh.js` 得 **804 行 / 99 文件**（原数已过期或口径不同）。另**后端部分不能算 UI 缺陷**：`src/app` 下字符串含中文 319 行，其中 **246 行（77%）是 `log.debug/error`、`throw new Error` 等日志与错误输出**，用户看不见。真正要改的是 `src/client` 侧的可见文案 | 见 `temp/hardcoded-zh.js` 输出 | 待修（**主侧边栏 4 处已修并双语实测**：`VPS看板`/`小组件`/`切换暗色·浅色主题`/`暗色·浅色` 改为走 `translate`，中英各验一轮；余量见左） |
 | 36 | 新增一个工具要改多处，已造成实际能力缺失：store 的**活跃**能力 31 个，Agent 只暴露 25 个 —— **AI 能建书签但改不了、删不掉**（实际缺 12 项，不是 7 项）；技能自定义工具分支只回一句"请参考技能说明"，**从不执行** | `src/client/components/ai/agent-tools.js`、`src/client/store/mcp-handler.js`、`src/app/widgets/widget-mcp-server.js` | 已修已验（12 项缺口补齐 + 技能假工具不再报给模型；注册表重构拆为 #66 见下） |
-| 37 | `parse-quick-connect` **两份 454 行分叉**（app 版认 `xnow-terminal://`，client 版还是 `electerm://`）；两份手写 zod 垫片已漂移（app 版有 `ZodRecord`，client 版无） | `app/common/` vs `client/common/` | 待修 |
+| 37 | `parse-quick-connect` **两份 454 行完全重复**（零行为分叉，见下）；真正差异只有模块制式：app 版 `module.exports`、client 版 `export` | `app/common/` vs `client/common/` | 待修（**原描述已纠正**，见下） |
 | 38 | `compactDatafile` **调用与签名不匹配**（传成 `dbName`），NeDB 永不压缩、sqlite 直接抛错；每次写满 100 次刷一条错误日志 | `lib/last-state.js:8-22` vs `lib/nedb.js:122-126` | 已修已验（顺带修好 NeDB 分支**返回 undefined 而非 Promise** —— 不改的话改对调用方反而会 `.catch` 崩） |
 | 39 | `execSshCommand` 的 `hostVerifier` **永远返回 true** —— 检测到主机密钥变更只 `console.warn` 然后照常连接（同项目 `ssh-known-hosts.js` 有正确实现却没用上） | `lib/ipc.js:602-611` | 已修已验 |
 | 40 | `--clear-config` 在数据目录被占用时**半删除并让应用起不来**（require 时已打开 db，Windows 删除失败 → 递归删除中断 → 异常无人 catch → 无窗口） | `app.js`、`lib/clear-config.js`、`lib/create-app.js` | 已修已验（清理挪到 require create-app 之前 + 失败不抛 + 路径改用 app-props 的 dataPath，见下方「#40 修复说明」） |
-| 41 | 迁移版本账本与业务数据**不在同一库**（账本在 `.nedb`，数据在 `xnow.db`），账本被删会重跑全部老迁移 | `migrate/index.js:36-82` | 待修 |
+| 41 | 迁移版本账本**丢失后不重跑迁移，而是全部静默跳过**（`shouldUpgrade()` 的 `dbVersion === emptyVersion` 兜底直接 return false）；账本本身存在 sqlite 的 `data` 表，不在 `.nedb` | `migrate/index.js:21-31,52-61` | 待修（**原描述方向写反**，见下） |
 | 42 | 会话 WS 消息 `JSON.parse` 无 try/catch，一条畸形 JSON 即可打死会话进程；而进程级 handler 无条件吞异常把它伪装成正常 | `server/session-server.js`、`server/server.js:44-49` | 已修已验（sftp/transfer/升级 三处走 `parseWsMessage`，畸形丢消息不断连接；「吞异常」那半句描述见说明） |
 | 43 | 深链接把含明文密码的 `ssh://user:pass@host` **写进日志**；任意网页 `<a href="ssh://...">` 一点即建带凭据的标签页 | `lib/deep-link.js:142,171` | 已修已验（日志泄露已堵，4 个入口全走 `redactCreds`；「一点即建标签页」那半句需祥哥拍板是否加确认，见下） |
 | 44 | 单实例命名管道**无鉴权**，本机任意进程可注入命令行参数（可致任意文件读取 + 自动建连执行命令） | `lib/single-instance.js:16,43-50` | 已修已验（改为共享 token 握手 + 1 MiB 上限；见下） |
@@ -90,6 +90,7 @@
 | 65 | **开发模式"独立数据目录"从来没生效过**：`create-app.js` 里给 `process.env.DATA_PATH` 赋值的时机，晚于数据库解析路径（`db.js` 在模块顶层就 `createDb()` 了）；而且**没有任何模块会读它**（读 DATA_PATH 的只有 nedb/sqlite/storage-key，全在那之前加载）。实际后果：`npm start` 和安装版**共用** `%APPDATA%/xnow-terminal` —— dev 下的改动、测试直接落在真实数据上 | `lib/create-app.js:73-76`、`lib/db.js:11-17`、`lib/sqlite.js:66` | 待修（**要祥哥拍板**：修就是"dev 换到独立目录、首次启动是空的"，会**改变他现在 dev 里看到的数据**；见「#40 修复说明」末段） |
 | 66 | **工具注册分散**（原 #36 的架构债部分）：加一个 AI 工具要同时维护 agent-tools 的 schema+switch、mcp-handler 的 switch、toolIcons；外部 MCP 侧（`widget-mcp-server.js`）还要再加一层 zod 声明。侦察确认约 2/3 是纯机械映射可收敛，但有 6 类带**真实逻辑差异**必须保留显式分支（书签参数拍平、危险命令弹窗、5 个文件类工具走主进程且是位置参数、外部 MCP 一对多拆分、三套命名体系） | `src/client/components/ai/agent-tools.js`、`src/client/store/mcp-handler.js`、`src/app/widgets/widget-mcp-server.js` | 待修（**祥哥 2026-09-12 拍板：先补缺口，重构另立此条**；动它会碰外部 MCP 派发链路，要单独评估） |
 | 67 | `quick_command` 是**整块死代码**：dispatch 的 4 个 case（`mcp-handler.js:68-81`）和 4 个实现（`:306-344`）**全部被注释掉**，但账本/文档里仍按"32 个能力"计数。另：`agent.js` 的 system prompt 用**散文**又列了一遍工具名，与代码清单容易脱节 | `src/client/store/mcp-handler.js:68-81,306-344`、`src/client/components/ai/agent.js:96-105` | 待修（清理类，风险低；本次遵循"预存死代码不动"未碰） |
+| 68 | **开发版 / 测试版窗口与正式安装版无法区分**。判据一直是 `isDev = NODE_ENV === 'development'`，而 E2E 不设 `NODE_ENV`（`app-options.js` 只设 `NODE_TEST`），于是 `npm run test1/2/3` 弹出的窗口标题就是 `XNOW`；又因 `useSystemTitleBar` 默认 `false`、标题栏整个隐藏，窗口里连标题都看不到。**已造成实际误判**：2026-09-12 祥哥把测试窗口当成本机安装版来报「左侧面板全是英文」，两边其实是同一份代码同一个 `config.language=zh_cn` | `src/app/lib/create-window.js`、`src/client/common/dev-build-badge.js`、`src/client/entry/electerm.jsx` | 已修已验（判据改用 `app.isPackaged`；窗口内加「开发版 DEV」角标 + 同步改 `document.title`。实测：开发版 `?v=3.17.11&devBuild=1` → 角标「开发版 DEV」、标题「XNOW 开发版」；**打包版分支靠 `!app.isPackaged` 单条件成立，仅代码审查、未实测**） |
 
 ---
 

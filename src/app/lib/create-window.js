@@ -1,5 +1,6 @@
 const {
-  BrowserWindow
+  BrowserWindow,
+  app
 } = require('electron')
 const { resolve } = require('path')
 const {
@@ -20,6 +21,22 @@ const globalState = require('./glob-state')
 const webviewHandler = require('./webview-handler')
 const { safeOpenExternal } = require('./safe-open-external')
 
+/**
+ * 这是不是「非正式版」（开发版 / E2E 测试版）。
+ *
+ * 判据用 app.isPackaged，**不能用 isDev** —— isDev 是 `NODE_ENV === 'development'`，
+ * 而 E2E 根本不设 NODE_ENV（见 test/e2e/common/app-options.js），
+ * 于是跑测试弹出来的窗口 isDev=false：标题跟正式版一模一样，
+ * 标题栏又因为 useSystemTitleBar 默认为 false 而整个隐藏掉、连标题都看不见。
+ *
+ * 后果是实打实的：2026-09-12 祥哥把我跑 E2E 弹出的窗口当成了自己的程序，
+ * 来报「左侧面板全是英文」。两边其实是同一份代码同一个配置，
+ * 区别只在那个窗口跑在 en_us 下。
+ *
+ * 只要不是打包产物就算非正式版 —— 覆盖 `npm start` 和 `npm run test1/2/3` 两条路径。
+ */
+const isDevBuild = !app.isPackaged
+
 exports.createWindow = async function (userConfig) {
   globalState.set('closeAction', 'closeApp')
   globalState.set('requireAuth', !!userConfig.hashedPassword)
@@ -33,7 +50,9 @@ exports.createWindow = async function (userConfig) {
     fullscreenable: true,
     minWidth: minWindowWidth,
     minHeight: minWindowHeight,
-    title: isDev ? 'XNOW 开发版' : 'XNOW',
+    // 标题栏默认 hidden 看不见，但任务栏 / Alt+Tab 列表读的就是这个 title，
+    // 所以这里仍要区分，别退回 isDev。
+    title: isDevBuild ? 'XNOW 开发版' : 'XNOW',
     frame: true,
     transparent: false,
     backgroundColor: '#0a0e1a',
@@ -85,7 +104,10 @@ exports.createWindow = async function (userConfig) {
   const port = isDev
     ? process.env.devPort || 5570
     : await getPort()
-  const opts = `http://127.0.0.1:${port}/index.html?v=${packInfo.version}`
+  // devBuild=1 让渲染进程知道该显示「开发版」角标。
+  // 走 URL 参数而不是 preload：这里加的只是展示用标志，
+  // 不值得为它在 preload 上多开一条 contextBridge 通道。
+  const opts = `http://127.0.0.1:${port}/index.html?v=${packInfo.version}${isDevBuild ? '&devBuild=1' : ''}`
 
   // ===== 导航闸门（ISSUES #1）=====
   // 主窗口只允许停在应用自身页面，其余一律拦下并交给系统浏览器。

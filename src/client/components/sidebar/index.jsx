@@ -160,7 +160,7 @@ export default function Sidebar (props) {
           <BookOutlined className='font20 iblock control-icon' />
         </SideIcon>
         <TransferList {...transferProps} />
-        <SideIcon title='VPS看板' active={vpsDashboardOpen} onClick={() => setVpsDashboardOpen(true)}>
+        <SideIcon title={e('VPS Dashboard')} active={vpsDashboardOpen} onClick={() => setVpsDashboardOpen(true)}>
           <DashboardOutlined className='font18 iblock pointer control-icon' />
         </SideIcon>
         <SideIcon title={e(settingMap.terminalThemes)} active={themeActive} onClick={openTerminalThemes}>
@@ -175,7 +175,7 @@ export default function Sidebar (props) {
             spin={isSyncingSetting}
           />
         </SideIcon>
-        <SideIcon title='小组件' active={widgetsActive} onClick={openWidgetsModal}>
+        <SideIcon title={e('widgets')} active={widgetsActive} onClick={openWidgetsModal}>
           <AppstoreOutlined className='iblock font20 control-icon' />
         </SideIcon>
 
@@ -194,12 +194,16 @@ export default function Sidebar (props) {
               />
               )}
         </SideIcon>
-        <div className='control-icon-wrap' title={lightTheme ? '切换暗色主题' : '切换浅色主题'} onClick={toggleTheme}>
+        <div
+          className='control-icon-wrap'
+          title={e(lightTheme ? 'Switch to dark theme' : 'Switch to light theme')}
+          onClick={toggleTheme}
+        >
           <BulbOutlined
             className='font18 iblock control-icon'
             style={{ color: lightTheme ? '#faad14' : undefined }}
           />
-          <div className='control-icon-label'>{lightTheme ? '暗色' : '浅色'}</div>
+          <div className='control-icon-label'>{e(lightTheme ? 'dark' : 'light')}</div>
         </div>
       </div>
       <SidePanel

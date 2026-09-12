@@ -167,6 +167,15 @@ const localKeys = {
   bookmarkGroups: '书签分组',
   widgets: '小组件',
 
+  // 主侧边栏（ISSUES #35）—— 这四处原本是写死的中文，
+  // 英文界面下也照渲染中文，跟旁边的 e('newBookmark') 等词条混在一起很扎眼。
+  // 改成走 translate 后，中文要在这里补上，否则会回退成英文 key。
+  'VPS Dashboard': 'VPS看板',
+  'Switch to dark theme': '切换暗色主题',
+  'Switch to light theme': '切换浅色主题',
+  dark: '暗色',
+  light: '浅色',
+
   // 协议名（上游缺 key → translate 回退后再首字母大写，会渲染成 Vnc / Rdp / Ftp 这种怪拼写）
   ssh: 'SSH',
   telnet: 'Telnet',

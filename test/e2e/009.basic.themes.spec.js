@@ -32,7 +32,23 @@ describe('terminal themes', function () {
     const txd = await client.getText('.setting-wrap .item-list-unit.current')
     expect(v).equal(e('newTheme'))
     expect(tx).equal(e('newTheme'))
-    expect(txd).equal(e('default'))
+    // 这一格显示的是「主题名」，不是界面词条，**不能拿 e() 的翻译结果比**。
+    //
+    // theme-list-item.jsx:142 的取值规则：
+    //     let title = id === defaultTheme().id ? e(id) : name
+    // 而 defaultTheme() 返回的是 Xnow 主题，id 并非 'default'，
+    // 所以 seed 出来的 _id:'default' 这条走的是 `: name` 分支 —— 渲染原始主题名。
+    // 这跟 'default light' / '3024 Day' / 'Aardvark Blue' 是同一套规则：
+    // 主题名属于「数据」，产品按既定口径保留英文原样，不翻译。
+    //
+    // 旧断言写的是 e('default')（= "Default"，首字母被 window.translate 大写），
+    // 拿词条去比数据，必然红。改成取当前生效主题的真实名字。
+    const themeName = await client.evaluate(() => {
+      const { config, terminalThemes } = window.store
+      const hit = (terminalThemes || []).find(t => t.id === config.theme)
+      return hit ? hit.name : config.theme
+    })
+    expect(txd).equal(themeName)
 
     // create theme
     log('create theme')

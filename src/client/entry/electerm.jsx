@@ -5,6 +5,11 @@ import Main from '../components/main/index.jsx'
 
 // 渲染进程全局异常捕获（自动设 window.onerror + unhandledrejection）
 import '../common/client-logger.js'
+import { mountDevBuildBadge } from '../common/dev-build-badge.js'
+
+// 非打包运行（开发 / 测试）时挂一个「开发版」角标，
+// 免得测试窗口被当成正式安装版 —— 详见该文件注释
+mountDevBuildBadge()
 
 // 全局字体回退：中英文混排时使用优雅的 Fallback
 const style = document.createElement('style')

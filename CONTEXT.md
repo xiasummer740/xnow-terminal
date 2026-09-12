@@ -119,6 +119,19 @@ addTab → activeTabId 变化
 
 ---
 
+## 开发踩坑
+
+### `store.currentTab` 有激活时机差
+`activeTabId` 改变后立刻读 `currentTab` 可能拿空对象（tab 组件未挂载到 refs），改用 `store.tabs.find(t => t.id === id)` 查询。
+
+### 替换/删除组件要 grep 所有调用方
+store 方法、事件处理、快捷键、watch 等可能还引用旧组件逻辑，必须一并更新。
+
+### 文件日志优先，不依赖肉眼排查
+遇到不确定的运行时问题，先加 `writeLog` IPC 写文件日志（`os.tmpdir() + '/xnow-debug.log'`），运行后自己读日志定位根因，不要反复问用户看到了什么。
+
+---
+
 ## 关键文件索引
 
 | 路径 | 说明 |
