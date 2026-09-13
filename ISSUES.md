@@ -1613,3 +1613,39 @@ grep -cE '^\|.*\|\s*(待修|已修待验)[^|]*\|' "$root/ISSUES.md"
 代价：模板里自带的**示例行**（`| 待修 | （示例）… |`）也会被计入 → 用了模板却没删示例行的项目会被拦住。这个方向是**宁可误拦、不可漏放**，但要祥哥确认。
 
 **跨项目**：这条影响所有用 ISSUES.md 的项目，不只是本项目；本条目只是一次实测取证，**改要改在 xiangge-env**。
+
+### #71 `xnow release` 在本仓库**永远发不出版**：版本号取自 `git describe`，而它认的是"距离最近"不是"版本最大"（2026-09-13 实测）
+
+**现象**：`xnow release --force patch` 输出
+
+```
+i  当前版本: v3.17.0        ← 实际是 3.17.12
+i  新版本: v3.17.1
+OK package.json 版本已更新   ← 已把版本号从 3.17.12 改成了 3.17.1（降级！）
+XX git tag 失败: fatal: tag 'v3.17.1' already exists
+```
+
+**根因**：`XNOW-Harness/xnow_harness/commands/_helpers.py:74` 的 `_get_current_version()`：
+
+```python
+result = run_cmd(["git", "describe", "--tags", "--abbrev=0"])
+```
+
+`git describe` 返回的是**离 HEAD 最近的 tag**（按提交拓扑），**不是版本号最大的那个**。而本仓库历史被重写过，两者正好相反：
+
+| tag | 离 HEAD 的提交数 |
+|---|---|
+| **v3.17.0** | **83** ← describe 选它 |
+| v3.17.10 / v3.17.11 / v3.17.12 | 342（三者挤在同一个老位置） |
+
+⇒ `describe` → `v3.17.0` ⇒ 加一版 → `v3.17.1` ⇒ 该 tag 已存在 ⇒ 失败。
+
+**实测佐证**：`git merge-base --is-ancestor v3.17.12 HEAD` = **是祖先**（tag 可达，不是 tag 丢了）；只是"最近的"那个恰好是 v3.17.0。
+
+**破坏性**：失败前它**已经把 `package.json` 的版本号改成 3.17.1 并提交**（`chore: bump v3.17.1`）。本次已 `git reset --hard HEAD~1` 撤回（未推送，reflog 可恢复），版本号已确认回到 3.17.12。
+
+**影响面**：**所有用 npm `package.json` 记版本、且 tag 拓扑不"单调"的项目**都可能中招；本仓库是 100% 必现。
+
+**修法（待拍板）**：`_get_current_version()` 改为**优先读 `package.json` 的 version**（npm 项目里它才是权威），读不到再退回 `git describe`。属 `xiangge-env/XNOW-Harness` 侧改动，影响全部项目，**需祥哥点头**。
+
+**另注（本次未处理）**：失败路径是"先改 package.json 并提交 → 再打 tag"，中间没有回滚 ⇒ **任何一步失败都会留下半成品提交**。光修版本号只能治这一个case，这条"失败要回滚"是同一处的第二个缺陷，建议一并修。
