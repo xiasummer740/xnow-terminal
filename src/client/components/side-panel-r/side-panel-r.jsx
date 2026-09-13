@@ -1,3 +1,9 @@
+/**
+ * 【零引用 · 有意保留】ISSUES #34 —— 别当废代码删。
+ * XNOW 自研功能的一部分，只是还没接线。
+ * 祥哥 2026-09-13 拍板：全部保留，不删。
+ * 详见 ISSUES.md #34。
+ */
 import React, { memo, useRef } from 'react'
 import DragHandle from '../common/drag-handle'
 import './right-side-panel.styl'

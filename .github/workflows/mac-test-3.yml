@@ -1,3 +1,9 @@
+# ⚠️ 本 workflow 已在 GitHub 上手工禁用（gh workflow list --all → disabled_manually），
+#   别随手 enable。历史 246 次运行 / 246 次失败 / 0 成功，最后一次 2026-06-12，
+#   失败点在 test 步骤本身（不是环境/网络）。触发条件里还带着 build 分支 ——
+#   一旦 enable，build 的每次推送都会再挂一次。要恢复请先把 test 步骤修通。
+#   详见 ISSUES.md #9。
+#
 # This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
