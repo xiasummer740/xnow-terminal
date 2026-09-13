@@ -1508,3 +1508,30 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 凭据在**应用内部**合并，模型依然看不到——不破坏 `sanitizeBookmark` 的安全边界。
 
 **判别要点（供复核）**：本问题的弹框出现在 **AI 新开的标签**里；若出现在**原标签**里，那是连接断开重连，属另一类问题，别混为一谈。
+
+**修复（2026-09-13 已实施）**：
+
+- `src/client/store/mcp-handler.js` 新增 `credentialFields` + `findSavedCredential(data)`
+- `mcpOpenTab` 在 `validateBookmarkData` **之后**、构造 tab **之前**补凭据：按 `host + port`（`data.username` 给定时要求 username 也相等）匹配已存书签，命中则把 `authType` / `password` / `privateKey` / `passphrase` / `useSshAgent` / `sshAgent` 合并进 tab
+- 两条防误伤：① 调用方自带 `password` 或 `privateKey` 时**直接返回 null，不覆盖**；② 用户名给定时优先精确匹配，避免把凭据注入到别的账号上
+- 安全边界不变：匹配与注入全在**应用内部**完成，凭据不经过模型，`sanitizeBookmark` 照旧剥离
+
+**验证到哪一步（如实记录，不夸大）**：
+
+| 项 | 结果 |
+|---|---|
+| `npx standard src/client/store/mcp-handler.js` | ✅ 通过 |
+| `npm run build` | ✅ 通过（23.92s） |
+| 改动**确实进了产物**（`work/app/assets/js/electerm-3.17.12.js`） | ✅ 已确认，见下方指纹 |
+| 端到端「AI 开标签不再弹密码框」 | ❌ **未验证** —— 需要真实 SSH 主机；本机无 sshd、`.env` 无 `TEST_HOST`/`TEST_USER`/`TEST_PASS`。留给用户在真实 AI + 真实 VPS 上实测 |
+
+**为什么不能从外部断言"标签里有密码"**：`mcpListTabs`（`mcp-handler.js:361-375`）只返回 `id/title/host/type/status/...`，**故意不含密码**。安全上是对的，代价是这个修复只能靠**行为**（连得上、不弹框）验证。
+
+**⚠️ 指纹搜索的坑（今天踩了两次假阴性，务必记住）**：
+
+1. 查 `app.asar` 用 `Select-String -Encoding utf8` → 报"没找到"，**是假阴性**；要用 `grep -a -F`
+2. 用双引号搜压缩产物 `'useSshAgent","sshAgent'` → **也是假阴性**。这个项目的压缩器把字符串字面量写成**反引号**，实际产物是：
+   ```
+   rivateKey`,`passphrase`,`useSshAgent`,`sshAgent`];function a(e){let{store:t}=window;if(e.password||e.priva
+   ```
+   → **指纹只搜"词"，不搜引号**（搜 `useSshAgent` 再带上下文看邻接关系），否则必翻车。

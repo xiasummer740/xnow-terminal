@@ -468,6 +468,40 @@ export default Store => {
     }
   }
 
+  // AI 用 open_tab 开标签时只带连接参数，而模型**读不到任何凭据**
+  // （sanitizeBookmark 已把 password / privateKey 等剥离，模型想传也传不了），
+  // 于是新标签带着「要密码」的默认设置、却没有密码 → 每次连接都弹密码框，
+  // 且输进去的密码不会写回书签，所以每次都要重输（ISSUES #68）。
+  //
+  // 这里按 host + port（+ username）找回已存书签，把凭据在**应用内部**补上。
+  // 凭据不经过模型，sanitizeBookmark 的安全边界原样保留。
+  const credentialFields = [
+    'authType', 'password', 'privateKey', 'passphrase',
+    'useSshAgent', 'sshAgent'
+  ]
+
+  function findSavedCredential (data) {
+    const { store } = window
+    // 调用方自己带了凭据就不覆盖
+    if (data.password || data.privateKey) {
+      return null
+    }
+    const port = data.port || 22
+    const candidates = store.bookmarks.filter(b =>
+      b.host === data.host &&
+      (b.port || 22) === port &&
+      b.type === data.type
+    )
+    if (!candidates.length) {
+      return null
+    }
+    // 用户名给定时优先精确匹配，避免把凭据注入到别的账号上
+    if (data.username) {
+      return candidates.find(b => b.username === data.username) || null
+    }
+    return candidates[0]
+  }
+
   Store.prototype.mcpOpenTab = function (args) {
     const { store } = window
     const data = fixBookmarkData({ ...args })
@@ -475,6 +509,16 @@ export default Store => {
     const { valid, errors } = validateBookmarkData(data)
     if (!valid) {
       throw new Error(errors.join(', '))
+    }
+
+    // #68：补上已存书签里的凭据，免得 AI 开的标签反复弹密码框
+    const saved = findSavedCredential(data)
+    if (saved) {
+      for (const k of credentialFields) {
+        if (saved[k] !== undefined) {
+          data[k] = deepCopy(saved[k])
+        }
+      }
     }
 
     const tab = {
