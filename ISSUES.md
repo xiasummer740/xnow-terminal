@@ -1415,3 +1415,49 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 | 安装包匿名下载 | HTTP 200，106,279,043 字节 ✅ |
 | blockmap 是否挂在 release 上 | 在（113,143 字节，补传成功）✅ |
 | `releases.atom`（备用路径，代码未用） | 最新仍是 `v3.16.0` ⚠️ |
+
+---
+
+### VPS 记录消失事故与恢复（2026-09-13 实测）
+
+**现象**：祥哥升级到 v3.17.12 后报告「之前的 VPS 记录没了」，同时同步报 `401 Bad credentials`。
+
+**时间线（以每日自动备份为锚）**：
+
+| 备份文件 | bookmarks 行数 | bookmarkGroups.default |
+|---|---|---|
+| `xnow-2026-09-10.db` | 5 | title「云主机VPS」+ 5 个 id |
+| `xnow-2026-09-11.db` | 5 | 同上 |
+| `xnow-2026-09-12.db` | 0 | — |
+| `xnow-2026-09-13.db` | 0 | — |
+| 当前库（恢复前） | 0 | title「云主机VPS」+ **bookmarkIds 为空** |
+
+→ 丢失发生在 **09-11 当天**，**早于 v3.17.12 安装**（用户主观感受是"更新后丢的"，与备份证据不符，以备份为准）。
+
+**现场特征**：书签行被逐条删除，但分组行**保留了用户自定义标题「云主机VPS」**，只有 `bookmarkIds` 被清空。与 #7「同步全量覆盖，一端为空即清空另一端」的症状完全一致。
+
+**已排除的原因**（都实际查过，不是推测）：
+
+1. **升级初始化**：`upgrade/db-defaults.js:113-121` 的 `initData()` 会 `INSERT OR REPLACE` 一条 `_id:'default'`、`title:'default'` 的分组——若它跑过，标题会被改回 `default`。**现场标题仍是「云主机VPS」，故未跑过。**
+2. **安装器**：`build/nsis-custom.nsh` 升级时 `${isUpdated}` → `myKeepAppData = "1"` → `customUnInstall` 不执行 `RMDir /r`。**升级不删数据。**
+3. **upgrade 目录**：`src/app/upgrade/` 仅 4 个文件，全局 grep `delete/remove/rmSync/unlink` **零命中**。
+
+**恢复操作**（已执行，用户授权）：
+
+- 动手前先把当前库复制为 `backups/xnow-PRE-RESTORE-<时间戳>.db` 兜底
+- 从 `xnow-2026-09-11.db` **原样搬运 5 行密文**（`INSERT OR REPLACE`，全程按 TEXT 取放，**不 JSON.parse 不重编码**——密文是 DPAPI 绑机器+账号的，一旦解析再序列化就永久解不开）
+- 回填分组行的 `bookmarkIds`（**这一步不能省**：书签不在分组里 UI 列表上看不到，见 `build/bin/prepare-e2e-data.js:130`）
+- 校验：5 条密文与备份**逐字节一致**
+
+**解密验证（用 app 自己的代码路径，非另写一套）**：`src/app/lib/safe-storage.js` 的 `safeDecrypt` → **5/5 全部解开**，标题/IP/用户名与用户陈述一致（DM US / JP.TKY.BGP / YX HK / HY US / RN US）。
+
+**验证过程中踩的两个坑（复现时必看）**：
+
+1. **必须先剥 `enc:` 前缀**。库里存的是 `enc:v2:safe:...`，而 `safeDecrypt` 认的前缀是 `v2:safe:`。`sqlite.js:134-138 decryptData` 负责剥掉外层 `enc:`。少剥这一层时**不报错**——所有分支都不匹配，函数原样返回密文，表现为"静默解密失败"。
+2. **必须 `app.setPath('userData', ...)` 指向真实数据目录**（且在 app ready 之前）。Windows 上 `safeStorage` 的密钥是「DPAPI 保护的一把随机密钥」，存在 **userData 目录的 `Local State`** 里。用 Electron 默认目录跑，拿到的是另一把钥匙，必然全解不开。
+
+**「不会再丢」的验证**：本轮改动前，已确认 `src/client/store/sync.js:37 isEmptyOverwrite()`（#7 的修复）**确实打进了已安装的 v3.17.12**——在 `E:\software\XNOW Terminal\resources\app.asar` 里用**压缩后仍保留的字符串常量**做指纹，`Skipped empty data sync` 命中 2 次（同时用老常量 `githubGistId` 对照命中 2 次，证明检索方法本身有效）。
+> ⚠️ 一开始用 `Select-String -Encoding utf8` 查二进制得到的是**假阴性**（报"没找到"）。查 asar 一律用 `grep -a -F` 按字符串常量做指纹，别用 Select-String。
+> 注：函数名 `isEmptyOverwrite` 在渲染层 bundle 里**会被压缩改名**，不能当指纹用。
+
+**仍未解决**：用户存储的 GitHub 同步令牌已失效（401），且该令牌已在聊天中明文暴露，**必须在 github.com/settings/tokens 撤销后重新生成**。恢复后已提示用户：在换新令牌前不要触发同步。
