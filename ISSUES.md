@@ -1440,6 +1440,7 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 
 1. **升级初始化**：`upgrade/db-defaults.js:113-121` 的 `initData()` 会 `INSERT OR REPLACE` 一条 `_id:'default'`、`title:'default'` 的分组——若它跑过，标题会被改回 `default`。**现场标题仍是「云主机VPS」，故未跑过。**
 2. **安装器**：`build/nsis-custom.nsh` 升级时 `${isUpdated}` → `myKeepAppData = "1"` → `customUnInstall` 不执行 `RMDir /r`。**升级不删数据。**
+   > ⚠️ **排查时会被提交标题误导**：`617e8bd1 feat: 升级自动清空旧数据，每次安装都是全新的 [r2]` 这个标题**与实际行为相反** —— 它引入的正是上面这个"升级保留数据"逻辑，只有**手动卸载**才弹窗询问（且默认 IDNO=保留）。`git log` 里看到这行别慌，以 `build/nsis-custom.nsh` 的代码为准。
 3. **upgrade 目录**：`src/app/upgrade/` 仅 4 个文件，全局 grep `delete/remove/rmSync/unlink` **零命中**。
 
 **恢复操作**（已执行，用户授权）：
@@ -1649,3 +1650,46 @@ result = run_cmd(["git", "describe", "--tags", "--abbrev=0"])
 **修法（待拍板）**：`_get_current_version()` 改为**优先读 `package.json` 的 version**（npm 项目里它才是权威），读不到再退回 `git describe`。属 `xiangge-env/XNOW-Harness` 侧改动，影响全部项目，**需祥哥点头**。
 
 **另注（本次未处理）**：失败路径是"先改 package.json 并提交 → 再打 tag"，中间没有回滚 ⇒ **任何一步失败都会留下半成品提交**。光修版本号只能治这一个case，这条"失败要回滚"是同一处的第二个缺陷，建议一并修。
+
+**✅ 2026-09-13 已修**：两处都改了 —— `_get_current_version()` 改为优先读 `package.json`（实测 v3.17.12 → v3.17.13 正确）；发版流程加了 `_rollback_release()`，add/commit/tag 失败时把本地痕迹清干净（push 失败**不**回滚，因为可能已部分成功）。已用 py_compile + 临时仓库断言验证。
+
+---
+
+### #72 Windows 安装包**两个多月没一个是 CI 打的**：依赖 `@electerm/electerm-resource@1.3.7` 已从所有源消失（2026-09-13 实测）
+
+**现象**：`win-nsis` workflow 自 **2026-06-18** 起 **68 次全挂、0 次成功**（`gh run list --workflow=win-nsis`）。本仓库最后一个由 CI 正常产出的版本是 **v3.15.0**（2026-06-18），最后一个对外发布的版本是 **v3.16.0**（2026-06-19）。此后每个安装包（v3.17.10 / v3.17.11 / v3.17.12）**都是手工在本地打的**。
+
+**根因（实测）**：`devDependencies` 里的 `@electerm/electerm-resource@1.3.7` **已从所有 registry 消失**：
+
+| 源 | 结果 |
+|---|---|
+| `registry.npmmirror.com/.../electerm-resource-1.3.7.tgz`（package-lock.json:526 写死的地址） | **HTTP 404** |
+| `registry.npmjs.org/.../electerm-resource-1.3.7.tgz` | **HTTP 404** |
+| npmmirror 的版本列表 | `…1.3.5, 1.3.6, 2.0.1…` —— **1.3.7 被跳过** |
+
+CI 原始报错（被埋在几十行 npm warn 底下，所以一直没被看见）：
+
+```
+npm error 404 Not Found - GET https://cdn.npmmirror.com/packages/%40electerm/electerm-resource/1.3.7/electerm-resource-1.3.7.tgz
+```
+
+**为什么表现成"第一步就挂"**：workflow 第 5 步 `npm un node-pty serialport` 跑在 `npm i` **之前**，而干净检出没有 `node_modules` —— 这一句要先解析整棵依赖树，于是撞上 404。它一挂，后面的 `npm i` / `npm run b` / `pb` / 打包**全部被跳过**，看起来像"第一步脚本写错"，实际是**依赖装不上**。（顺序本身也不对：没有 `node_modules` 时 `npm un` 无意义。）
+
+**为什么两个多月没被发现**：本地 `node_modules` 里还留着 **1.3.7 被撤下之前装好的那一份**，所以本地打包一切正常；CI 一直红着但没人看。
+
+**🔴 当前最大风险**：这份 1.3.7 现在是**全世界唯一一份**。一次 `rm -rf node_modules`、换机器、或新克隆 ⇒ **本仓库再也构建不出来**。
+
+**已做的止血**：备份到 `G:\Temp\electerm-resource-1.3.7-backup\`（目录 + 可直接当 npm 包用的 `electerm-resource-1.3.7.tgz`，2,442,909 字节，17 个文件）。
+
+**第二个 CI 缺陷（同一 workflow）**：win-nsis 打包前跑 `npm run pb`，而 `prepare-electron-build.js` 自己的注释写着这会**用上游配置覆盖根目录配置**（上游那份带 `channel: ${env.WORKFLOW_NAME}` → 不产 `latest.yml` → 本 fork 客户端永远收不到更新，且打包和发 release 全程不报错，见 ISSUES #25）。`build-common.js:76` 读写的就是**根目录**那份。⇒ **即使依赖修好，CI 打出来的包自动更新链路也是断的。**
+
+**修法（待拍板，多方案）**：
+
+| 方案 | 可行性 |
+|---|---|
+| ① 把 1.3.7 收进仓库（`file:vendor/electerm-resource`，2.4 MB） | ✅ 最稳，CI 与本地都不再依赖公网；代价是仓库多 2.4 MB 第三方资源 |
+| ② 降到 1.3.6（镜像上有） | ❌ **实测不等价**：1.3.6 缺 `build-res/`，而 `electron-builder.json` 的 `buildResources` 正指向它 |
+| ③ 升到 2.x | ⚠️ 跨大版本，图标/资源路径可能变，需重新验证全部平台 |
+| ④ 自建源（VPS/R2）托管该包并改 `resolved` | ⚠️ 引入外部依赖可用性问题 |
+
+**注**：不影响本次 v3.17.13 交付 —— 本地 `node_modules` 完好，本地打包路径照常可用。
