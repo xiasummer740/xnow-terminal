@@ -128,3 +128,6 @@ ftp-root
 # 防止再次添加冗余目录
 /electerm/
 /temp-electerm/
+
+# Claude Code 本地 MCP 配置（每台机器可以不同，不入库）
+/.mcp.json
