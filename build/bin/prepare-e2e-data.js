@@ -146,7 +146,7 @@ function main () {
   mainDb.close()
   dataDb.close()
 
-  console.log(`[prepare-e2e-data] 种子就绪：1 条 local 书签 + onStartSessions + language=en_us`)
+  console.log('[prepare-e2e-data] 种子就绪：1 条 local 书签 + onStartSessions + language=en_us')
   console.log(`[prepare-e2e-data] 数据目录 ${DATA_PATH}`)
 }
 
