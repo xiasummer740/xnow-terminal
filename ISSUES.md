@@ -29,7 +29,7 @@
 |---|---|---|---|
 | 9 | 3 个 mac 测试 workflow **已手工禁用 3 个月**；历史 **246 次运行 / 246 次失败 / 0 成功**，失败点在 `test` 步骤本身（非环境） | `gh workflow list --all`、`gh run list` | **不修**（祥哥 2026-09-13 拍板：修 mac 测试要重搭 mac 环境，收益不抵成本）。改为**防误开**：3 个 yml 顶部各加 5 行 ⚠️ 注释，写明「已手工禁用 / 246 战全败 / 触发条件带 build 分支 / 要恢复先把 test 步骤修通 / 详见 #9」。**纯注释、0 行 YAML 逻辑改动**，js-yaml 解析通过、触发分支未被改动。已实测三者状态确为 `disabled_manually` —— 零 CI 成本，不是「每推一次烧一次」 |
 | 10 | `npm test` 在 Windows 上**找不到测试**：`test/e2e/00*.js` 作为 Playwright 位置参数是**正则不是 glob**（CI 是 sh 会先展开，本地 cmd.exe 不展开）→ `No tests found`，`test2/test3` 永不执行 | `package.json:25-27` | 已修已验 |
-| 11 | `test/unit/` **21 个 spec（约 5984 行）从未被任何脚本执行**（`test-unit-ci` 指向的是 `test/unit-ci/`）；其中 `zod.spec.js` 依赖根本不存在的 zod 包 | `package.json:23` | 待修（2026-09-13 复核：「从未被执行」属实，但**加一份配置接不上** —— 实测这 21 个文件由**三套互不兼容的 runner** 写成，用 Playwright 一把收会把 node:test 的文件按 Playwright 那套解析、直接报错：<br>· **12 个用 `node:test`**（custom-require / db-concurrency / db-enc / mcp / mcp2 / mcp-widget / npm / open-file / open-file-with-editor / quick-connect / resolve / skill-manager）→ 该走 `node --test`<br>· **7 个用 `@playwright/test`**（enc / ftp / ftp-transfer / ip-check / load-widget / rename-widget / zod）→ 该走 Playwright<br>· **2 个 jest 孤儿**（npm-install / npm-install2）—— 只写了 `/* eslint-env jest */` 前置声明，**没 import 任何 runner**，jest 全局不存在，属第三类、跑不起来<br>· `zod.spec.js` 要 `require('zod')` 这个**仓库里根本没有的真包**（它拿自研 `src/app/lib/zod.js` 跟真 zod 做差分），得先定「加 devDependency」还是「改写成非差分」<br>结论：接 CI 前必须先按 runner 分流 + 逐个看还能不能过。**本轮不拿一份「收了却报错」的配置充数**。<br>**2026-09-13 逐文件分诊（node:test 那 12 个，逐个单独跑、每个 90s 上限）：**<br>· **绿 7 个** —— custom-require / open-file / open-file-with-editor / quick-connect / resolve / skill-manager 本来就能过；**`mcp-widget` 本轮已修好**：根因是 `widget → log → runtime-constants` 这条链上要 `require('../package.json')`（`runtime-constants.js:55` 按 `isDev` 决定往上几层），而那是**打包时才生成**的 `src/app/package.json`，纯 node 下没有 —— 照 `test/unit-ci/parse-ws-message.spec.js` 已有的做法在 `Module._load` 里替掉，**46/46 全绿**<br>· **分类错的 2 个：`mcp` / `mcp2`** —— 它们压根不是单元测试，是**对着 `http://127.0.0.1:30837/mcp` 的 HTTP 集成测试**（30837 正是 `widget-mcp-server.js:41` 的默认端口），**要 app 起着才能跑**。没起就是 `ECONNREFUSED` / 整组 cancel，不是断言写错。应归到 E2E 侧或加"服务在跑"前置条件<br>· **待修 1 个：`db-enc`** —— Windows 专有 fs 问题：`.nedb~` 原子重命名 ENOENT + 临时目录清理 `EPERM, Permission denied`<br>· **挂死 2 个：`db-concurrency` / `npm`** —— 单文件也跑不完（>90s），还没定位挂在哪一步<br>**本轮已把绿的 7 个接上**：新增 `test-unit-legacy` 脚本（**显式列这 7 个文件**，因为剩下 5 个还跑不了，用通配会把红的一起拖进来），并挂进 `test3` —— 所以 `npm test` 现在会带上它们。实测 `npm run test-unit-legacy` **197/197、0.54s**，而且 7 个文件**合跑不互相干扰**（单独跑和合跑结果一致）。剩余路线图：`mcp`/`mcp2` 挪到 E2E 侧 → 修 `db-enc` → 单独排查 2 个挂死 → 最后补 playwright 那 7 个） |
+| 11 | `test/unit/` **21 个 spec（约 5984 行）从未被任何脚本执行**（`test-unit-ci` 指向的是 `test/unit-ci/`）；其中 `zod.spec.js` 依赖根本不存在的 zod 包 | `package.json:23` | 待修（2026-09-13 复核：「从未被执行」属实，但**加一份配置接不上** —— 实测这 21 个文件由**三套互不兼容的 runner** 写成，用 Playwright 一把收会把 node:test 的文件按 Playwright 那套解析、直接报错：<br>· **12 个用 `node:test`**（custom-require / db-concurrency / db-enc / mcp / mcp2 / mcp-widget / npm / open-file / open-file-with-editor / quick-connect / resolve / skill-manager）→ 该走 `node --test`<br>· **7 个用 `@playwright/test`**（enc / ftp / ftp-transfer / ip-check / load-widget / rename-widget / zod）→ 该走 Playwright<br>· **2 个 jest 孤儿**（npm-install / npm-install2）—— 只写了 `/* eslint-env jest */` 前置声明，**没 import 任何 runner**，jest 全局不存在，属第三类、跑不起来<br>· `zod.spec.js` 要 `require('zod')` 这个**仓库里根本没有的真包**（它拿自研 `src/app/lib/zod.js` 跟真 zod 做差分），得先定「加 devDependency」还是「改写成非差分」<br>结论：接 CI 前必须先按 runner 分流 + 逐个看还能不能过。**本轮不拿一份「收了却报错」的配置充数**。<br>**2026-09-13 逐文件分诊（node:test 那 12 个，逐个单独跑、每个 90s 上限）：**<br>· **绿 7 个** —— custom-require / open-file / open-file-with-editor / quick-connect / resolve / skill-manager 本来就能过；**`mcp-widget` 本轮已修好**：根因是 `widget → log → runtime-constants` 这条链上要 `require('../package.json')`（`runtime-constants.js:55` 按 `isDev` 决定往上几层），而那是**打包时才生成**的 `src/app/package.json`，纯 node 下没有 —— 照 `test/unit-ci/parse-ws-message.spec.js` 已有的做法在 `Module._load` 里替掉，**46/46 全绿**<br>· **分类错的 2 个：`mcp` / `mcp2`** —— 它们压根不是单元测试，是**对着 `http://127.0.0.1:30837/mcp` 的 HTTP 集成测试**（30837 正是 `widget-mcp-server.js:41` 的默认端口），**要 app 起着才能跑**。没起就是 `ECONNREFUSED` / 整组 cancel，不是断言写错。应归到 E2E 侧或加"服务在跑"前置条件<br>· **待修 1 个：`db-enc`** —— Windows 专有 fs 问题：`.nedb~` 原子重命名 ENOENT + 临时目录清理 `EPERM, Permission denied`<br>· **挂死 2 个：`db-concurrency` / `npm`** —— 单文件也跑不完（>90s），还没定位挂在哪一步<br>**本轮已把绿的 7 个接上**：新增 `test-unit-legacy` 脚本（**显式列这 7 个文件**，因为剩下 5 个还跑不了，用通配会把红的一起拖进来），并挂进 `test3` —— 所以 `npm test` 现在会带上它们。实测 `npm run test-unit-legacy` **197/197、0.54s**，而且 7 个文件**合跑不互相干扰**（单独跑和合跑结果一致）。剩余路线图：见文末「#11 分诊续」—— 2026-09-13 已修活 `db-enc` 并接入（**8 个文件 / 224 用例**）；剩余 13 个逐个实测后确认**不属于单元测试**（网络集成 / 基准 / jest 孤儿 / 测的是自己的副本），每一项都要先拍一个板，不擅自加依赖或删文件） |
 | 12 | Playwright `1.28.1` 与 Electron `41.2.0` **结构性不兼容**（已实测）：1.28.1 在 Electron 主进程执行 `process.mainModule.require('electron')`，该 API 在 Node 22+/Electron 30+ 已移除 → `electron.launch` 必失败 | `playwright-core/lib/server/electron/electron.js:67` | 已修已验（2026-09-13：`build/bin/prepare-test.js` 改钉 `@playwright/test@1.63.0`。实测 `node -e "require('@playwright/test/package.json').version"` = 1.63.0，且本轮 E2E 语言探针真驱动起 Electron 41 跑通 —— 1.28.1 驱动不了的结论由「换到 1.63.0 就能跑」反证成立） |
 | 13 | `npm run prepare-test` 在 Windows 上**静默失败却返回 0**（`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` 是 bash 语法，cmd.exe 不认）→ 永远装不上 Playwright 却无人察觉 | `package.json:18` 实测输出 | 已修已验（2026-09-13：`build/bin/prepare-test.js` 重写为 node 脚本 —— 跨平台设环境变量、**装失败即非零退出**、幂等自愈。**现场验过自愈**：彼时 `node_modules/@playwright/test` 又被清掉了，跑一次输出「未装或被 npm install 清掉了，开始安装」→ `added 3 packages` → 探针通过 →「@playwright/test@1.63.0 就绪」。原报告里那句 2026-09-11 的复现，现在正是这条自愈要治的病） |
 | 14 | `.claude/tasks.json` 的 `test` 字段为**空字符串** —— 声称 build/start/test 自动化验证，测试环节空转 | `.claude/tasks.json` | 已修已验 |
@@ -1348,3 +1348,36 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 
 **拆出的新条目**：#66（工具注册表的收敛重构，祥哥拍板另立、单独评估）、
 #67（`quick_command` 整块死代码 + system prompt 散文列工具名）。
+
+### #11 分诊续（第 17 批：`test/unit` 剩余文件的归类与去向）
+
+**本轮已完成**：`db-enc` 修活并接进 CI（27/27，连跑 3 次稳定，无异步告警）。
+三个根因叠在一起：
+
+1. **路径还是 fork 改名前的老名字** —— 目录 `electerm/` → `xnow-terminal/`、
+   库文件 `electerm.db` / `electerm_data.db` → `xnow.db` / `xnow_data.db`、
+   表文件 `electerm.<表>.nedb` → `xnow.<表>.nedb`，共 8 处，全是 ENOENT。
+2. **sqlite 的两个 `DatabaseSync` 句柄到测试结束仍开着** → 临时目录删不掉（EPERM）。
+   只放过 EPERM，其余错误照抛。
+3. **nedb 建库时会后台补建 15 个数据文件**（先写 `.nedb~` 再 rename）。删目录跑在
+   它前面，rename 就 ENOENT —— 而且是在**测试结束之后**才炸成 uncaughtException，
+   node:test 会因此判整个文件失败。改成删目录前先等后台写落定。
+
+至此 `test-unit-legacy` = **8 个文件 / 224 用例**，即 `node --test` 这条线上全部
+「快、无网、无外部依赖」的单元测试。
+
+**剩下的 13 个不是"还没修好"，是本来就不属于单元测试**（逐个实测过）：
+
+| 文件 | 实测结论 | 该去哪 |
+|---|---|---|
+| `mcp` / `mcp2` | 对着 `http://127.0.0.1:30837/mcp` 的 **HTTP 集成测试**（30837 正是 `widget-mcp-server.js:41` 的默认端口），app 不启动就 ECONNREFUSED | E2E 侧，或加「服务在跑」前置条件 |
+| `npm` | **要联网**：真去 registry 下 lodash / debug / ftp-srv。且第 4 个用例断言写错 —— 它按「DNS 失败（`ENOTFOUND`）」写，实际拿到的是 404 AxiosError（`code: 'ERR_BAD_REQUEST'`，message 里没有包名），所以必红 | 集成测试；「要联网」本身就不该进 CI 门禁 |
+| `db-concurrency` | 顶着单元测试的名，实际是**基准测试**：`OLD vs NEW` × 三档数量 × 4 个用例做 100/500/1000 条的插入计时，`console.log` 打耗时；其中 mixed ops 两组**一个断言都没有** | 手动跑的 benchmark，不进 CI |
+| `enc` | Playwright 只当 runner 用（纯逻辑、无浏览器）。**只差一个 API 名**：`expect(r2).equal(rr)` —— Playwright 是 `toEqual`，`equal` 是 chai/jest 的写法。加解密往返本身是对的（日志里原文完整还原） | 改 1 个词即可绿 |
+| `ip-check` | **测的是文件内自己定义的 `isValidIP`，不是产品代码** —— 等于把函数复制一份再测自己。而且现在就是红的（不认 `::` 压缩写法的 IPv6） | 先拍板：改成 import 产品实现，还是删 |
+| `zod` | 拿自研 `src/app/lib/zod.js` 跟**真 `zod` 包**做差分（300 行，是真有价值的测试）。但 `zod` 不在 devDependencies 里，文件一 `require` 就抛，**会把同批其他文件一起带崩** | 先拍板：加 `zod` devDependency，还是改写成非差分 |
+| `ftp` / `ftp-transfer` / `load-widget` / `rename-widget` | 都 spawn 本地服务/进程做真实 I/O（`test/e2e/common/ftp.js` 等），属集成测试；未逐个验过是否还绿 | 集成测试 |
+| `npm-install` / `npm-install2` | **jest 孤儿**：只写了 `/* eslint-env jest */`，没 import 任何 runner，jest 全局不存在 | 补 runner，或删 |
+
+**为什么这一轮停在这**：剩下这 13 个，每一项都要先做一个决定（加依赖 / 搬目录 /
+删文件 / 改测法），不是「照着修」就能过的活。**等祥哥拍板再动，不擅自加依赖或删文件。**
