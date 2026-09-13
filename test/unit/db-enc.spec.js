@@ -34,6 +34,75 @@ function makeTmpDir () {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'electerm-test-'))
 }
 
+/**
+ * Windows 上 sqlite 那两个 DatabaseSync 句柄到测试结束仍是开着的，被占用的 .db
+ * 文件删不掉，`rmSync` 会抛 EPERM。这是 OS 层面的限制（app.js 里也记着同一件事：
+ * 「Windows 上删不掉被打开的文件」），不是测试失败 —— 只放过 EPERM，其余照旧抛出。
+ */
+function cleanTmpDir (dir) {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true })
+  } catch (e) {
+    if (e.code !== 'EPERM') throw e
+  }
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+/** 数一数目录树下落定的 / 还在写的 nedb 文件（目录不存在时算 0）。 */
+function scanNedb (dir) {
+  let done = 0
+  let pending = 0
+  const walk = (d) => {
+    let entries
+    try {
+      entries = fs.readdirSync(d, { withFileTypes: true })
+    } catch (e) {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        walk(path.join(d, entry.name))
+      } else if (entry.name.endsWith('.nedb')) {
+        done++
+      } else if (entry.name.endsWith('.nedb~')) {
+        pending++
+      }
+    }
+  }
+  walk(dir)
+  return { done, pending }
+}
+
+/**
+ * nedb 的 Datastore 是 autoload 的：数据文件不存在时它会在**后台**异步补建
+ * （先写 `xxx.nedb~` 再 rename 成 `xxx.nedb`）。createDb() 一口气建 15 张表，
+ * 不等这些后台写落定就删临时目录，nedb 的 rename 会 ENOENT —— 而且是在测试
+ * 结束之后才炸出来，node:test 会因此判整个文件失败。
+ * 所以删目录前先等：连续 3 次采样「文件数不变且没有半成品的 `~`」才算落定。
+ */
+async function waitForNedbSettled (dir, timeout = 5000) {
+  const deadline = Date.now() + timeout
+  let last = -1
+  let stable = 0
+  while (Date.now() < deadline) {
+    const { done, pending } = scanNedb(dir)
+    if (done > 0 && pending === 0 && done === last) {
+      if (++stable >= 3) {
+        return done
+      }
+    } else {
+      stable = 0
+    }
+    last = done
+    await sleep(20)
+  }
+  const { done, pending } = scanNedb(dir)
+  throw new Error(
+    `等 nedb 后台建数据文件超时（${timeout}ms）：已落定 ${done} 个，还在写 ${pending} 个`
+  )
+}
+
 // ---------------------------------------------------------------------------
 // SQLite tests (Node >= 22)
 // ---------------------------------------------------------------------------
@@ -51,7 +120,7 @@ describe('sqlite createDb', () => {
     })
 
     after(() => {
-      fs.rmSync(tmpDir, { recursive: true, force: true })
+      cleanTmpDir(tmpDir)
     })
 
     test('insert and find returns original data', async () => {
@@ -106,12 +175,12 @@ describe('sqlite createDb', () => {
 
     before(() => {
       tmpDir = makeTmpDir()
-      dbFolder = path.join(tmpDir, 'electerm', 'users', 'testuser')
+      dbFolder = path.join(tmpDir, 'xnow-terminal', 'users', 'testuser')
       db = createDb(tmpDir, 'testuser', encOpts)
     })
 
     after(() => {
-      fs.rmSync(tmpDir, { recursive: true, force: true })
+      cleanTmpDir(tmpDir)
     })
 
     test('inserted bookmarks data is encrypted on disk', async () => {
@@ -120,7 +189,7 @@ describe('sqlite createDb', () => {
       assert.ok(inserted._id)
 
       // Read raw sqlite file to confirm the value is not plain text
-      const dbPath = path.join(dbFolder, 'electerm.db')
+      const dbPath = path.join(dbFolder, 'xnow.db')
       const raw = fs.readFileSync(dbPath, 'latin1')
       assert.ok(!raw.includes('hunter2'), 'raw db should NOT contain plaintext password')
       assert.ok(!raw.includes('secret.com'), 'raw db should NOT contain plaintext host')
@@ -154,7 +223,7 @@ describe('sqlite createDb', () => {
       await db.dbAction('data', 'insert', { _id: 'userConfig', value: 'topSecret123' })
       // other data record should NOT be encrypted
       await db.dbAction('data', 'insert', { _id: 'version', value: '1.0.0' })
-      const dbPath = path.join(dbFolder, 'electerm_data.db')
+      const dbPath = path.join(dbFolder, 'xnow_data.db')
       const raw = fs.readFileSync(dbPath, 'latin1')
       assert.ok(!raw.includes('topSecret123'), 'userConfig value should NOT be plaintext on disk')
       assert.ok(raw.includes('1.0.0'), 'non-userConfig data should be plaintext on disk')
@@ -173,7 +242,7 @@ describe('sqlite createDb', () => {
     test('profiles table is encrypted', async () => {
       const doc = { name: 'myProfile', secret: 'profileSecret' }
       await db.dbAction('profiles', 'insert', doc)
-      const dbPath = path.join(dbFolder, 'electerm.db')
+      const dbPath = path.join(dbFolder, 'xnow.db')
       const raw = fs.readFileSync(dbPath, 'latin1')
       assert.ok(!raw.includes('profileSecret'), 'profiles db should NOT contain plaintext secret')
     })
@@ -181,7 +250,7 @@ describe('sqlite createDb', () => {
     test('non-enc table (quickCommands) is NOT encrypted', async () => {
       const doc = { cmd: 'ls -la' }
       await db.dbAction('quickCommands', 'insert', doc)
-      const dbPath = path.join(dbFolder, 'electerm.db')
+      const dbPath = path.join(dbFolder, 'xnow.db')
       const raw = fs.readFileSync(dbPath, 'latin1')
       assert.ok(raw.includes('ls -la'), 'non-enc tables should store data as plaintext')
     })
@@ -213,8 +282,10 @@ describe('nedb createDb', () => {
       db = createDb(tmpDir, 'testuser')
     })
 
-    after(() => {
-      fs.rmSync(tmpDir, { recursive: true, force: true })
+    after(async () => {
+      // 先等 nedb 的后台建文件落定，再删目录（否则它的 rename 会 ENOENT）
+      await waitForNedbSettled(tmpDir)
+      cleanTmpDir(tmpDir)
     })
 
     test('insert and find returns original data', async () => {
@@ -261,8 +332,10 @@ describe('nedb createDb', () => {
       db = createDb(tmpDir, 'testuser', encOpts)
     })
 
-    after(() => {
-      fs.rmSync(tmpDir, { recursive: true, force: true })
+    after(async () => {
+      // 先等 nedb 的后台建文件落定，再删目录（否则它的 rename 会 ENOENT）
+      await waitForNedbSettled(tmpDir)
+      cleanTmpDir(tmpDir)
     })
 
     test('inserted bookmarks data is encrypted on disk', async () => {
@@ -272,7 +345,7 @@ describe('nedb createDb', () => {
 
       // Read raw nedb file to confirm the value is not plain text
       const nedbPath = path.join(
-        tmpDir, 'electerm', 'users', 'testuser', 'electerm.bookmarks.nedb'
+        tmpDir, 'xnow-terminal', 'users', 'testuser', 'xnow.bookmarks.nedb'
       )
       const raw = fs.readFileSync(nedbPath, 'utf8')
       assert.ok(!raw.includes('hunter2'), 'nedb file should NOT contain plaintext password')
@@ -306,7 +379,7 @@ describe('nedb createDb', () => {
       await db.dbAction('data', 'insert', { _id: 'userConfig', secret: 'mySecret' })
       await db.dbAction('data', 'insert', { _id: 'version', value: '1.0.0' })
       const nedbPath = path.join(
-        tmpDir, 'electerm', 'users', 'testuser', 'electerm.data.nedb'
+        tmpDir, 'xnow-terminal', 'users', 'testuser', 'xnow.data.nedb'
       )
       const raw = fs.readFileSync(nedbPath, 'utf8')
       assert.ok(!raw.includes('mySecret'), 'userConfig secret should NOT be plaintext in nedb')
@@ -327,7 +400,7 @@ describe('nedb createDb', () => {
       const doc = { name: 'myProfile', secret: 'profileSecret' }
       await db.dbAction('profiles', 'insert', doc)
       const nedbPath = path.join(
-        tmpDir, 'electerm', 'users', 'testuser', 'electerm.profiles.nedb'
+        tmpDir, 'xnow-terminal', 'users', 'testuser', 'xnow.profiles.nedb'
       )
       const raw = fs.readFileSync(nedbPath, 'utf8')
       assert.ok(!raw.includes('profileSecret'), 'profiles nedb should NOT contain plaintext secret')
@@ -337,7 +410,7 @@ describe('nedb createDb', () => {
       const doc = { cmd: 'echo hello' }
       await db.dbAction('quickCommands', 'insert', doc)
       const nedbPath = path.join(
-        tmpDir, 'electerm', 'users', 'testuser', 'electerm.quickCommands.nedb'
+        tmpDir, 'xnow-terminal', 'users', 'testuser', 'xnow.quickCommands.nedb'
       )
       const raw = fs.readFileSync(nedbPath, 'utf8')
       assert.ok(raw.includes('echo hello'), 'non-enc tables should store data as plaintext')
