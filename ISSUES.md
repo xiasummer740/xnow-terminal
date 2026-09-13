@@ -1535,3 +1535,41 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
    rivateKey`,`passphrase`,`useSshAgent`,`sshAgent`];function a(e){let{store:t}=window;if(e.password||e.priva
    ```
    → **指纹只搜"词"，不搜引号**（搜 `useSshAgent` 再带上下文看邻接关系），否则必翻车。
+
+### #69 【已撤销 · 留作教训】我以为"开发版解不开密码" —— 是错的，两次"实测"都是我自己造的假象
+
+**这一条留着，但它记的是一个方法论教训，不是一个 bug。**
+
+**起因**：要回答「#68 怎么验证」时想到——开发版能不能当 #68 的验证场？于是先去确认开发版数据目录的状态。
+
+**我当时"实测"到的**（后来证明全是假的）：
+
+| 我做的实验 | 我读到的 | 我当时的结论 |
+|---|---|---|
+| 脚本里先 `app.setPath('userData', dev目录)` 再解密 | 报 `Error while decrypting the ciphertext…` | 「开发版解不开」❌ |
+| 脚本放 `G:\Temp`（那儿没有 package.json），Electron 用了默认应用名 | `app.name=Electron`、`userData=%APPDATA%\Electron`，解密失败 | 又一次「解不开」❌ |
+
+**两项都错在"测试环境 ≠ 真实启动条件"：**
+
+1. **真实程序从不调用 `app.setPath`** —— `grep -rn "setPath" src/app/` **零命中**。我在脚本里手动把 `userData` 指到 dev 目录，等于**人为换成了另一把钥匙**，然后拿这个去证明"解不开"。**这个失败是我自己造出来的。**
+2. Electron 的应用名取自**应用目录的 `package.json`**。脚本放 `G:\Temp` 下没有这个文件 → 名字退回默认的 `Electron` → `userData` 变成 `%APPDATA%\Electron`（**第三个目录**）→ 又是一把不同的钥匙。
+
+**真相（忠实实验：探针带 `name: xnow-terminal` 的 package.json，全程一行 `setPath` 都不写）**：
+
+```
+app.name  = xnow-terminal
+userData  = C:\Users\Administrator\AppData\Roaming\xnow-terminal   ← 与安装版同一个
+dev 目录里有 Local State 吗: false                                   ← 没有钥匙，但不要紧
+=== dev 库 4 条书签，逐条试解 ===
+  ✓ DM US / YX HK / HY US / RN US          结论：4/4 条解开
+```
+
+**根本原因**：#65 只把**应用自己的数据**（`users/`）挪进了 dev 目录，**Electron 自己的 `userData` 从头到尾没动过**，仍是默认的 `%APPDATA%/xnow-terminal` —— **跟安装版是同一个目录**。于是 `Local State`、`Cache`、日志全是共用的，**开发版用的就是安装版那把钥匙，本来就能解开**。
+
+**旁证**（不靠推理，靠现场留下的痕迹）：开发版启动打的那行 `[dev] 使用独立数据目录`，写在 **`%APPDATA%/xnow-terminal/logs/main.old.log`** 里。`electron-log` 的文件日志默认落在 `userData/logs/` 下 —— **日志落在哪，`userData` 就在哪。**
+
+**处置**：`src/app/lib/dev-data-path.js` 里那版 `copySafeStorageKey()` **已 `git checkout` 撤销**（先 `git diff` 确认该文件除我的改动外无其他未提交内容，再撤）。本条目改成现在这个记录，不删——**删了就白错一次**。
+
+**顺带确认的真问题（不新开条目，先记在这）**：dev 与安装版共用 `userData` ⇒ 共用 `Cache` / `Code Cache` / `GPUCache` ⇒ 这正是 CLAUDE.md 里那条「bundle 名不带 hash，Chromium 复用旧包，改了等于没改，实测白跑两轮」的老坑的**根源**。要不要把 dev 的 `userData` 也彻底隔离开，是另一个决定（代价是要真的开始搬钥匙），等祥哥拍板，不在本轮。
+
+**⚠️ 教训（比这条本身值钱）**：**"实测失败"必须先自证测试环境与真实运行条件一致，否则失败的可能是测试，不是程序。** 同一天里连着两次把自己想要的失败"做"了出来，还差点据此改生产代码。规矩：**在断言某段代码有缺陷之前，先问一句"我这次跑的方式，跟程序真实跑的方式，差在哪？"——差异没排除，不下结论。**
