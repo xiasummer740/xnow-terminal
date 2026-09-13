@@ -1381,3 +1381,37 @@ saveChain = p.then(() => {}, () => {})  // 链自己吞掉结果，防未处理�
 
 **为什么这一轮停在这**：剩下这 13 个，每一项都要先做一个决定（加依赖 / 搬目录 /
 删文件 / 改测法），不是「照着修」就能过的活。**等祥哥拍板再动，不擅自加依赖或删文件。**
+
+---
+
+### 发版链路新发现（2026-09-13，v3.17.12 发版时实测）
+
+**问题：`electron-builder` 每次发版会创建两个同 tag 的 release，把产物劈成两半 —— #32 的完整性校验因此必然失败。**
+
+实测证据（v3.17.12）：
+
+- electron-builder 日志里这两行**各出现两次**：
+  `• publishing  ... version: 3.17.12` ×2、`• creating GitHub release  reason=release doesn't exist tag=v3.17.12` ×2
+- 结果 GitHub 上有两个 v3.17.12 release，**产物被劈开、两边都不完整**：
+  - id `387840810` → 只有 `...installer.exe.blockmap`
+  - id `387840811` → `latest.yml` + `...installer.exe`
+
+**这解释了 GitHub 上那 12 个从没发布的草稿**（`v3.17.0` ～ `v3.17.11`，`published_at` 全为 null；最后一个真正对外发布的是 **v3.16.0**，2026-06-19）：
+`release-xnow.js:81-84` 的完整性校验用 `gh release view v${newVer}` 查产物，**同 tag 有两个 release 时只能看到其中一个** → 判定「产物不齐」→ 抛错停在 draft（`release-xnow.js:96-103`，这个「宁可停草稿也不发残缺版本」的设计本身是对的）→ **每次发版重演一次**。`v3.17.11` 同样是「一个已发布 + 一个草稿」的重复结构。
+
+**第二个后果：`make_latest` 不会自动生效。** 发布后 `api.github.com/.../releases/latest`（`src/client/common/update-check.js:7` 用的就是这个接口）**仍返回 v3.17.11**，必须显式 `PATCH .../releases/<id> -f make_latest=true` 才切到 v3.17.12。
+**注意**：客户端检查更新读的是**该 API**，不是 `releases.atom`（实测 atom feed 最新仍是 `v3.16.0`，3.17.x 一个都不在里面，原因未查明）——所以这次没卡住用户，但备用路径是坏的。
+
+**本次处置（手工从失败步骤续跑）**：`npm run b` 全量构建 + 提交推送（`af53bda3 release: v3.17.12`）**已完成**，只有打包那步失败（7-Zip `Can't allocate required memory!`，当时内存占用 87.6%）。于是跳过 15 分钟的 node_modules 拷贝，从打包步骤续跑 → blockmap 补传到 `387840811` → `make_latest=true`。
+
+**尚未修**：`electron-builder` 双发布的根因未动（需另开任务）；13 个历史草稿 + v3.17.12 的重复草稿 `387840810` 仍在 GitHub 上**未删**（涉及线上状态，等祥哥拍板）。
+
+**客户端视角匿名实测（2026-09-13，模拟未登录客户端）**：
+
+| 检查项 | 结果 |
+|---|---|
+| `api.github.com/.../releases/latest`（匿名） | `tag_name: v3.17.12`、`draft: false` ✅ |
+| `releases/download/v3.17.12/latest.yml`（匿名） | HTTP 200，`version: 3.17.12`、sha512 完整 ✅ |
+| 安装包匿名下载 | HTTP 200，106,279,043 字节 ✅ |
+| blockmap 是否挂在 release 上 | 在（113,143 字节，补传成功）✅ |
+| `releases.atom`（备用路径，代码未用） | 最新仍是 `v3.16.0` ⚠️ |
