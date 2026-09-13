@@ -127,7 +127,38 @@ function updateChatEntry (chatEntry, updates) {
   }
 }
 
-async function callBackendAIchatWithTools (messages, config) {
+// 当前在跑的 agent 请求，按对话记录 id 索引它们的 runId（ISSUES #20）。
+// 点「停止」时要用这个 id 去主进程把**正在飞的那次 HTTP 请求**掐掉 ——
+// 光置 abortRef 的话，得等请求自己回来才轮得到下一轮检查，模型卡住时等于没反应。
+const runningRunIds = new Map()
+
+// 单条工具结果进上下文前最多留这么多字（ISSUES #20）。
+// 以前是原样 push：一条 `cat` 大日志、一次目录列表就能上兆，150 轮下来请求体
+// 越滚越大 —— 模型越答越慢，最后像卡死一样，而账本上只看得出「AI 停不下来」。
+// 截断保留头尾，中间省略，模型仍能看懂这是什么。
+const MAX_TOOL_RESULT_CHARS = 20000
+
+function capToolResult (result) {
+  let s
+  try {
+    s = typeof result === 'string' ? result : JSON.stringify(result)
+  } catch (e) {
+    s = String(result)
+  }
+  if (!s || s.length <= MAX_TOOL_RESULT_CHARS) {
+    return s
+  }
+  const half = Math.floor(MAX_TOOL_RESULT_CHARS / 2)
+  return s.slice(0, half) +
+    `\n\n...(内容过长，已省略中间 ${s.length - MAX_TOOL_RESULT_CHARS} 字)...\n\n` +
+    s.slice(-half)
+}
+
+export function getRunningRunId (chatEntryId) {
+  return runningRunIds.get(chatEntryId)
+}
+
+async function callBackendAIchatWithTools (messages, config, runId) {
   // 只报内置工具（ISSUES #36）。
   // 技能自带的 tools 以前也 concat 进来，但执行侧落到 default 分支只会回一句
   // 「请参考技能说明使用」、**从不真跑** —— 等于告诉模型「这个你能调」然后次次失败，
@@ -143,7 +174,8 @@ async function callBackendAIchatWithTools (messages, config) {
     config.apiPathAI,
     config.apiKeyAI,
     config.proxyAI,
-    tools
+    tools,
+    runId
   )
 }
 
@@ -285,7 +317,21 @@ async function autoLearn (messages, accumulatedContent, config) {
   }
 }
 
+/**
+ * Agent 循环入口。除了跑循环，还负责把 runId 登记下来，
+ * 让界面上的「停止」能找到正在飞的那次后端请求（ISSUES #20）。
+ */
 export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming, history = []) {
+  const runId = `agent-${chatEntry.id}-${Date.now()}`
+  runningRunIds.set(chatEntry.id, runId)
+  try {
+    await runAgentLoopInner(chatEntry, config, abortRef, setIsStreaming, history, runId)
+  } finally {
+    runningRunIds.delete(chatEntry.id)
+  }
+}
+
+async function runAgentLoopInner (chatEntry, config, abortRef, setIsStreaming, history = [], runId) {
   // 构建消息列表：系统提示 → 最近对话历史 → 当前问题
   const messages = [
     { role: 'system', content: buildAgentSystemPrompt(config) }
@@ -316,7 +362,16 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming,
       return
     }
 
-    const result = await callBackendAIchatWithTools(messages, config)
+    const result = await callBackendAIchatWithTools(messages, config, runId)
+
+    // 用户点了停止、主进程把请求掐了：不是报错，按「已停止」收尾
+    if (result.aborted) {
+      setIsStreaming(false)
+      updateChatEntry(chatEntry, {
+        response: accumulatedContent + '\n\n*(Agent stopped by user)*'
+      })
+      return
+    }
 
     if (result.error) {
       setIsStreaming(false)
@@ -399,7 +454,7 @@ export async function runAgentLoop (chatEntry, config, abortRef, setIsStreaming,
       messages.push({
         role: 'tool',
         tool_call_id: toolCall.id,
-        content: toolEntry.result
+        content: capToolResult(toolEntry.result)
       })
     }
   }

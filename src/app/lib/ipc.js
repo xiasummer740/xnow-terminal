@@ -53,7 +53,7 @@ const { safeEncrypt, safeDecrypt } = require('./safe-storage')
 const { initCommandLine } = require('./command-line')
 const { watchFile, unwatchFile } = require('./watch-file')
 const lookup = require('../common/lookup')
-const { AIchat, AIchatWithTools, getStreamContent, stopStream } = require('./ai')
+const { AIchat, AIchatWithTools, getStreamContent, stopStream, abortAIChat } = require('./ai')
 const { createAcceptNewHostVerifier } = require('../server/ssh-known-hosts')
 
 // Security: whitelist of safe environment variables for Linux/Mac/Windows
@@ -309,6 +309,7 @@ function initIpc () {
     AIchatWithTools,
     getStreamContent,
     stopStream,
+    abortAIChat,
     // electron-updater
     autoUpdaterCheck: () => {
       const win = globalState.get('win')

@@ -1,6 +1,6 @@
 const { app } = require('electron')
 const { createWindow } = require('./create-window')
-const { packInfo, isDev } = require('../common/runtime-constants')
+const { packInfo } = require('../common/runtime-constants')
 const { initCommandLine } = require('./command-line')
 const globalState = require('./glob-state')
 const { getUserConfigNoEnc, getDbConfig } = require('./get-config')
@@ -69,12 +69,8 @@ process.on('unhandledRejection', (reason) => {
 })
 
 exports.createApp = async function () {
-  // 开发模式使用独立数据目录，绝不碰安装版的数据
-  if (isDev) {
-    process.env.DATA_PATH = require('path').join(app.getPath('userData'), 'xnow-terminal-dev')
-    log.info('[dev] 使用独立数据目录:', process.env.DATA_PATH)
-  }
-
+  // 开发模式的独立数据目录已挪到 app.js 顶部（ISSUES #65）—— 放这里太晚，
+  // require 链早把目录算完了，这句赋值对数据库从来没生效过。
   app.setName(packInfo.name)
   // Handle GPU issues on Linux
   // On Linux, disable GPU for compatibility

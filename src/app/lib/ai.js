@@ -7,6 +7,24 @@ const { createProxyAgent } = require('./proxy-agent')
 // Store for ongoing streaming sessions
 const streamingSessions = new Map()
 
+// 正在飞的非流式 AI 请求，按 runId 存 AbortController（ISSUES #20）。
+// 非流式那条路径（AIchatWithTools，内置 Agent 走的就是它）以前**没有任何办法取消**：
+// 界面上点「停止」只是把 abortRef.current 置 true，得等这一次 HTTP 自己回来，
+// runAgentLoop 才会在下一轮开头看到这个标志。模型/网关卡住时，点了停止界面纹丝不动
+// —— 这就是「AI 停不下来」。
+const aiAbortControllers = new Map()
+
+// 掐掉一次正在飞的非流式 AI 请求
+exports.abortAIChat = (runId) => {
+  const controller = aiAbortControllers.get(runId)
+  if (!controller) {
+    return { error: 'Request not found' }
+  }
+  controller.abort()
+  aiAbortControllers.delete(runId)
+  return { aborted: true }
+}
+
 // Stop an ongoing streaming session
 exports.stopStream = (sessionId) => {
   const session = streamingSessions.get(sessionId)
@@ -29,13 +47,17 @@ exports.stopStream = (sessionId) => {
   return { stopped: true }
 }
 
-const createAIClient = (baseURL, apiKey, proxy) => {
+// timeout 只在调用方显式传时才设 —— 流式那些调用不传，免得把长时间的输出掐断
+const createAIClient = (baseURL, apiKey, proxy, timeout) => {
   const config = {
     baseURL,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`
     }
+  }
+  if (timeout) {
+    config.timeout = timeout
   }
 
   // Add proxy agent if proxy is provided
@@ -48,9 +70,27 @@ const createAIClient = (baseURL, apiKey, proxy) => {
   return axios.create(config)
 }
 
-exports.AIchatWithTools = async (messages, model, baseURL, path, apiKey, proxy, tools) => {
+// 非流式一次带工具的请求最长等多久（ISSUES #20）。
+// 以前完全没设超时 = 可以无限期挂着，用户点了停止也什么都不会发生。
+// 一轮带工具的对话几十秒是正常的，给 3 分钟余量。
+const AI_TOOLS_TIMEOUT = 3 * 60 * 1000
+
+// runId 由渲染层给，用来在用户点「停止」时精确掐掉这一次请求。
+// 不传 runId 时行为和以前一样，只是多了超时。
+exports.AIchatWithTools = async (
+  messages, model, baseURL, path, apiKey, proxy, tools, runId
+) => {
+  const controller = new AbortController()
+  if (runId) {
+    // 同一个 runId 又进来（上一轮还没收干净）：把旧的收掉，别泄漏
+    const prev = aiAbortControllers.get(runId)
+    if (prev) {
+      prev.abort()
+    }
+    aiAbortControllers.set(runId, controller)
+  }
   try {
-    const client = createAIClient(baseURL, apiKey, proxy)
+    const client = createAIClient(baseURL, apiKey, proxy, AI_TOOLS_TIMEOUT)
     const requestData = {
       model,
       messages,
@@ -59,14 +99,25 @@ exports.AIchatWithTools = async (messages, model, baseURL, path, apiKey, proxy, 
     if (tools && tools.length) {
       requestData.tools = tools
     }
-    const response = await client.post(path, requestData)
+    const response = await client.post(path, requestData, {
+      signal: controller.signal
+    })
     const choice = response.data.choices[0]
     return {
       message: choice.message
     }
   } catch (e) {
+    // 用户主动停止：不是错误，agent 循环靠这个标志收尾，别显示成报错
+    if (controller.signal.aborted) {
+      log.info('AI 工具对话已被用户停止', runId)
+      return { aborted: true }
+    }
     log.error('AI 工具对话出错', e)
     return { error: e.message }
+  } finally {
+    if (runId && aiAbortControllers.get(runId) === controller) {
+      aiAbortControllers.delete(runId)
+    }
   }
 }
 

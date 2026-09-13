@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import AIOutput from './ai-output'
 import AIStopIcon from './ai-stop-icon'
 import AgentToolCallCard from './agent-tool-call-card'
-import { runAgentLoop } from './agent'
+import { runAgentLoop, getRunningRunId } from './agent'
 import {
   Alert,
   Tooltip
@@ -170,8 +170,19 @@ export default function AIChatHistoryItem ({ item }) {
   async function handleStop (e) {
     e.stopPropagation()
     if (mode === 'agent') {
+      // 只置 abortRef 是不够的：标志要等这一次 HTTP 请求自己回来、跑到下一轮循环
+      // 开头才会被看见。模型/网关卡住时，点了停止界面纹丝不动（ISSUES #20）。
+      // 所以同时让主进程把正在飞的那次请求掐掉，循环立刻收到「已被用户停止」。
       abortRef.current = true
       setIsStreaming(false)
+      const runId = getRunningRunId(item.id)
+      if (runId) {
+        try {
+          await window.pre.runGlobalAsync('abortAIChat', runId)
+        } catch (error) {
+          console.error('Error aborting agent request:', error)
+        }
+      }
       return
     }
     if (!sessionId) return

@@ -15,6 +15,12 @@ log.debug('electron 启动')
 const { clearConfigIfRequested } = require('./lib/clear-config')
 clearConfigIfRequested()
 
+// 开发模式切独立数据目录，同样必须赶在上面那条 require 链**之前**（ISSUES #65）——
+// 链里的 app-props.js / nedb.js / sqlite.js 在模块加载时就把数据目录算好了，
+// 放晚了（原来在 create-app.js 里）等于没改。dev 的目录不存在时会把安装版那份复制过来。
+const { setupDevDataPath } = require('./lib/dev-data-path')
+setupDevDataPath()
+
 const { createApp } = require('./lib/create-app')
 
 const app = createApp()
